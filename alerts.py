@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 from urllib.parse import quote
 
 
-POLYSIGHT_BOT_URL = "https://t.me/polysightbot"
+ONSIGHT_BOT_URL = "https://t.me/polysightbot"
 
 
 def get_market_link(title: str, url: str) -> str:
@@ -17,10 +17,10 @@ def get_market_link(title: str, url: str) -> str:
 
 def create_trade_button_view(market_url: str) -> View:
     view = View()
-    polysight_url = f"{POLYSIGHT_BOT_URL}?start={quote(market_url, safe='')}"
+    onsight_url = f"{ONSIGHT_BOT_URL}?start={quote(market_url, safe='')}"
     view.add_item(Button(
-        label="Trade on Polysight",
-        url=polysight_url,
+        label="Trade via Onsight",
+        url=onsight_url,
         style=discord.ButtonStyle.link,
         emoji="📈"
     ))
