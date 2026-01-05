@@ -13,7 +13,6 @@ from alerts import (
     create_whale_alert_embed,
     create_fresh_wallet_alert_embed,
     create_custom_wallet_alert_embed,
-    create_redeem_alert_embed,
     create_settings_embed,
     create_trade_button_view,
     create_positions_overview_embed,
@@ -486,15 +485,10 @@ async def monitor_loop():
             global_trades = await polymarket_client.get_recent_trades(limit=50)
             
             tracked_trades = []
-            tracked_redeems = []
             for wallet_addr in unique_tracked_addresses:
                 wallet_trades = await polymarket_client.get_wallet_trades(wallet_addr, limit=10)
                 if wallet_trades:
                     tracked_trades.extend(wallet_trades)
-                
-                wallet_redeems = await polymarket_client.get_wallet_activity(wallet_addr, "REDEEM", limit=5)
-                if wallet_redeems:
-                    tracked_redeems.extend([(wallet_addr, r) for r in wallet_redeems])
             
             all_trades = global_trades or []
             seen_keys = set()
@@ -527,6 +521,11 @@ async def monitor_loop():
                 wallet = wallet.lower()
                 market_title = polymarket_client.get_market_title(trade)
                 market_url = polymarket_client.get_market_url(trade)
+                
+                price = float(trade.get('price', 0) or 0)
+                side = trade.get('side', '').lower()
+                if side == 'sell' and price > 0.99:
+                    continue
                 
                 wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
                 is_fresh = wallet_activity is None and wallet not in processed_wallets_this_batch
@@ -588,48 +587,6 @@ async def monitor_loop():
                             await channel.send(embed=embed, view=button_view)
                         except Exception as e:
                             print(f"Error sending whale alert: {e}")
-            
-            for wallet_addr, redeem in tracked_redeems:
-                unique_key = polymarket_client.get_unique_activity_id(redeem)
-                
-                if not unique_key or len(unique_key) < 10:
-                    continue
-                
-                seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key[:66]).first()
-                if seen:
-                    continue
-                
-                session.add(SeenTransaction(tx_hash=unique_key[:66]))
-                
-                value = float(redeem.get('cashValue', 0) or 0)
-                market_title = redeem.get('title', 'Unknown Market')
-                market_url = polymarket_client.get_market_url(redeem)
-                
-                if polymarket_client.is_sports_market(redeem):
-                    continue
-                
-                for config in configs:
-                    channel = bot.get_channel(config.alert_channel_id)
-                    if not channel:
-                        continue
-                    
-                    tracked_addresses = tracked_by_guild.get(config.guild_id, {})
-                    
-                    if wallet_addr in tracked_addresses:
-                        tw = tracked_addresses[wallet_addr]
-                        embed = create_redeem_alert_embed(
-                            activity=redeem,
-                            value_usd=value,
-                            market_title=market_title,
-                            wallet_address=wallet_addr,
-                            wallet_label=tw.label,
-                            market_url=market_url
-                        )
-                        button_view = create_trade_button_view(market_url)
-                        try:
-                            await channel.send(embed=embed, view=button_view)
-                        except Exception as e:
-                            print(f"Error sending redeem alert: {e}")
             
             session.commit()
         finally:

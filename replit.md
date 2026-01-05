@@ -7,11 +7,11 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Whale Alerts**: Notifications for large transactions ($10k+ by default)
 - **Fresh Wallet Alerts**: Detect new wallets making their first trades
 - **Custom Wallet Tracking**: Monitor specific wallet addresses (any trade amount)
-- **Redeem Alerts**: Notifications when tracked wallets cash out positions
 - **Volatility Alerts**: Track markets with 20%+ price swings within 1 hour
 - **Sports Filtering**: Automatically excludes sports/esports markets from all alerts
+- **Sell Filtering**: Excludes sells above 99% (position closures)
 - **Position Viewing**: View current holdings of tracked wallets with drill-down
-- **Market Links**: Clickable links to Polymarket + Trade on Polysight buttons
+- **Market Links**: Clickable links to Polymarket + Trade via Onsight buttons
 - **Per-Server Configuration**: Each Discord server has its own settings
 - **Slash Commands**: Simple Discord interface for configuration
 
@@ -57,10 +57,9 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Whale Alerts**: Large transactions $10k+ (configurable threshold)
 - **Fresh Wallet Alerts**: New wallets making first trades $10k+
 - **Tracked Wallet Alerts**: Any activity from tracked wallets (no minimum)
-- **Redeem Alerts**: When tracked wallets cash out winning positions
 - **Volatility Alerts**: Markets with 20%+ price swings within 1 hour (separate channel)
 
-Note: Sports and esports markets are automatically excluded from all alert types.
+Note: Sports/esports markets and sells above 99% are automatically excluded from all alerts.
 
 ## Environment Variables
 
@@ -69,9 +68,10 @@ Note: Sports and esports markets are automatically excluded from all alert types
 
 ## Recent Changes
 
+- 2026-01-05: Removed redeem alerts and filtered out sells above 99%
+- 2026-01-05: Updated trade button to "Trade via Onsight"
 - 2026-01-05: Added volatility tracker with separate channel (/volatility command) for 20%+ price swings
 - 2026-01-05: Added sports market filtering - excludes all sports/esports from alerts
-- 2026-01-05: Added redeem tracking, position viewing, market links, and Polysight trade buttons
 - 2026-01-05: Added /positions command with wallet buttons for drill-down views
 - 2026-01-05: Added /rename command to update tracked wallet labels
 - 2026-01-05: Fixed tracked wallet alerts to query each wallet directly via API (catches all trades regardless of amount)
