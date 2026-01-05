@@ -617,12 +617,19 @@ async def monitor_loop():
                     trade_timestamp = trade.get('timestamp', 0)
                     trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
                     
+                    def is_trade_after_tracking(trade_dt, added_dt):
+                        if not trade_dt or not added_dt:
+                            return True
+                        trade_naive = trade_dt.replace(tzinfo=None) if hasattr(trade_dt, 'tzinfo') and trade_dt.tzinfo else trade_dt
+                        added_naive = added_dt.replace(tzinfo=None) if hasattr(added_dt, 'tzinfo') and added_dt.tzinfo else added_dt
+                        return trade_naive >= added_naive
+                    
                     if is_sports:
                         sports_channel = bot.get_channel(config.sports_channel_id) if config.sports_channel_id else None
                         if sports_channel:
                             if wallet in tracked_addresses:
                                 tw = tracked_addresses[wallet]
-                                if tw.added_at and trade_time and trade_time < tw.added_at:
+                                if not is_trade_after_tracking(trade_time, tw.added_at):
                                     continue
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_custom_wallet_alert_embed(
@@ -670,7 +677,7 @@ async def monitor_loop():
                         
                         if wallet in tracked_addresses:
                             tw = tracked_addresses[wallet]
-                            if tw.added_at and trade_time and trade_time < tw.added_at:
+                            if not is_trade_after_tracking(trade_time, tw.added_at):
                                 continue
                             wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                             embed = create_custom_wallet_alert_embed(
