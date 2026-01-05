@@ -294,18 +294,21 @@ class PolymarketClient:
         stats = {'pnl': 0.0, 'win_rate': 0.0, 'total_positions': 0, 'winning_positions': 0}
         
         total_pnl = 0.0
+        unrealized_pnl = 0.0
         positions_with_realized = 0
         winning_positions = 0
         
         try:
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/positions",
-                params={"user": wallet_address}
+                params={"user": wallet_address, "limit": 1000}
             ) as resp:
                 if resp.status == 200:
                     positions = await resp.json()
                     if isinstance(positions, list):
                         for pos in positions:
+                            cash_pnl = float(pos.get('cashPnl', 0) or 0)
+                            unrealized_pnl += cash_pnl
                             realized_pnl = float(pos.get('realizedPnl', 0) or 0)
                             total_pnl += realized_pnl
                             if realized_pnl != 0:
@@ -318,7 +321,7 @@ class PolymarketClient:
         try:
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/closed-positions",
-                params={"user": wallet_address, "limit": 500}
+                params={"user": wallet_address, "limit": 1000}
             ) as resp:
                 if resp.status == 200:
                     closed = await resp.json()
@@ -333,10 +336,11 @@ class PolymarketClient:
         except Exception as e:
             print(f"Error fetching closed positions for {wallet_address}: {e}")
         
+        combined_pnl = total_pnl + unrealized_pnl
         win_rate = (winning_positions / positions_with_realized * 100) if positions_with_realized > 0 else 0.0
         
         stats = {
-            'pnl': total_pnl,
+            'pnl': combined_pnl,
             'win_rate': win_rate,
             'total_positions': positions_with_realized,
             'winning_positions': winning_positions
