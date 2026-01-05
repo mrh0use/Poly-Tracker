@@ -6,7 +6,10 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 ## Features
 - **Whale Alerts**: Notifications for large transactions ($10k+ by default)
 - **Fresh Wallet Alerts**: Detect new wallets making their first trades
-- **Custom Wallet Tracking**: Monitor specific wallet addresses
+- **Custom Wallet Tracking**: Monitor specific wallet addresses (any trade amount)
+- **Redeem Alerts**: Notifications when tracked wallets cash out positions
+- **Position Viewing**: View current holdings of tracked wallets with drill-down
+- **Market Links**: Clickable links to Polymarket + Trade on Polysight buttons
 - **Per-Server Configuration**: Each Discord server has its own settings
 - **Slash Commands**: Simple Discord interface for configuration
 
@@ -37,10 +40,19 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 | `/threshold <amount>` | Set USD threshold | Admin |
 | `/track <wallet> [label]` | Track a wallet | Admin |
 | `/untrack <wallet>` | Stop tracking | Admin |
+| `/rename <wallet> <name>` | Rename a tracked wallet | Admin |
+| `/positions` | View tracked wallets' positions | Anyone |
 | `/list` | Show settings | Anyone |
 | `/pause` | Pause alerts | Admin |
 | `/resume` | Resume alerts | Admin |
 | `/help` | Show commands | Anyone |
+
+## Alert Types
+
+- **Whale Alerts**: Large transactions $10k+ (configurable threshold)
+- **Fresh Wallet Alerts**: New wallets making first trades $10k+
+- **Tracked Wallet Alerts**: Any activity from tracked wallets (no minimum)
+- **Redeem Alerts**: When tracked wallets cash out winning positions
 
 ## Environment Variables
 
@@ -49,6 +61,9 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 
 ## Recent Changes
 
+- 2026-01-05: Added redeem tracking, position viewing, market links, and Polysight trade buttons
+- 2026-01-05: Added /positions command with wallet buttons for drill-down views
+- 2026-01-05: Added /rename command to update tracked wallet labels
 - 2026-01-05: Fixed tracked wallet alerts to query each wallet directly via API (catches all trades regardless of amount)
 - 2026-01-05: Initial project setup with full bot implementation
 

@@ -1,14 +1,44 @@
 import discord
 from discord import Embed
+from discord.ui import View, Button
 from datetime import datetime
 from typing import Dict, Any, Optional
+from urllib.parse import quote
+
+
+POLYSIGHT_BOT_URL = "https://t.me/polysightbot"
+
+
+def get_market_link(title: str, url: str) -> str:
+    if url and url != "https://polymarket.com":
+        return f"[{title[:80]}]({url})"
+    return title[:80] if title else "Unknown"
+
+
+def create_trade_button_view(market_url: str) -> View:
+    view = View()
+    polysight_url = f"{POLYSIGHT_BOT_URL}?start={quote(market_url, safe='')}"
+    view.add_item(Button(
+        label="Trade on Polysight",
+        url=polysight_url,
+        style=discord.ButtonStyle.link,
+        emoji="📈"
+    ))
+    view.add_item(Button(
+        label="View on Polymarket",
+        url=market_url,
+        style=discord.ButtonStyle.link,
+        emoji="🔗"
+    ))
+    return view
 
 
 def create_whale_alert_embed(
     trade: Dict[str, Any],
     value_usd: float,
     market_title: str = "Unknown Market",
-    wallet_address: str = "Unknown"
+    wallet_address: str = "Unknown",
+    market_url: str = "https://polymarket.com"
 ) -> Embed:
     embed = Embed(
         title="Whale Alert",
@@ -23,9 +53,10 @@ def create_whale_alert_embed(
         inline=True
     )
     
+    market_display = get_market_link(market_title, market_url)
     embed.add_field(
         name="Market",
-        value=market_title[:100] if market_title else "Unknown",
+        value=market_display,
         inline=True
     )
     
@@ -66,7 +97,8 @@ def create_fresh_wallet_alert_embed(
     trade: Dict[str, Any],
     value_usd: float,
     market_title: str = "Unknown Market",
-    wallet_address: str = "Unknown"
+    wallet_address: str = "Unknown",
+    market_url: str = "https://polymarket.com"
 ) -> Embed:
     embed = Embed(
         title="Fresh Wallet Alert",
@@ -81,9 +113,10 @@ def create_fresh_wallet_alert_embed(
         inline=True
     )
     
+    market_display = get_market_link(market_title, market_url)
     embed.add_field(
         name="Market",
-        value=market_title[:100] if market_title else "Unknown",
+        value=market_display,
         inline=True
     )
     
@@ -118,7 +151,8 @@ def create_custom_wallet_alert_embed(
     value_usd: float,
     market_title: str = "Unknown Market",
     wallet_address: str = "Unknown",
-    wallet_label: Optional[str] = None
+    wallet_label: Optional[str] = None,
+    market_url: str = "https://polymarket.com"
 ) -> Embed:
     title = f"Tracked Wallet Alert"
     if wallet_label:
@@ -137,9 +171,10 @@ def create_custom_wallet_alert_embed(
         inline=True
     )
     
+    market_display = get_market_link(market_title, market_url)
     embed.add_field(
         name="Market",
-        value=market_title[:100] if market_title else "Unknown",
+        value=market_display,
         inline=True
     )
     
@@ -172,6 +207,149 @@ def create_custom_wallet_alert_embed(
     )
     
     embed.set_footer(text="Polymarket Custom Wallet Monitor")
+    
+    return embed
+
+
+def create_redeem_alert_embed(
+    activity: Dict[str, Any],
+    value_usd: float,
+    market_title: str = "Unknown Market",
+    wallet_address: str = "Unknown",
+    wallet_label: Optional[str] = None,
+    market_url: str = "https://polymarket.com"
+) -> Embed:
+    title = f"Redeem Alert"
+    if wallet_label:
+        title += f" - {wallet_label}"
+    
+    embed = Embed(
+        title=title,
+        description=f"Tracked wallet cashed out a winning position",
+        color=0x9B59B6,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Redeemed Value",
+        value=f"${value_usd:,.2f}",
+        inline=True
+    )
+    
+    market_display = get_market_link(market_title, market_url)
+    embed.add_field(
+        name="Market",
+        value=market_display,
+        inline=True
+    )
+    
+    outcome = activity.get('outcome', 'Unknown')
+    embed.add_field(
+        name="Outcome",
+        value=outcome.upper() if outcome else "Unknown",
+        inline=True
+    )
+    
+    short_wallet = f"{wallet_address[:6]}...{wallet_address[-4:]}" if len(wallet_address) > 10 else wallet_address
+    embed.add_field(
+        name="Wallet",
+        value=f"`{short_wallet}`",
+        inline=True
+    )
+    
+    embed.set_footer(text="Polymarket Redeem Monitor")
+    
+    return embed
+
+
+def create_positions_overview_embed(
+    tracked_wallets: list,
+    positions_data: Dict[str, list]
+) -> Embed:
+    embed = Embed(
+        title="Tracked Wallet Positions",
+        description="Overview of positions for all tracked wallets",
+        color=0x3498DB,
+        timestamp=datetime.utcnow()
+    )
+    
+    for wallet in tracked_wallets:
+        addr = wallet.wallet_address
+        label = wallet.label or f"{addr[:6]}...{addr[-4:]}"
+        positions = positions_data.get(addr, [])
+        
+        if positions:
+            top_positions = sorted(positions, key=lambda p: float(p.get('cashValue', 0) or 0), reverse=True)[:3]
+            pos_text = []
+            for pos in top_positions:
+                title = pos.get('title', 'Unknown')[:40]
+                value = float(pos.get('cashValue', 0) or 0)
+                outcome = pos.get('outcome', '')
+                pos_text.append(f"• {title} ({outcome}): ${value:,.0f}")
+            
+            if len(positions) > 3:
+                pos_text.append(f"*...and {len(positions) - 3} more*")
+            
+            embed.add_field(
+                name=label,
+                value="\n".join(pos_text) if pos_text else "No positions",
+                inline=False
+            )
+        else:
+            embed.add_field(
+                name=label,
+                value="No positions found",
+                inline=False
+            )
+    
+    embed.set_footer(text="Click a button below to see full details")
+    
+    return embed
+
+
+def create_wallet_positions_embed(
+    wallet_address: str,
+    wallet_label: Optional[str],
+    positions: list
+) -> Embed:
+    label = wallet_label or f"{wallet_address[:6]}...{wallet_address[-4:]}"
+    
+    embed = Embed(
+        title=f"Positions - {label}",
+        description=f"Full position breakdown for `{wallet_address[:10]}...`",
+        color=0x3498DB,
+        timestamp=datetime.utcnow()
+    )
+    
+    if not positions:
+        embed.add_field(name="No Positions", value="This wallet has no open positions", inline=False)
+        return embed
+    
+    sorted_positions = sorted(positions, key=lambda p: float(p.get('cashValue', 0) or 0), reverse=True)
+    
+    total_value = sum(float(p.get('cashValue', 0) or 0) for p in sorted_positions)
+    embed.add_field(name="Total Value", value=f"${total_value:,.2f}", inline=True)
+    embed.add_field(name="Position Count", value=str(len(sorted_positions)), inline=True)
+    embed.add_field(name="\u200b", value="\u200b", inline=True)
+    
+    for pos in sorted_positions[:10]:
+        title = pos.get('title', 'Unknown')[:50]
+        value = float(pos.get('cashValue', 0) or 0)
+        size = float(pos.get('size', 0) or 0)
+        outcome = pos.get('outcome', 'Unknown')
+        avg_price = float(pos.get('avgPrice', 0) or 0) * 100
+        current_price = float(pos.get('currentPrice', 0) or 0) * 100
+        
+        field_value = f"**{outcome}** | Size: {size:,.0f} | Value: ${value:,.2f}\nEntry: {avg_price:.1f}% → Current: {current_price:.1f}%"
+        
+        embed.add_field(
+            name=title,
+            value=field_value,
+            inline=False
+        )
+    
+    if len(sorted_positions) > 10:
+        embed.set_footer(text=f"Showing top 10 of {len(sorted_positions)} positions")
     
     return embed
 

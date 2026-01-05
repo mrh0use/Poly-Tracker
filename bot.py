@@ -2,6 +2,7 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
+from discord.ui import View, Button
 import asyncio
 from datetime import datetime
 from typing import Optional
@@ -12,7 +13,11 @@ from alerts import (
     create_whale_alert_embed,
     create_fresh_wallet_alert_embed,
     create_custom_wallet_alert_embed,
-    create_settings_embed
+    create_redeem_alert_embed,
+    create_settings_embed,
+    create_trade_button_view,
+    create_positions_overview_embed,
+    create_wallet_positions_embed
 )
 
 
@@ -307,9 +312,107 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     
+    embed.add_field(
+        name="/positions",
+        value="View positions of all tracked wallets",
+        inline=False
+    )
+    embed.add_field(
+        name="/rename <wallet> <new_name>",
+        value="Rename a tracked wallet",
+        inline=False
+    )
+    
     embed.set_footer(text="Administrator permissions required for configuration commands")
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class WalletPositionButton(Button):
+    def __init__(self, wallet_address: str, wallet_label: str, row: int = 0):
+        label = wallet_label[:20] if wallet_label else f"{wallet_address[:6]}...{wallet_address[-4:]}"
+        super().__init__(label=label, style=discord.ButtonStyle.primary, row=row)
+        self.wallet_address = wallet_address
+        self.wallet_label = wallet_label
+    
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        
+        positions = await polymarket_client.get_wallet_positions(self.wallet_address)
+        embed = create_wallet_positions_embed(
+            wallet_address=self.wallet_address,
+            wallet_label=self.wallet_label,
+            positions=positions
+        )
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="positions", description="View positions of all tracked wallets")
+async def positions(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    
+    session = get_session()
+    try:
+        tracked = session.query(TrackedWallet).filter_by(guild_id=interaction.guild_id).all()
+        
+        if not tracked:
+            await interaction.followup.send(
+                "No wallets are being tracked. Use `/track` to add wallets.",
+                ephemeral=True
+            )
+            return
+        
+        positions_data = {}
+        for wallet in tracked:
+            wallet_positions = await polymarket_client.get_wallet_positions(wallet.wallet_address)
+            positions_data[wallet.wallet_address] = wallet_positions
+        
+        embed = create_positions_overview_embed(tracked, positions_data)
+        
+        view = View(timeout=300)
+        for i, wallet in enumerate(tracked[:5]):
+            label = wallet.label or f"{wallet.wallet_address[:6]}...{wallet.wallet_address[-4:]}"
+            view.add_item(WalletPositionButton(wallet.wallet_address, label, row=i // 3))
+        
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+    finally:
+        session.close()
+
+
+@bot.tree.command(name="rename", description="Rename a tracked wallet")
+@app_commands.describe(
+    wallet="The wallet address to rename (0x...)",
+    name="New label for this wallet"
+)
+@app_commands.checks.has_permissions(administrator=True)
+async def rename(interaction: discord.Interaction, wallet: str, name: str):
+    wallet = wallet.strip().lower()
+    
+    session = get_session()
+    try:
+        tracked = session.query(TrackedWallet).filter_by(
+            guild_id=interaction.guild_id,
+            wallet_address=wallet
+        ).first()
+        
+        if not tracked:
+            await interaction.response.send_message(
+                f"Wallet `{wallet[:6]}...{wallet[-4:]}` is not being tracked",
+                ephemeral=True
+            )
+            return
+        
+        old_label = tracked.label or "None"
+        tracked.label = name
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Renamed wallet `{wallet[:6]}...{wallet[-4:]}` from '{old_label}' to '{name}'",
+            ephemeral=True
+        )
+    finally:
+        session.close()
 
 
 @tasks.loop(seconds=30)
@@ -337,10 +440,15 @@ async def monitor_loop():
             global_trades = await polymarket_client.get_recent_trades(limit=50)
             
             tracked_trades = []
+            tracked_redeems = []
             for wallet_addr in unique_tracked_addresses:
                 wallet_trades = await polymarket_client.get_wallet_trades(wallet_addr, limit=10)
                 if wallet_trades:
                     tracked_trades.extend(wallet_trades)
+                
+                wallet_redeems = await polymarket_client.get_wallet_activity(wallet_addr, "REDEEM", limit=5)
+                if wallet_redeems:
+                    tracked_redeems.extend([(wallet_addr, r) for r in wallet_redeems])
             
             all_trades = global_trades or []
             seen_keys = set()
@@ -349,9 +457,6 @@ async def monitor_loop():
                 if key not in seen_keys:
                     all_trades.append(trade)
                     seen_keys.add(key)
-            
-            if not all_trades:
-                return
             
             processed_wallets_this_batch = set()
             
@@ -375,6 +480,7 @@ async def monitor_loop():
                 
                 wallet = wallet.lower()
                 market_title = polymarket_client.get_market_title(trade)
+                market_url = polymarket_client.get_market_url(trade)
                 
                 wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
                 is_fresh = wallet_activity is None and wallet not in processed_wallets_this_batch
@@ -392,6 +498,7 @@ async def monitor_loop():
                         continue
                     
                     tracked_addresses = tracked_by_guild.get(config.guild_id, {})
+                    button_view = create_trade_button_view(market_url)
                     
                     if wallet in tracked_addresses:
                         tw = tracked_addresses[wallet]
@@ -400,10 +507,11 @@ async def monitor_loop():
                             value_usd=value,
                             market_title=market_title,
                             wallet_address=wallet,
-                            wallet_label=tw.label
+                            wallet_label=tw.label,
+                            market_url=market_url
                         )
                         try:
-                            await channel.send(embed=embed)
+                            await channel.send(embed=embed, view=button_view)
                         except Exception as e:
                             print(f"Error sending custom wallet alert: {e}")
                     
@@ -412,10 +520,11 @@ async def monitor_loop():
                             trade=trade,
                             value_usd=value,
                             market_title=market_title,
-                            wallet_address=wallet
+                            wallet_address=wallet,
+                            market_url=market_url
                         )
                         try:
-                            await channel.send(embed=embed)
+                            await channel.send(embed=embed, view=button_view)
                         except Exception as e:
                             print(f"Error sending fresh wallet alert: {e}")
                     
@@ -424,12 +533,52 @@ async def monitor_loop():
                             trade=trade,
                             value_usd=value,
                             market_title=market_title,
-                            wallet_address=wallet
+                            wallet_address=wallet,
+                            market_url=market_url
                         )
                         try:
-                            await channel.send(embed=embed)
+                            await channel.send(embed=embed, view=button_view)
                         except Exception as e:
                             print(f"Error sending whale alert: {e}")
+            
+            for wallet_addr, redeem in tracked_redeems:
+                unique_key = polymarket_client.get_unique_activity_id(redeem)
+                
+                if not unique_key or len(unique_key) < 10:
+                    continue
+                
+                seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key[:66]).first()
+                if seen:
+                    continue
+                
+                session.add(SeenTransaction(tx_hash=unique_key[:66]))
+                
+                value = float(redeem.get('cashValue', 0) or 0)
+                market_title = redeem.get('title', 'Unknown Market')
+                market_url = polymarket_client.get_market_url(redeem)
+                
+                for config in configs:
+                    channel = bot.get_channel(config.alert_channel_id)
+                    if not channel:
+                        continue
+                    
+                    tracked_addresses = tracked_by_guild.get(config.guild_id, {})
+                    
+                    if wallet_addr in tracked_addresses:
+                        tw = tracked_addresses[wallet_addr]
+                        embed = create_redeem_alert_embed(
+                            activity=redeem,
+                            value_usd=value,
+                            market_title=market_title,
+                            wallet_address=wallet_addr,
+                            wallet_label=tw.label,
+                            market_url=market_url
+                        )
+                        button_view = create_trade_button_view(market_url)
+                        try:
+                            await channel.send(embed=embed, view=button_view)
+                        except Exception as e:
+                            print(f"Error sending redeem alert: {e}")
             
             session.commit()
         finally:
@@ -450,6 +599,7 @@ async def before_monitor():
 @untrack.error
 @pause.error
 @resume.error
+@rename.error
 async def command_error(interaction: discord.Interaction, error):
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message(

@@ -104,6 +104,56 @@ class PolymarketClient:
         wallet = trade.get('proxyWallet', '')
         asset = trade.get('asset', '')[:20]
         return f"{tx_hash}_{timestamp}_{wallet}_{asset}"
+    
+    async def get_wallet_activity(self, wallet_address: str, activity_type: str = "REDEEM", limit: int = 20) -> List[Dict[str, Any]]:
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/activity",
+                params={"user": wallet_address, "type": activity_type, "limit": limit}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data if isinstance(data, list) else []
+                return []
+        except Exception as e:
+            print(f"Error fetching activity for {wallet_address}: {e}")
+            return []
+    
+    async def get_wallet_positions(self, wallet_address: str) -> List[Dict[str, Any]]:
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/positions",
+                params={"user": wallet_address}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data if isinstance(data, list) else []
+                return []
+        except Exception as e:
+            print(f"Error fetching positions for {wallet_address}: {e}")
+            return []
+    
+    def get_market_slug(self, trade_or_activity: Dict[str, Any]) -> Optional[str]:
+        return trade_or_activity.get('slug') or trade_or_activity.get('marketSlug')
+    
+    def get_market_url(self, trade_or_activity: Dict[str, Any]) -> str:
+        slug = self.get_market_slug(trade_or_activity)
+        if slug:
+            return f"https://polymarket.com/event/{slug}"
+        return "https://polymarket.com"
+    
+    def get_unique_activity_id(self, activity: Dict[str, Any]) -> str:
+        import hashlib
+        tx_hash = activity.get('transactionHash', '')
+        timestamp = str(activity.get('timestamp', ''))
+        activity_type = activity.get('type', '')
+        user = activity.get('proxyWallet', activity.get('user', ''))
+        condition_id = activity.get('conditionId', '')[:20]
+        raw_key = f"{tx_hash}_{timestamp}_{activity_type}_{user}_{condition_id}"
+        hashed = hashlib.sha256(raw_key.encode()).hexdigest()[:64]
+        return f"A_{hashed}"
 
 
 polymarket_client = PolymarketClient()
