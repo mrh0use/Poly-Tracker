@@ -1,4 +1,5 @@
 import re
+import base64
 import discord
 from discord import Embed
 from discord.ui import View, Button
@@ -15,18 +16,22 @@ def get_market_link(title: str, url: str) -> str:
     return title[:80] if title else "Unknown"
 
 
-def sanitize_telegram_param(slug: str) -> str:
-    if not slug:
+def encode_onsight_param(event_slug: str) -> str:
+    if not event_slug:
         return ''
-    clean = slug.split('?')[0].strip('/')
-    clean = re.sub(r'[^A-Za-z0-9_-]', '', clean)
-    return clean[:64]
+    clean_slug = event_slug.split('?')[0].strip('/')
+    url_path = f"polymarket.com/event/{clean_slug}"
+    encoded = base64.urlsafe_b64encode(url_path.encode()).decode().rstrip('=')
+    if len(encoded) <= 64:
+        return encoded
+    return clean_slug[:64]
+
 
 def create_trade_button_view(onsight_slug: str, market_url: str) -> View:
     view = View()
-    clean_slug = sanitize_telegram_param(onsight_slug)
-    if clean_slug:
-        onsight_url = f"{ONSIGHT_BOT_URL}?start={clean_slug}"
+    encoded_param = encode_onsight_param(onsight_slug)
+    if encoded_param:
+        onsight_url = f"{ONSIGHT_BOT_URL}?start={encoded_param}"
     else:
         onsight_url = ONSIGHT_BOT_URL
     view.add_item(Button(
