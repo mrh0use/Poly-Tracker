@@ -377,6 +377,68 @@ async def sports_threshold(interaction: discord.Interaction, amount: float):
         session.close()
 
 
+@bot.tree.command(name="trending", description="Show top trending markets by 24h volume")
+async def trending_command(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
+    markets = await polymarket_client.get_trending_markets(limit=10, sports_only=False)
+    
+    if not markets:
+        await interaction.followup.send("No trending markets found.", ephemeral=True)
+        return
+    
+    embed = discord.Embed(
+        title="Trending Markets (24h Volume)",
+        description="Top non-sports markets by trading volume",
+        color=0x4ECDC4
+    )
+    
+    for i, market in enumerate(markets, 1):
+        volume_str = f"${market['volume_24h']:,.0f}"
+        price_str = f"{market['yes_price']*100:.0f}%"
+        url = f"https://polymarket.com/event/{market['slug']}" if market['slug'] else None
+        
+        name = f"{i}. {market['question'][:60]}{'...' if len(market['question']) > 60 else ''}"
+        value = f"Volume: {volume_str} | Yes: {price_str}"
+        if url:
+            value += f"\n[View Market]({url})"
+        
+        embed.add_field(name=name, value=value, inline=False)
+    
+    await interaction.followup.send(embed=embed)
+
+
+@bot.tree.command(name="sports_trending", description="Show top trending sports markets by 24h volume")
+async def sports_trending_command(interaction: discord.Interaction):
+    await interaction.response.defer()
+    
+    markets = await polymarket_client.get_trending_markets(limit=10, sports_only=True)
+    
+    if not markets:
+        await interaction.followup.send("No trending sports markets found.", ephemeral=True)
+        return
+    
+    embed = discord.Embed(
+        title="Trending Sports Markets (24h Volume)",
+        description="Top sports/esports markets by trading volume",
+        color=0xFF6B35
+    )
+    
+    for i, market in enumerate(markets, 1):
+        volume_str = f"${market['volume_24h']:,.0f}"
+        price_str = f"{market['yes_price']*100:.0f}%"
+        url = f"https://polymarket.com/event/{market['slug']}" if market['slug'] else None
+        
+        name = f"{i}. {market['question'][:60]}{'...' if len(market['question']) > 60 else ''}"
+        value = f"Volume: {volume_str} | Yes: {price_str}"
+        if url:
+            value += f"\n[View Market]({url})"
+        
+        embed.add_field(name=name, value=value, inline=False)
+    
+    await interaction.followup.send(embed=embed)
+
+
 @bot.tree.command(name="help", description="Show available commands")
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
@@ -444,6 +506,16 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/rename <wallet> <new_name>",
         value="Rename a tracked wallet",
+        inline=False
+    )
+    embed.add_field(
+        name="/trending",
+        value="Show top 10 trending markets by 24h volume",
+        inline=False
+    )
+    embed.add_field(
+        name="/sports_trending",
+        value="Show top 10 trending sports markets by 24h volume",
         inline=False
     )
     

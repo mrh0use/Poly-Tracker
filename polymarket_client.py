@@ -477,4 +477,70 @@ class PolymarketClient:
             return []
 
 
+    async def get_trending_markets(self, limit: int = 10, sports_only: bool = False) -> List[Dict[str, Any]]:
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/markets",
+                params={
+                    'limit': 100,
+                    'active': 'true',
+                    'order': 'volume24hr',
+                    'ascending': 'false'
+                }
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    results = []
+                    for m in data:
+                        if not isinstance(m, dict):
+                            continue
+                        
+                        volume_24h = float(m.get('volume24hr', 0) or 0)
+                        if volume_24h <= 0:
+                            continue
+                        
+                        slug = m.get('slug', '').lower()
+                        tags = m.get('tags', []) or []
+                        tag_slugs = {t.get('slug', '').lower() for t in tags if isinstance(t, dict)}
+                        is_sports = bool(tag_slugs & self.SPORTS_SLUGS) or any(s in slug for s in self.SPORTS_SLUGS)
+                        
+                        if sports_only and not is_sports:
+                            continue
+                        if not sports_only and is_sports:
+                            continue
+                        
+                        outcome_prices = m.get('outcomePrices', [0.5, 0.5])
+                        if isinstance(outcome_prices, str):
+                            try:
+                                outcome_prices = outcome_prices.strip('[]').split(',')
+                                yes_price = float(outcome_prices[0]) if outcome_prices else 0.5
+                            except (ValueError, IndexError):
+                                yes_price = 0.5
+                        elif isinstance(outcome_prices, list) and len(outcome_prices) > 0:
+                            try:
+                                yes_price = float(outcome_prices[0])
+                            except (ValueError, TypeError):
+                                yes_price = 0.5
+                        else:
+                            yes_price = 0.5
+                        
+                        results.append({
+                            'question': m.get('question', 'Unknown'),
+                            'slug': m.get('slug', ''),
+                            'volume_24h': volume_24h,
+                            'yes_price': yes_price,
+                            'liquidity': float(m.get('liquidity', 0) or 0)
+                        })
+                        
+                        if len(results) >= limit:
+                            break
+                    
+                    return results
+                return []
+        except Exception as e:
+            print(f"Error fetching trending markets: {e}")
+            return []
+
+
 polymarket_client = PolymarketClient()
