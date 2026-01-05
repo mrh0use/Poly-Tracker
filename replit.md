@@ -44,6 +44,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 | `/volatility #channel` | Set volatility alerts channel | Admin |
 | `/sports #channel` | Set sports alerts channel | Admin |
 | `/threshold <amount>` | Set USD threshold | Admin |
+| `/sports_threshold <amount>` | Set sports USD threshold (default: $5k) | Admin |
 | `/track <wallet> [label]` | Track a wallet | Admin |
 | `/untrack <wallet>` | Stop tracking | Admin |
 | `/rename <wallet> <name>` | Rename a tracked wallet | Admin |
@@ -59,7 +60,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Fresh Wallet Alerts**: New wallets making first trades $10k+
 - **Tracked Wallet Alerts**: Any activity from tracked wallets (no minimum)
 - **Volatility Alerts**: Markets with 20%+ price swings within 1 hour (separate channel)
-- **Sports Alerts**: All sports/esports market activity (separate channel)
+- **Sports Alerts**: Sports/esports market activity $5k+ (separate channel, configurable threshold)
 
 Note: Sells above 99% are automatically excluded from all alerts. Sports markets go to their own dedicated channel when configured.
 
@@ -70,6 +71,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: Added /sports_threshold command - configurable threshold for sports market alerts (default $5k)
 - 2026-01-05: Added separate sports channel (/sports command) - sports markets now route to dedicated channel instead of being excluded
 - 2026-01-05: Fixed sports detection with market metadata caching for accurate identification
 - 2026-01-05: Removed redeem alerts and filtered out sells above 99%
@@ -84,4 +86,4 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 - Keep Discord interface simple
 - Real-time alerts only (no summaries)
-- Default thresholds: $10k for whale and fresh wallet alerts
+- Default thresholds: $10k for whale and fresh wallet alerts, $5k for sports alerts

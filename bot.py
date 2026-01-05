@@ -236,7 +236,8 @@ async def list_settings(interaction: discord.Interaction):
             tracked_wallets=tracked,
             volatility_channel_name=volatility_channel_name,
             volatility_threshold=config.volatility_threshold or 20.0,
-            sports_channel_name=sports_channel_name
+            sports_channel_name=sports_channel_name,
+            sports_threshold=config.sports_threshold or 5000.0
         )
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -336,6 +337,35 @@ async def sports(interaction: discord.Interaction, channel: discord.TextChannel)
         session.close()
 
 
+@bot.tree.command(name="sports_threshold", description="Set the minimum USD value for sports market alerts")
+@app_commands.describe(amount="Minimum USD value for sports alerts (e.g., 5000)")
+@app_commands.checks.has_permissions(administrator=True)
+async def sports_threshold(interaction: discord.Interaction, amount: float):
+    if amount < 100:
+        await interaction.response.send_message(
+            "Threshold must be at least $100",
+            ephemeral=True
+        )
+        return
+    
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.sports_threshold = amount
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Sports alert threshold set to ${amount:,.0f}",
+            ephemeral=True
+        )
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="help", description="Show available commands")
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
@@ -362,6 +392,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/threshold <amount>",
         value="Set the minimum USD value for alerts (default: $10,000)",
+        inline=False
+    )
+    embed.add_field(
+        name="/sports_threshold <amount>",
+        value="Set the minimum USD value for sports alerts (default: $5,000)",
         inline=False
     )
     embed.add_field(
@@ -596,7 +631,7 @@ async def monitor_loop():
                                     await sports_channel.send(embed=embed, view=button_view)
                                 except Exception as e:
                                     print(f"Error sending sports tracked wallet alert: {e}")
-                            elif is_fresh and value >= config.fresh_wallet_threshold:
+                            elif is_fresh and value >= (config.sports_threshold or 5000.0):
                                 embed = create_fresh_wallet_alert_embed(
                                     trade=trade,
                                     value_usd=value,
@@ -608,7 +643,7 @@ async def monitor_loop():
                                     await sports_channel.send(embed=embed, view=button_view)
                                 except Exception as e:
                                     print(f"Error sending sports fresh wallet alert: {e}")
-                            elif value >= config.whale_threshold:
+                            elif value >= (config.sports_threshold or 5000.0):
                                 embed = create_whale_alert_embed(
                                     trade=trade,
                                     value_usd=value,

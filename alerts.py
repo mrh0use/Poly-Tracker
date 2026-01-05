@@ -414,7 +414,8 @@ def create_settings_embed(
     tracked_wallets: list,
     volatility_channel_name: Optional[str] = None,
     volatility_threshold: float = 20.0,
-    sports_channel_name: Optional[str] = None
+    sports_channel_name: Optional[str] = None,
+    sports_threshold: float = 5000.0
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -465,6 +466,12 @@ def create_settings_embed(
     embed.add_field(
         name="Sports Channel",
         value=f"#{sports_channel_name}" if sports_channel_name else "Not configured",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Sports Threshold",
+        value=f"${sports_threshold:,.0f}",
         inline=True
     )
     
