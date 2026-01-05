@@ -13,6 +13,7 @@ from alerts import (
     create_whale_alert_embed,
     create_fresh_wallet_alert_embed,
     create_custom_wallet_alert_embed,
+    create_top_trader_alert_embed,
     create_settings_embed,
     create_trade_button_view,
     create_positions_overview_embed,
@@ -265,31 +266,71 @@ async def track(interaction: discord.Interaction, wallet: str, label: Optional[s
         session.close()
 
 
-@bot.tree.command(name="untrack", description="Remove a wallet from tracking")
-@app_commands.describe(wallet="The wallet address to stop tracking")
-@app_commands.checks.has_permissions(administrator=True)
-async def untrack(interaction: discord.Interaction, wallet: str):
-    wallet = wallet.strip().lower()
+class UntrackSelect(discord.ui.Select):
+    def __init__(self, wallets: list):
+        options = []
+        for w in wallets[:25]:
+            label = w.label if w.label else f"{w.wallet_address[:6]}...{w.wallet_address[-4:]}"
+            description = w.wallet_address[:20] + "..." if len(w.wallet_address) > 20 else w.wallet_address
+            options.append(discord.SelectOption(
+                label=label[:100],
+                value=w.wallet_address,
+                description=description
+            ))
+        super().__init__(placeholder="Select a wallet to untrack...", options=options)
     
+    async def callback(self, interaction: discord.Interaction):
+        wallet = self.values[0]
+        session = get_session()
+        try:
+            tracked = session.query(TrackedWallet).filter_by(
+                guild_id=interaction.guild_id,
+                wallet_address=wallet
+            ).first()
+            
+            if tracked:
+                label = tracked.label or f"{wallet[:6]}...{wallet[-4:]}"
+                session.delete(tracked)
+                session.commit()
+                await interaction.response.send_message(
+                    f"Stopped tracking wallet: {label}",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    "Wallet not found",
+                    ephemeral=True
+                )
+        finally:
+            session.close()
+
+
+class UntrackView(discord.ui.View):
+    def __init__(self, wallets: list):
+        super().__init__(timeout=60)
+        self.add_item(UntrackSelect(wallets))
+
+
+@bot.tree.command(name="untrack", description="Remove a wallet from tracking")
+@app_commands.checks.has_permissions(administrator=True)
+async def untrack(interaction: discord.Interaction):
     session = get_session()
     try:
         tracked = session.query(TrackedWallet).filter_by(
-            guild_id=interaction.guild_id,
-            wallet_address=wallet
-        ).first()
+            guild_id=interaction.guild_id
+        ).all()
         
         if not tracked:
             await interaction.response.send_message(
-                f"Wallet `{wallet[:6]}...{wallet[-4:]}` is not being tracked",
+                "No wallets are currently being tracked",
                 ephemeral=True
             )
             return
         
-        session.delete(tracked)
-        session.commit()
-        
+        view = UntrackView(tracked)
         await interaction.response.send_message(
-            f"Stopped tracking wallet `{wallet[:6]}...{wallet[-4:]}`",
+            "Select a wallet to stop tracking:",
+            view=view,
             ephemeral=True
         )
     finally:
@@ -488,6 +529,28 @@ async def sports_threshold(interaction: discord.Interaction, amount: float):
         
         await interaction.response.send_message(
             f"Sports alert threshold set to ${amount:,.0f}",
+            ephemeral=True
+        )
+    finally:
+        session.close()
+
+
+@bot.tree.command(name="top_trader_channel", description="Set the channel for top 25 trader alerts")
+@app_commands.describe(channel="The channel to send top trader alerts to")
+@app_commands.checks.has_permissions(administrator=True)
+async def top_trader_channel(interaction: discord.Interaction, channel: discord.TextChannel):
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.top_trader_channel_id = channel.id
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Top 25 trader alerts will be sent to {channel.mention}. All trades from top 25 all-time profit leaders will be shown here.",
             ephemeral=True
         )
     finally:
@@ -747,6 +810,7 @@ async def rename(interaction: discord.Interaction, wallet: str, name: str):
 async def monitor_loop():
     try:
         await polymarket_client.refresh_market_cache()
+        await polymarket_client.get_top_traders(limit=25)
         
         session = get_session()
         try:
@@ -754,7 +818,7 @@ async def monitor_loop():
                 ServerConfig.is_paused == False
             ).all()
             
-            configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id]
+            configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id or c.top_trader_channel_id]
             
             if not configs:
                 return
@@ -851,7 +915,25 @@ async def monitor_loop():
                         added_naive = added_dt.replace(tzinfo=None) if hasattr(added_dt, 'tzinfo') and added_dt.tzinfo else added_dt
                         return trade_naive >= added_naive
                     
+                    top_trader_info = polymarket_client.is_top_trader(wallet)
+                    
                     if is_sports:
+                        if top_trader_info and config.top_trader_channel_id:
+                            top_channel = bot.get_channel(config.top_trader_channel_id)
+                            if top_channel:
+                                embed = create_top_trader_alert_embed(
+                                    trade=trade,
+                                    value_usd=value,
+                                    market_title=market_title,
+                                    wallet_address=wallet,
+                                    market_url=market_url,
+                                    trader_info=top_trader_info
+                                )
+                                try:
+                                    await top_channel.send(embed=embed, view=button_view)
+                                except Exception as e:
+                                    print(f"Error sending sports top trader alert: {e}")
+                        
                         sports_channel = bot.get_channel(config.sports_channel_id) if config.sports_channel_id else None
                         if sports_channel:
                             if wallet in tracked_addresses:
@@ -923,7 +1005,23 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"Error sending tracked wallet alert: {e}")
                         
-                        elif is_fresh and value >= config.fresh_wallet_threshold:
+                        if top_trader_info and config.top_trader_channel_id:
+                            top_channel = bot.get_channel(config.top_trader_channel_id)
+                            if top_channel:
+                                embed = create_top_trader_alert_embed(
+                                    trade=trade,
+                                    value_usd=value,
+                                    market_title=market_title,
+                                    wallet_address=wallet,
+                                    market_url=market_url,
+                                    trader_info=top_trader_info
+                                )
+                                try:
+                                    await top_channel.send(embed=embed, view=button_view)
+                                except Exception as e:
+                                    print(f"Error sending top trader alert: {e}")
+                        
+                        if is_fresh and value >= config.fresh_wallet_threshold:
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             fresh_channel = bot.get_channel(fresh_channel_id) if fresh_channel_id else None
                             if fresh_channel:

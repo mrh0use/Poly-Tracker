@@ -8,6 +8,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Fresh Wallet Alerts**: Detect new wallets making their first trades
 - **Custom Wallet Tracking**: Monitor specific wallet addresses (any trade amount)
 - **Volatility Alerts**: Track markets with 20%+ price swings within 1 hour
+- **Top Trader Alerts**: Monitor trades from top 25 all-time profit leaders
 - **Sports Channel**: Separate channel for sports/esports market alerts
 - **Sell Filtering**: Excludes sells above 99% (position closures)
 - **Position Viewing**: View current holdings of tracked wallets with drill-down
@@ -46,6 +47,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 | `/tracked_wallet_channel #channel` | Set tracked wallet alerts channel individually | Admin |
 | `/volatility #channel` | Set volatility alerts channel individually | Admin |
 | `/sports #channel` | Set sports alerts channel individually | Admin |
+| `/top_trader_channel #channel` | Set top 25 trader alerts channel | Admin |
 | `/threshold <amount>` | Set USD threshold | Admin |
 | `/sports_threshold <amount>` | Set sports USD threshold (default: $5k) | Admin |
 | `/track <wallet> [label]` | Track a wallet | Admin |
@@ -65,6 +67,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Fresh Wallet Alerts**: New wallets making first trades $10k+
 - **Tracked Wallet Alerts**: Any activity from tracked wallets (no minimum)
 - **Volatility Alerts**: Markets with 20%+ price swings within 1 hour (separate channel)
+- **Top Trader Alerts**: Any trade from top 25 all-time profit leaders (separate channel)
 - **Sports Alerts**: Sports/esports market activity $5k+ (separate channel, configurable threshold)
 
 Note: Sells above 99% are automatically excluded from all alerts. Sports markets go to their own dedicated channel when configured.
@@ -76,6 +79,8 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: **Added Top Trader Alerts** - monitors trades from top 25 all-time profit leaders, configurable via /top_trader_channel
+- 2026-01-05: **Improved /untrack command** - now uses dropdown menu to select wallet instead of pasting address
 - 2026-01-05: **Fixed Onsight trade button** - now uses correct `event_{slug_with_underscores}` format that Polysight bot expects (hyphens replaced with underscores, prefixed with "event_")
 - 2026-01-05: **Fixed market URLs** - changed from /event/{slug} to /market/{slug} format which works for all market types (sports, events, standalone) and auto-redirects correctly
 - 2026-01-05: **Added granular channel configuration** - each alert type can now be routed to a specific channel: /whale_channel, /fresh_wallet_channel, /tracked_wallet_channel (plus existing /volatility and /sports). Falls back to /setup channel if not configured.

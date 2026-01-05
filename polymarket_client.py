@@ -23,6 +23,8 @@ class PolymarketClient:
         self._wallet_stats_updated: Dict[str, datetime] = {}
         self._wallet_history_cache: Dict[str, bool] = {}
         self._wallet_history_updated: Dict[str, datetime] = {}
+        self._top_traders_cache: List[Dict[str, Any]] = []
+        self._top_traders_updated: Optional[datetime] = None
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -400,6 +402,47 @@ class PolymarketClient:
         self._wallet_stats_cache[wallet_lower] = stats
         self._wallet_stats_updated[wallet_lower] = now
         return stats
+    
+    async def get_top_traders(self, limit: int = 25, force_refresh: bool = False) -> List[Dict[str, Any]]:
+        now = datetime.utcnow()
+        
+        if not force_refresh and self._top_traders_cache:
+            if self._top_traders_updated and (now - self._top_traders_updated).total_seconds() < 600:
+                return self._top_traders_cache
+        
+        await self.ensure_session()
+        traders = []
+        
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/v1/leaderboard",
+                params={"timePeriod": "ALL", "limit": limit}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, list):
+                        for trader in data[:limit]:
+                            traders.append({
+                                'address': trader.get('userAddress', '').lower(),
+                                'username': trader.get('userName'),
+                                'pnl': float(trader.get('pnl', 0) or 0),
+                                'volume': float(trader.get('vol', 0) or 0),
+                                'rank': trader.get('rank')
+                            })
+                        self._top_traders_cache = traders
+                        self._top_traders_updated = now
+                        print(f"Top traders cache refreshed: {len(traders)} entries")
+        except Exception as e:
+            print(f"Error fetching top traders: {e}")
+        
+        return traders
+    
+    def is_top_trader(self, wallet_address: str) -> Optional[Dict[str, Any]]:
+        wallet_lower = wallet_address.lower()
+        for trader in self._top_traders_cache:
+            if trader['address'] == wallet_lower:
+                return trader
+        return None
     
     def get_market_slug(self, trade_or_activity: Dict[str, Any]) -> Optional[str]:
         slug = trade_or_activity.get('slug') or trade_or_activity.get('marketSlug')

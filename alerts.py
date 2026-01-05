@@ -180,6 +180,88 @@ def create_fresh_wallet_alert_embed(
     return embed
 
 
+def create_top_trader_alert_embed(
+    trade: Dict[str, Any],
+    value_usd: float,
+    market_title: str = "Unknown Market",
+    wallet_address: str = "Unknown",
+    market_url: str = "https://polymarket.com",
+    trader_info: Optional[Dict[str, Any]] = None
+) -> Embed:
+    rank = trader_info.get('rank') if trader_info else None
+    username = trader_info.get('username') if trader_info else None
+    pnl = trader_info.get('pnl') if trader_info else None
+    
+    title = f"Top Trader Alert"
+    if rank:
+        title = f"#{rank} Top Trader Alert"
+    if username:
+        title += f" - {username}"
+    
+    stats_line = ""
+    if pnl is not None:
+        pnl_sign = "+" if pnl >= 0 else ""
+        stats_line = f"All-Time PnL: {pnl_sign}${pnl:,.0f}\n\n"
+    
+    embed = Embed(
+        title=title,
+        description=f"{stats_line}Trade from a top 25 all-time profit leader",
+        color=0xFFD700,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Transaction Value",
+        value=f"${value_usd:,.2f}",
+        inline=True
+    )
+    
+    market_display = get_market_link(market_title, market_url)
+    embed.add_field(
+        name="Market",
+        value=market_display,
+        inline=True
+    )
+    
+    side = trade.get('side', '').upper()
+    outcome = trade.get('outcome', '')
+    if side and outcome:
+        action = f"{side} {outcome}"
+    elif side:
+        action = side
+    else:
+        action = "Unknown"
+    embed.add_field(
+        name="Action",
+        value=action,
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Wallet",
+        value=f"`{wallet_address}`",
+        inline=False
+    )
+    
+    price = trade.get('price', 0)
+    embed.add_field(
+        name="Price",
+        value=f"{float(price)*100:.1f}%" if price else "N/A",
+        inline=True
+    )
+    
+    size = trade.get('size', 0)
+    embed.add_field(
+        name="Size",
+        value=f"{float(size):,.2f}" if size else "N/A",
+        inline=True
+    )
+    
+    embed.set_footer(text="Polymarket Top 25 Trader Monitor")
+    
+    return embed
+
+
 def create_custom_wallet_alert_embed(
     trade: Dict[str, Any],
     value_usd: float,
