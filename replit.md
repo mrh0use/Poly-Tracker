@@ -71,6 +71,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: Improved alert display - shows "BUY Yes" / "SELL No" action format, full wallet addresses (copyable), and better market URL construction with cache lookup and conditionId fallback
 - 2026-01-05: Added lifetime PnL and win rate to tracked wallet alerts (fetched from Polymarket API with 10-min caching)
 - 2026-01-05: Added /sports_threshold command - configurable threshold for sports market alerts (default $5k)
 - 2026-01-05: Added separate sports channel (/sports command) - sports markets now route to dedicated channel instead of being excluded
