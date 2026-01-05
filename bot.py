@@ -539,7 +539,7 @@ async def rename(interaction: discord.Interaction, wallet: str, name: str):
         session.close()
 
 
-@tasks.loop(seconds=30)
+@tasks.loop(seconds=15)
 async def monitor_loop():
     try:
         await polymarket_client.refresh_market_cache()
@@ -555,6 +555,8 @@ async def monitor_loop():
             if not configs:
                 return
             
+            min_threshold = min([c.whale_threshold for c in configs] + [c.sports_threshold or 5000.0 for c in configs])
+            
             all_tracked = session.query(TrackedWallet).all()
             tracked_by_guild = {}
             unique_tracked_addresses = set()
@@ -564,11 +566,14 @@ async def monitor_loop():
                 tracked_by_guild[tw.guild_id][tw.wallet_address] = tw
                 unique_tracked_addresses.add(tw.wallet_address)
             
-            global_trades = await polymarket_client.get_recent_trades(limit=50)
+            global_trades = await polymarket_client.get_recent_trades(limit=200)
             
-            large_trades = [t for t in global_trades if polymarket_client.calculate_trade_value(t) >= 10000]
-            if large_trades:
-                print(f"[Monitor] Found {len(large_trades)} trades >= $10k out of {len(global_trades)} total")
+            if global_trades:
+                trade_values = [polymarket_client.calculate_trade_value(t) for t in global_trades]
+                max_val = max(trade_values) if trade_values else 0
+                above_threshold = [v for v in trade_values if v >= min_threshold]
+                if above_threshold:
+                    print(f"[Monitor] Found {len(above_threshold)} trades >= ${min_threshold:,.0f} (max: ${max_val:,.0f}) out of {len(global_trades)} total")
             
             tracked_trades = []
             for wallet_addr in unique_tracked_addresses:
@@ -613,11 +618,13 @@ async def monitor_loop():
                 if side == 'sell' and price > 0.99:
                     continue
                 
-                wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
-                is_fresh = wallet_activity is None and wallet not in processed_wallets_this_batch
-                
+                is_fresh = False
                 if wallet not in processed_wallets_this_batch:
+                    wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
                     if wallet_activity is None:
+                        has_history = await polymarket_client.has_prior_activity(wallet)
+                        if has_history is False:
+                            is_fresh = True
                         session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
                     else:
                         wallet_activity.transaction_count += 1
@@ -656,8 +663,7 @@ async def monitor_loop():
                                     market_url=market_url,
                                     pnl=wallet_stats.get('pnl'),
                                     volume=wallet_stats.get('volume'),
-                                    rank=wallet_stats.get('rank'),
-                                    win_rate=wallet_stats.get('win_rate')
+                                    rank=wallet_stats.get('rank')
                                 )
                                 try:
                                     await sports_channel.send(embed=embed, view=button_view)
@@ -706,8 +712,7 @@ async def monitor_loop():
                                 market_url=market_url,
                                 pnl=wallet_stats.get('pnl'),
                                 volume=wallet_stats.get('volume'),
-                                rank=wallet_stats.get('rank'),
-                                win_rate=wallet_stats.get('win_rate')
+                                rank=wallet_stats.get('rank')
                             )
                             try:
                                 await channel.send(embed=embed, view=button_view)

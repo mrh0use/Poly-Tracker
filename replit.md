@@ -71,7 +71,8 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
-- 2026-01-05: **Added win rate calculation** - uses /closed-positions endpoint to count profitable vs unprofitable closed positions (cached 10 min)
+- 2026-01-05: **Fixed fresh wallet detection** - now queries Polymarket API to check if wallet has prior activity (prevents false fresh alerts for experienced traders)
+- 2026-01-05: Removed win rate calculation (was not calculating correctly)
 - 2026-01-05: Added debug logging to monitor loop to track large trades (shows when $10k+ trades are detected)
 - 2026-01-05: **PnL now matches Polymarket exactly** - switched to official v1/leaderboard endpoint which returns Polymarket's calculated PnL, volume, and rank (verified: SeriouslySirius shows $3.9M matching the site)
 - 2026-01-05: Switched to paginated Data API calls for accurate PnL matching Polymarket's displayed values - fetches open + closed positions up to 10,000 offset with realized PnL summing

@@ -21,6 +21,8 @@ class PolymarketClient:
         self._cache_last_updated: Optional[datetime] = None
         self._wallet_stats_cache: Dict[str, Dict[str, Any]] = {}
         self._wallet_stats_updated: Dict[str, datetime] = {}
+        self._wallet_history_cache: Dict[str, bool] = {}
+        self._wallet_history_updated: Dict[str, datetime] = {}
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -335,45 +337,30 @@ class PolymarketClient:
         
         return all_closed
     
-    async def _calculate_win_rate(self, wallet_address: str) -> Optional[float]:
+    async def has_prior_activity(self, wallet_address: str) -> Optional[bool]:
+        wallet_lower = wallet_address.lower()
+        now = datetime.utcnow()
+        
+        if wallet_lower in self._wallet_history_cache:
+            last_updated = self._wallet_history_updated.get(wallet_lower)
+            if last_updated and (now - last_updated).total_seconds() < 3600:
+                return self._wallet_history_cache[wallet_lower]
+        
         await self.ensure_session()
-        wins = 0
-        total = 0
-        offset = 0
-        limit = 500
-        
         try:
-            while offset < 5000:
-                async with self.session.get(
-                    f"{self.DATA_API_BASE_URL}/closed-positions",
-                    params={
-                        "user": wallet_address,
-                        "limit": limit,
-                        "offset": offset
-                    }
-                ) as resp:
-                    if resp.status != 200:
-                        break
-                    positions = await resp.json()
-                    if not positions:
-                        break
-                    
-                    for pos in positions:
-                        realized = float(pos.get('realizedPnl', 0) or 0)
-                        if realized != 0:
-                            total += 1
-                            if realized > 0:
-                                wins += 1
-                    
-                    if len(positions) < limit:
-                        break
-                    offset += limit
-            
-            if total > 0:
-                return round((wins / total) * 100, 1)
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/activity",
+                params={"user": wallet_address, "limit": 1}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    has_history = isinstance(data, list) and len(data) > 0
+                    self._wallet_history_cache[wallet_lower] = has_history
+                    self._wallet_history_updated[wallet_lower] = now
+                    return has_history
+                print(f"Activity API returned status {resp.status} for {wallet_address[:10]}...")
         except Exception as e:
-            print(f"Error calculating win rate for {wallet_address}: {e}")
-        
+            print(f"Error checking wallet activity for {wallet_address}: {e}")
         return None
     
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
@@ -386,7 +373,7 @@ class PolymarketClient:
                 return self._wallet_stats_cache[wallet_lower]
         
         await self.ensure_session()
-        stats = {'pnl': 0.0, 'volume': 0.0, 'rank': None, 'username': None, 'win_rate': None}
+        stats = {'pnl': 0.0, 'volume': 0.0, 'rank': None, 'username': None}
         
         try:
             async with self.session.get(
@@ -401,14 +388,10 @@ class PolymarketClient:
                             'pnl': float(user_data.get('pnl', 0) or 0),
                             'volume': float(user_data.get('vol', 0) or 0),
                             'rank': user_data.get('rank'),
-                            'username': user_data.get('userName'),
-                            'win_rate': None
+                            'username': user_data.get('userName')
                         }
         except Exception as e:
             print(f"Error fetching leaderboard stats for {wallet_address}: {e}")
-        
-        win_rate = await self._calculate_win_rate(wallet_address)
-        stats['win_rate'] = win_rate
         
         self._wallet_stats_cache[wallet_lower] = stats
         self._wallet_stats_updated[wallet_lower] = now
