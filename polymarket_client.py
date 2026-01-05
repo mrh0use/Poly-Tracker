@@ -424,32 +424,30 @@ class PolymarketClient:
         
         return "https://polymarket.com"
     
-    def get_onsight_url(self, trade_or_activity: Dict[str, Any]) -> str:
+    def get_event_slug(self, trade_or_activity: Dict[str, Any]) -> str:
         market_info = self.get_market_info(trade_or_activity)
         if market_info:
             event_slug = market_info.get('eventSlug', '')
             if event_slug:
-                return f"https://polymarket.com/event/{event_slug}"
+                return event_slug
         
         slug = self.get_market_slug(trade_or_activity)
         if slug:
-            clean_slug = slug.split('?')[0].strip('/')
-            return f"https://polymarket.com/event/{clean_slug}"
+            return slug.split('?')[0].strip('/')
         
-        return "https://polymarket.com"
+        return ''
     
-    def get_onsight_url_by_condition(self, condition_id: str, fallback_slug: str = '') -> str:
+    def get_event_slug_by_condition(self, condition_id: str, fallback_slug: str = '') -> str:
         if condition_id and condition_id in self._market_cache:
             market_info = self._market_cache[condition_id]
             event_slug = market_info.get('eventSlug', '')
             if event_slug:
-                return f"https://polymarket.com/event/{event_slug}"
+                return event_slug
         
         if fallback_slug:
-            clean_slug = fallback_slug.split('?')[0].strip('/')
-            return f"https://polymarket.com/event/{clean_slug}"
+            return fallback_slug.split('?')[0].strip('/')
         
-        return "https://polymarket.com"
+        return ''
     
     def get_unique_activity_id(self, activity: Dict[str, Any]) -> str:
         import hashlib

@@ -1,9 +1,9 @@
+import re
 import discord
 from discord import Embed
 from discord.ui import View, Button
 from datetime import datetime
 from typing import Dict, Any, Optional
-from urllib.parse import quote
 
 
 ONSIGHT_BOT_URL = "https://t.me/polysightbot"
@@ -15,9 +15,20 @@ def get_market_link(title: str, url: str) -> str:
     return title[:80] if title else "Unknown"
 
 
-def create_trade_button_view(market_url: str) -> View:
+def sanitize_telegram_param(slug: str) -> str:
+    if not slug:
+        return ''
+    clean = slug.split('?')[0].strip('/')
+    clean = re.sub(r'[^A-Za-z0-9_-]', '', clean)
+    return clean[:64]
+
+def create_trade_button_view(onsight_slug: str, market_url: str) -> View:
     view = View()
-    onsight_url = f"{ONSIGHT_BOT_URL}?start={quote(market_url, safe='')}"
+    clean_slug = sanitize_telegram_param(onsight_slug)
+    if clean_slug:
+        onsight_url = f"{ONSIGHT_BOT_URL}?start={clean_slug}"
+    else:
+        onsight_url = ONSIGHT_BOT_URL
     view.add_item(Button(
         label="Trade via Onsight",
         url=onsight_url,

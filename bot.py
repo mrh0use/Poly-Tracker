@@ -816,7 +816,7 @@ async def monitor_loop():
                 wallet = wallet.lower()
                 market_title = polymarket_client.get_market_title(trade)
                 market_url = polymarket_client.get_market_url(trade)
-                onsight_url = polymarket_client.get_onsight_url(trade)
+                event_slug = polymarket_client.get_event_slug(trade)
                 
                 price = float(trade.get('price', 0) or 0)
                 side = trade.get('side', '').lower()
@@ -839,7 +839,7 @@ async def monitor_loop():
                 
                 for config in configs:
                     tracked_addresses = tracked_by_guild.get(config.guild_id, {})
-                    button_view = create_trade_button_view(onsight_url)
+                    button_view = create_trade_button_view(event_slug, market_url)
                     
                     trade_timestamp = trade.get('timestamp', 0)
                     trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
@@ -1052,8 +1052,8 @@ async def volatility_loop():
                         price_change=price_change_pct,
                         time_window_minutes=60
                     )
-                    onsight_url = polymarket_client.get_onsight_url_by_condition(condition_id, market['slug'])
-                    button_view = create_trade_button_view(onsight_url)
+                    event_slug = polymarket_client.get_event_slug_by_condition(condition_id, market['slug'])
+                    button_view = create_trade_button_view(event_slug, market_url)
                     
                     try:
                         await channel.send(embed=embed, view=button_view)

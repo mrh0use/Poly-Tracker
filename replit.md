@@ -76,7 +76,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
-- 2026-01-05: **Fixed Onsight trade button** - now uses /event/{event_slug} format which the Polysight Telegram bot can parse correctly (extracts event slug from API)
+- 2026-01-05: **Fixed Onsight trade button** - now passes just the event slug (not full URL) to comply with Telegram's 64-char start parameter limit, enabling Polysight bot to properly open markets
 - 2026-01-05: **Fixed market URLs** - changed from /event/{slug} to /market/{slug} format which works for all market types (sports, events, standalone) and auto-redirects correctly
 - 2026-01-05: **Added granular channel configuration** - each alert type can now be routed to a specific channel: /whale_channel, /fresh_wallet_channel, /tracked_wallet_channel (plus existing /volatility and /sports). Falls back to /setup channel if not configured.
 - 2026-01-05: Added /trending and /sports_trending commands to view top markets by 24h volume
