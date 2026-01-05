@@ -330,22 +330,19 @@ async def monitor_loop():
             if not configs:
                 return
             
+            processed_wallets_this_batch = set()
+            
             for trade in trades:
-                trade_id = trade.get('id')
-                tx_hash = trade.get('transactionHash', '')
-                timestamp = str(trade.get('timestamp', ''))
-                fill_index = str(trade.get('fillIndex', trade.get('tradeIndex', '')))
+                unique_key = polymarket_client.get_unique_trade_id(trade)
                 
-                unique_key = trade_id or f"{tx_hash}_{timestamp}_{fill_index}"
-                
-                if not unique_key or unique_key == "__":
+                if not unique_key or len(unique_key) < 10:
                     continue
                 
-                seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key).first()
+                seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key[:66]).first()
                 if seen:
                     continue
                 
-                session.add(SeenTransaction(tx_hash=unique_key))
+                session.add(SeenTransaction(tx_hash=unique_key[:66]))
                 
                 value = polymarket_client.calculate_trade_value(trade)
                 wallet = polymarket_client.get_wallet_from_trade(trade)
@@ -354,15 +351,17 @@ async def monitor_loop():
                     continue
                 
                 wallet = wallet.lower()
-                market_title = trade.get('market', {}).get('question', 'Unknown Market') if isinstance(trade.get('market'), dict) else trade.get('asset_id', 'Unknown Market')
+                market_title = polymarket_client.get_market_title(trade)
                 
                 wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
-                is_fresh = wallet_activity is None
+                is_fresh = wallet_activity is None and wallet not in processed_wallets_this_batch
                 
-                if is_fresh:
-                    session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
-                else:
-                    wallet_activity.transaction_count += 1
+                if wallet not in processed_wallets_this_batch:
+                    if wallet_activity is None:
+                        session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
+                    else:
+                        wallet_activity.transaction_count += 1
+                    processed_wallets_this_batch.add(wallet)
                 
                 for config in configs:
                     channel = bot.get_channel(config.alert_channel_id)
