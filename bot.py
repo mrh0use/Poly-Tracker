@@ -199,12 +199,14 @@ async def untrack(interaction: discord.Interaction, wallet: str):
 
 @bot.tree.command(name="list", description="Show current settings and tracked wallets")
 async def list_settings(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    
     session = get_session()
     try:
         config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
         
         if not config:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "No configuration found. Use `/setup` to get started.",
                 ephemeral=True
             )
@@ -216,6 +218,14 @@ async def list_settings(interaction: discord.Interaction):
             channel_name = channel.name if channel else None
         
         tracked = session.query(TrackedWallet).filter_by(guild_id=interaction.guild_id).all()
+        
+        wallet_stats = {}
+        for w in tracked[:10]:
+            try:
+                stats = await polymarket_client.get_wallet_pnl_stats(w.wallet_address)
+                wallet_stats[w.wallet_address.lower()] = stats
+            except Exception as e:
+                print(f"Error fetching stats for {w.wallet_address}: {e}")
         
         volatility_channel_name = None
         if config.volatility_channel_id:
@@ -237,10 +247,11 @@ async def list_settings(interaction: discord.Interaction):
             volatility_channel_name=volatility_channel_name,
             volatility_threshold=config.volatility_threshold or 20.0,
             sports_channel_name=sports_channel_name,
-            sports_threshold=config.sports_threshold or 5000.0
+            sports_threshold=config.sports_threshold or 5000.0,
+            wallet_stats=wallet_stats
         )
         
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
     finally:
         session.close()
 

@@ -440,7 +440,8 @@ def create_settings_embed(
     volatility_channel_name: Optional[str] = None,
     volatility_threshold: float = 20.0,
     sports_channel_name: Optional[str] = None,
-    sports_threshold: float = 5000.0
+    sports_threshold: float = 5000.0,
+    wallet_stats: Optional[Dict[str, Any]] = None
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -506,7 +507,17 @@ def create_settings_embed(
             addr = w.wallet_address
             short = f"{addr[:6]}...{addr[-4:]}"
             label = f" ({w.label})" if w.label else ""
-            wallet_list.append(f"`{short}`{label}")
+            
+            stats_str = ""
+            if wallet_stats:
+                stats = wallet_stats.get(addr.lower())
+                if stats:
+                    pnl = stats.get('pnl', 0)
+                    win_rate = stats.get('win_rate', 0)
+                    pnl_sign = "+" if pnl >= 0 else ""
+                    stats_str = f" | {pnl_sign}${pnl:,.0f} | {win_rate:.0f}% win"
+            
+            wallet_list.append(f"`{short}`{label}{stats_str}")
         
         if len(tracked_wallets) > 10:
             wallet_list.append(f"...and {len(tracked_wallets) - 10} more")
