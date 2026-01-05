@@ -614,11 +614,16 @@ async def monitor_loop():
                     tracked_addresses = tracked_by_guild.get(config.guild_id, {})
                     button_view = create_trade_button_view(market_url)
                     
+                    trade_timestamp = trade.get('timestamp', 0)
+                    trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
+                    
                     if is_sports:
                         sports_channel = bot.get_channel(config.sports_channel_id) if config.sports_channel_id else None
                         if sports_channel:
                             if wallet in tracked_addresses:
                                 tw = tracked_addresses[wallet]
+                                if tw.added_at and trade_time and trade_time < tw.added_at:
+                                    continue
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_custom_wallet_alert_embed(
                                     trade=trade,
@@ -665,6 +670,8 @@ async def monitor_loop():
                         
                         if wallet in tracked_addresses:
                             tw = tracked_addresses[wallet]
+                            if tw.added_at and trade_time and trade_time < tw.added_at:
+                                continue
                             wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                             embed = create_custom_wallet_alert_embed(
                                 trade=trade,
