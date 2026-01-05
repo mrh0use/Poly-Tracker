@@ -295,7 +295,7 @@ class PolymarketClient:
         
         try:
             async with self.session.get(
-                f"{self.GAMMA_BASE_URL}/positions",
+                f"{self.DATA_API_BASE_URL}/positions",
                 params={"user": wallet_address}
             ) as resp:
                 if resp.status == 200:
@@ -310,10 +310,9 @@ class PolymarketClient:
                             current_value = float(pos.get('currentValue', 0) or 0)
                             size = float(pos.get('size', 0) or 0)
                             
-                            is_closed = size == 0 or current_value == 0
-                            
                             total_pnl += realized_pnl
                             
+                            is_closed = size == 0 or current_value == 0
                             if is_closed and realized_pnl != 0:
                                 resolved_count += 1
                                 if realized_pnl > 0:
@@ -327,6 +326,8 @@ class PolymarketClient:
                             'total_positions': resolved_count,
                             'winning_positions': winning_count
                         }
+                else:
+                    print(f"Positions API returned status {resp.status} for {wallet_address}")
         except Exception as e:
             print(f"Error fetching PnL stats for {wallet_address}: {e}")
         
