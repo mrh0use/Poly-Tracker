@@ -1,0 +1,70 @@
+import os
+from sqlalchemy import create_engine, Column, String, BigInteger, Float, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from datetime import datetime
+
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+class ServerConfig(Base):
+    __tablename__ = 'server_configs'
+    
+    guild_id = Column(BigInteger, primary_key=True)
+    alert_channel_id = Column(BigInteger, nullable=True)
+    whale_threshold = Column(Float, default=10000.0)
+    fresh_wallet_threshold = Column(Float, default=10000.0)
+    is_paused = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    tracked_wallets = relationship("TrackedWallet", back_populates="server", cascade="all, delete-orphan")
+
+
+class TrackedWallet(Base):
+    __tablename__ = 'tracked_wallets'
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    guild_id = Column(BigInteger, ForeignKey('server_configs.guild_id'), nullable=False)
+    wallet_address = Column(String(42), nullable=False)
+    label = Column(String(100), nullable=True)
+    added_by = Column(BigInteger, nullable=True)
+    added_at = Column(DateTime, default=datetime.utcnow)
+    
+    server = relationship("ServerConfig", back_populates="tracked_wallets")
+
+
+class SeenTransaction(Base):
+    __tablename__ = 'seen_transactions'
+    
+    tx_hash = Column(String(66), primary_key=True)
+    seen_at = Column(DateTime, default=datetime.utcnow)
+
+
+class WalletActivity(Base):
+    __tablename__ = 'wallet_activity'
+    
+    wallet_address = Column(String(42), primary_key=True)
+    first_seen = Column(DateTime, default=datetime.utcnow)
+    transaction_count = Column(BigInteger, default=0)
+
+
+def init_db():
+    Base.metadata.create_all(bind=engine)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_session():
+    return SessionLocal()
