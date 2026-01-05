@@ -7,6 +7,7 @@ from typing import Optional, List, Dict, Any
 class PolymarketClient:
     DATA_API_BASE_URL = "https://data-api.polymarket.com"
     GAMMA_BASE_URL = "https://gamma-api.polymarket.com"
+    PNL_SUBGRAPH_URL = "https://api.goldsky.com/api/public/project_cl6mb8i9h0003e201j6li0diw/subgraphs/pnl-subgraph/0.0.14/gn"
     
     SPORTS_SLUGS = {'sports', 'nba', 'nfl', 'mlb', 'nhl', 'soccer', 'football', 'basketball', 
                    'baseball', 'hockey', 'tennis', 'golf', 'ufc', 'mma', 'boxing', 'f1', 
@@ -281,6 +282,59 @@ class PolymarketClient:
             print(f"Error fetching positions for {wallet_address}: {e}")
             return []
     
+    async def _fetch_subgraph_positions(self, wallet_address: str) -> tuple[List[Dict[str, Any]], bool]:
+        await self.ensure_session()
+        all_positions = []
+        skip = 0
+        batch_size = 1000
+        fetch_complete = True
+        
+        while True:
+            query = """
+            {
+              userPositions(first: %d, skip: %d, where: { user: "%s" }) {
+                id
+                realizedPnl
+                amount
+              }
+            }
+            """ % (batch_size, skip, wallet_address.lower())
+            
+            try:
+                async with self.session.post(
+                    self.PNL_SUBGRAPH_URL,
+                    json={'query': query}
+                ) as resp:
+                    if resp.status != 200:
+                        print(f"Subgraph returned status {resp.status}, falling back to Data API")
+                        fetch_complete = False
+                        break
+                    
+                    data = await resp.json()
+                    
+                    if 'errors' in data:
+                        print(f"Subgraph error: {data['errors']}, falling back to Data API")
+                        fetch_complete = False
+                        break
+                    
+                    positions = data.get('data', {}).get('userPositions', [])
+                    if not positions:
+                        break
+                    
+                    all_positions.extend(positions)
+                    
+                    if len(positions) < batch_size:
+                        break
+                    skip += batch_size
+            except Exception as e:
+                print(f"Error querying subgraph for {wallet_address}: {e}, falling back to Data API")
+                fetch_complete = False
+                break
+        
+        if not fetch_complete:
+            return [], False
+        return all_positions, True
+    
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
@@ -293,58 +347,88 @@ class PolymarketClient:
         await self.ensure_session()
         stats = {'pnl': 0.0, 'win_rate': 0.0, 'total_positions': 0, 'winning_positions': 0}
         
-        total_pnl = 0.0
-        unrealized_pnl = 0.0
-        positions_with_realized = 0
-        winning_positions = 0
+        subgraph_positions, subgraph_success = await self._fetch_subgraph_positions(wallet_address)
         
-        try:
-            async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/positions",
-                params={"user": wallet_address, "limit": 1000}
-            ) as resp:
-                if resp.status == 200:
-                    positions = await resp.json()
-                    if isinstance(positions, list):
-                        for pos in positions:
-                            cash_pnl = float(pos.get('cashPnl', 0) or 0)
-                            unrealized_pnl += cash_pnl
-                            realized_pnl = float(pos.get('realizedPnl', 0) or 0)
-                            total_pnl += realized_pnl
-                            if realized_pnl != 0:
-                                positions_with_realized += 1
-                                if realized_pnl > 0:
-                                    winning_positions += 1
-        except Exception as e:
-            print(f"Error fetching open positions for {wallet_address}: {e}")
-        
-        try:
-            async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/closed-positions",
-                params={"user": wallet_address, "limit": 1000}
-            ) as resp:
-                if resp.status == 200:
-                    closed = await resp.json()
-                    if isinstance(closed, list):
-                        for pos in closed:
-                            realized_pnl = float(pos.get('realizedPnl', 0) or 0)
-                            total_pnl += realized_pnl
-                            if realized_pnl != 0:
-                                positions_with_realized += 1
-                                if realized_pnl > 0:
-                                    winning_positions += 1
-        except Exception as e:
-            print(f"Error fetching closed positions for {wallet_address}: {e}")
-        
-        combined_pnl = total_pnl + unrealized_pnl
-        win_rate = (winning_positions / positions_with_realized * 100) if positions_with_realized > 0 else 0.0
-        
-        stats = {
-            'pnl': combined_pnl,
-            'win_rate': win_rate,
-            'total_positions': positions_with_realized,
-            'winning_positions': winning_positions
-        }
+        if subgraph_success and subgraph_positions:
+            total_pnl = sum(float(p.get('realizedPnl', 0) or 0) for p in subgraph_positions) / 1e6
+            winning = sum(1 for p in subgraph_positions if float(p.get('realizedPnl', 0) or 0) > 0)
+            total_with_pnl = sum(1 for p in subgraph_positions if float(p.get('realizedPnl', 0) or 0) != 0)
+            
+            unrealized_pnl = 0.0
+            try:
+                async with self.session.get(
+                    f"{self.DATA_API_BASE_URL}/positions",
+                    params={"user": wallet_address, "limit": 1000}
+                ) as resp:
+                    if resp.status == 200:
+                        positions = await resp.json()
+                        if isinstance(positions, list):
+                            unrealized_pnl = sum(float(p.get('cashPnl', 0) or 0) for p in positions)
+            except Exception as e:
+                print(f"Error fetching unrealized PnL: {e}")
+            
+            combined_pnl = total_pnl + unrealized_pnl
+            win_rate = (winning / total_with_pnl * 100) if total_with_pnl > 0 else 0.0
+            
+            stats = {
+                'pnl': combined_pnl,
+                'win_rate': win_rate,
+                'total_positions': total_with_pnl,
+                'winning_positions': winning
+            }
+        else:
+            total_pnl = 0.0
+            unrealized_pnl = 0.0
+            positions_with_realized = 0
+            winning_positions = 0
+            
+            try:
+                async with self.session.get(
+                    f"{self.DATA_API_BASE_URL}/positions",
+                    params={"user": wallet_address, "limit": 1000}
+                ) as resp:
+                    if resp.status == 200:
+                        positions = await resp.json()
+                        if isinstance(positions, list):
+                            for pos in positions:
+                                cash_pnl = float(pos.get('cashPnl', 0) or 0)
+                                unrealized_pnl += cash_pnl
+                                realized_pnl = float(pos.get('realizedPnl', 0) or 0)
+                                total_pnl += realized_pnl
+                                if realized_pnl != 0:
+                                    positions_with_realized += 1
+                                    if realized_pnl > 0:
+                                        winning_positions += 1
+            except Exception as e:
+                print(f"Error fetching open positions for {wallet_address}: {e}")
+            
+            try:
+                async with self.session.get(
+                    f"{self.DATA_API_BASE_URL}/closed-positions",
+                    params={"user": wallet_address, "limit": 1000}
+                ) as resp:
+                    if resp.status == 200:
+                        closed = await resp.json()
+                        if isinstance(closed, list):
+                            for pos in closed:
+                                realized_pnl = float(pos.get('realizedPnl', 0) or 0)
+                                total_pnl += realized_pnl
+                                if realized_pnl != 0:
+                                    positions_with_realized += 1
+                                    if realized_pnl > 0:
+                                        winning_positions += 1
+            except Exception as e:
+                print(f"Error fetching closed positions for {wallet_address}: {e}")
+            
+            combined_pnl = total_pnl + unrealized_pnl
+            win_rate = (winning_positions / positions_with_realized * 100) if positions_with_realized > 0 else 0.0
+            
+            stats = {
+                'pnl': combined_pnl,
+                'win_rate': win_rate,
+                'total_positions': positions_with_realized,
+                'winning_positions': winning_positions
+            }
         
         self._wallet_stats_cache[wallet_lower] = stats
         self._wallet_stats_updated[wallet_lower] = now
