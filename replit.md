@@ -76,6 +76,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: **Fixed market URLs** - changed from /event/{slug} to /market/{slug} format which works for all market types (sports, events, standalone) and auto-redirects correctly
 - 2026-01-05: **Added granular channel configuration** - each alert type can now be routed to a specific channel: /whale_channel, /fresh_wallet_channel, /tracked_wallet_channel (plus existing /volatility and /sports). Falls back to /setup channel if not configured.
 - 2026-01-05: Added /trending and /sports_trending commands to view top markets by 24h volume
 - 2026-01-05: **Fixed fresh wallet detection** - now queries Polymarket API to check if wallet has prior activity (prevents false fresh alerts for experienced traders)
