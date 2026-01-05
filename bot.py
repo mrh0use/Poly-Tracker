@@ -513,7 +513,7 @@ async def trending_command(interaction: discord.Interaction):
     for i, market in enumerate(markets, 1):
         volume_str = f"${market['volume_24h']:,.0f}"
         price_str = f"{market['yes_price']*100:.0f}%"
-        url = f"https://polymarket.com/event/{market['slug']}" if market['slug'] else None
+        url = f"https://polymarket.com/market/{market['slug']}" if market['slug'] else None
         
         name = f"{i}. {market['question'][:60]}{'...' if len(market['question']) > 60 else ''}"
         value = f"Volume: {volume_str} | Yes: {price_str}"
@@ -544,7 +544,7 @@ async def sports_trending_command(interaction: discord.Interaction):
     for i, market in enumerate(markets, 1):
         volume_str = f"${market['volume_24h']:,.0f}"
         price_str = f"{market['yes_price']*100:.0f}%"
-        url = f"https://polymarket.com/event/{market['slug']}" if market['slug'] else None
+        url = f"https://polymarket.com/market/{market['slug']}" if market['slug'] else None
         
         name = f"{i}. {market['question'][:60]}{'...' if len(market['question']) > 60 else ''}"
         value = f"Volume: {volume_str} | Yes: {price_str}"

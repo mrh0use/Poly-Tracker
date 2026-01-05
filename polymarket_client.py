@@ -412,11 +412,11 @@ class PolymarketClient:
         slug = self.get_market_slug(trade_or_activity)
         if slug:
             clean_slug = slug.split('?')[0].strip('/')
-            return f"https://polymarket.com/event/{clean_slug}"
+            return f"https://polymarket.com/market/{clean_slug}"
         
         condition_id = trade_or_activity.get('conditionId', trade_or_activity.get('condition_id', ''))
         if condition_id:
-            return f"https://polymarket.com/markets?condition_id={condition_id}"
+            return f"https://polymarket.com/market/{condition_id}"
         
         return "https://polymarket.com"
     

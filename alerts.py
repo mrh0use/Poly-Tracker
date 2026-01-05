@@ -395,7 +395,7 @@ def create_volatility_alert_embed(
     arrow = "+" if price_change > 0 else ""
     color = 0x27AE60 if price_change > 0 else 0xE74C3C
     
-    market_url = f"https://polymarket.com/event/{slug}" if slug else "https://polymarket.com"
+    market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
     market_display = get_market_link(market_title, market_url)
     
     embed = Embed(
