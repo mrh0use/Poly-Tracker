@@ -335,12 +335,26 @@ class PolymarketClient:
         return stats
     
     def get_market_slug(self, trade_or_activity: Dict[str, Any]) -> Optional[str]:
-        return trade_or_activity.get('slug') or trade_or_activity.get('marketSlug')
+        slug = trade_or_activity.get('slug') or trade_or_activity.get('marketSlug')
+        if slug:
+            return slug
+        
+        market_info = self.get_market_info(trade_or_activity)
+        if market_info:
+            return market_info.get('slug')
+        
+        return None
     
     def get_market_url(self, trade_or_activity: Dict[str, Any]) -> str:
         slug = self.get_market_slug(trade_or_activity)
         if slug:
-            return f"https://polymarket.com/event/{slug}"
+            clean_slug = slug.split('?')[0].strip('/')
+            return f"https://polymarket.com/event/{clean_slug}"
+        
+        condition_id = trade_or_activity.get('conditionId', trade_or_activity.get('condition_id', ''))
+        if condition_id:
+            return f"https://polymarket.com/markets?condition_id={condition_id}"
+        
         return "https://polymarket.com"
     
     def get_unique_activity_id(self, activity: Dict[str, Any]) -> str:

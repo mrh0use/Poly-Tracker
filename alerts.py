@@ -60,18 +60,24 @@ def create_whale_alert_embed(
         inline=True
     )
     
-    side = trade.get('side', 'Unknown')
+    side = trade.get('side', '').upper()
+    outcome = trade.get('outcome', '')
+    if side and outcome:
+        action = f"{side} {outcome}"
+    elif side:
+        action = side
+    else:
+        action = "Unknown"
     embed.add_field(
-        name="Side",
-        value=side.upper() if side else "Unknown",
+        name="Action",
+        value=action,
         inline=True
     )
     
-    short_wallet = f"{wallet_address[:6]}...{wallet_address[-4:]}" if len(wallet_address) > 10 else wallet_address
     embed.add_field(
         name="Wallet",
-        value=f"`{short_wallet}`",
-        inline=True
+        value=f"`{wallet_address}`",
+        inline=False
     )
     
     price = trade.get('price', 0)
@@ -120,18 +126,24 @@ def create_fresh_wallet_alert_embed(
         inline=True
     )
     
-    side = trade.get('side', 'Unknown')
+    side = trade.get('side', '').upper()
+    outcome = trade.get('outcome', '')
+    if side and outcome:
+        action = f"{side} {outcome}"
+    elif side:
+        action = side
+    else:
+        action = "Unknown"
     embed.add_field(
-        name="Side",
-        value=side.upper() if side else "Unknown",
+        name="Action",
+        value=action,
         inline=True
     )
     
-    short_wallet = f"{wallet_address[:6]}...{wallet_address[-4:]}" if len(wallet_address) > 10 else wallet_address
     embed.add_field(
         name="New Wallet",
-        value=f"`{short_wallet}`",
-        inline=True
+        value=f"`{wallet_address}`",
+        inline=False
     )
     
     price = trade.get('price', 0)
@@ -185,18 +197,24 @@ def create_custom_wallet_alert_embed(
         inline=True
     )
     
-    side = trade.get('side', 'Unknown')
+    side = trade.get('side', '').upper()
+    outcome = trade.get('outcome', '')
+    if side and outcome:
+        action = f"{side} {outcome}"
+    elif side:
+        action = side
+    else:
+        action = "Unknown"
     embed.add_field(
-        name="Side",
-        value=side.upper() if side else "Unknown",
+        name="Action",
+        value=action,
         inline=True
     )
     
-    short_wallet = f"{wallet_address[:6]}...{wallet_address[-4:]}" if len(wallet_address) > 10 else wallet_address
     embed.add_field(
         name="Wallet",
-        value=f"`{short_wallet}`",
-        inline=True
+        value=f"`{wallet_address}`",
+        inline=False
     )
     
     price = trade.get('price', 0)
