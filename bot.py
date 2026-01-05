@@ -566,6 +566,10 @@ async def monitor_loop():
             
             global_trades = await polymarket_client.get_recent_trades(limit=50)
             
+            large_trades = [t for t in global_trades if polymarket_client.calculate_trade_value(t) >= 10000]
+            if large_trades:
+                print(f"[Monitor] Found {len(large_trades)} trades >= $10k out of {len(global_trades)} total")
+            
             tracked_trades = []
             for wallet_addr in unique_tracked_addresses:
                 wallet_trades = await polymarket_client.get_wallet_trades(wallet_addr, limit=10)
@@ -652,7 +656,8 @@ async def monitor_loop():
                                     market_url=market_url,
                                     pnl=wallet_stats.get('pnl'),
                                     volume=wallet_stats.get('volume'),
-                                    rank=wallet_stats.get('rank')
+                                    rank=wallet_stats.get('rank'),
+                                    win_rate=wallet_stats.get('win_rate')
                                 )
                                 try:
                                     await sports_channel.send(embed=embed, view=button_view)
@@ -701,7 +706,8 @@ async def monitor_loop():
                                 market_url=market_url,
                                 pnl=wallet_stats.get('pnl'),
                                 volume=wallet_stats.get('volume'),
-                                rank=wallet_stats.get('rank')
+                                rank=wallet_stats.get('rank'),
+                                win_rate=wallet_stats.get('win_rate')
                             )
                             try:
                                 await channel.send(embed=embed, view=button_view)

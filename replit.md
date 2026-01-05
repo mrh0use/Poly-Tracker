@@ -71,6 +71,8 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: **Added win rate calculation** - uses /closed-positions endpoint to count profitable vs unprofitable closed positions (cached 10 min)
+- 2026-01-05: Added debug logging to monitor loop to track large trades (shows when $10k+ trades are detected)
 - 2026-01-05: **PnL now matches Polymarket exactly** - switched to official v1/leaderboard endpoint which returns Polymarket's calculated PnL, volume, and rank (verified: SeriouslySirius shows $3.9M matching the site)
 - 2026-01-05: Switched to paginated Data API calls for accurate PnL matching Polymarket's displayed values - fetches open + closed positions up to 10,000 offset with realized PnL summing
 - 2026-01-05: Integrated Goldsky PnL Subgraph for complete wallet statistics - now fetches ALL positions (unlimited) via GraphQL with pagination, eliminating the 500 position limit from Data API
