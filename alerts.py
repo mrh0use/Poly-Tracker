@@ -166,16 +166,20 @@ def create_custom_wallet_alert_embed(
     wallet_label: Optional[str] = None,
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
-    win_rate: Optional[float] = None
+    volume: Optional[float] = None,
+    rank: Optional[str] = None
 ) -> Embed:
     title = f"Tracked Wallet Alert"
     if wallet_label:
         title += f" - {wallet_label}"
     
     stats_line = ""
-    if pnl is not None and win_rate is not None:
+    if pnl is not None:
         pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"📊 {pnl_sign}${pnl:,.0f} PnL | {win_rate:.0f}% Win Rate\n\n"
+        stats_line = f"📊 {pnl_sign}${pnl:,.0f} PnL"
+        if rank:
+            stats_line += f" | Rank #{rank}"
+        stats_line += "\n\n"
     
     embed = Embed(
         title=title,
@@ -513,9 +517,11 @@ def create_settings_embed(
                 stats = wallet_stats.get(addr.lower())
                 if stats:
                     pnl = stats.get('pnl', 0)
-                    win_rate = stats.get('win_rate', 0)
                     pnl_sign = "+" if pnl >= 0 else ""
-                    stats_str = f" | {pnl_sign}${pnl:,.0f} | {win_rate:.0f}% win"
+                    rank = stats.get('rank')
+                    stats_str = f" | {pnl_sign}${pnl:,.0f}"
+                    if rank:
+                        stats_str += f" | #{rank}"
             
             wallet_list.append(f"`{short}`{label}{stats_str}")
         

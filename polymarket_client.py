@@ -7,7 +7,6 @@ from typing import Optional, List, Dict, Any
 class PolymarketClient:
     DATA_API_BASE_URL = "https://data-api.polymarket.com"
     GAMMA_BASE_URL = "https://gamma-api.polymarket.com"
-    PNL_SUBGRAPH_URL = "https://api.goldsky.com/api/public/project_cl6mb8i9h0003e201j6li0diw/subgraphs/pnl-subgraph/0.0.14/gn"
     
     SPORTS_SLUGS = {'sports', 'nba', 'nfl', 'mlb', 'nhl', 'soccer', 'football', 'basketball', 
                    'baseball', 'hockey', 'tennis', 'golf', 'ufc', 'mma', 'boxing', 'f1', 
@@ -346,27 +345,25 @@ class PolymarketClient:
                 return self._wallet_stats_cache[wallet_lower]
         
         await self.ensure_session()
-        stats = {'pnl': 0.0, 'win_rate': 0.0, 'total_positions': 0, 'winning_positions': 0}
+        stats = {'pnl': 0.0, 'volume': 0.0, 'rank': None, 'username': None}
         
-        open_positions = await self._fetch_positions_paginated(wallet_address)
-        closed_positions = await self._fetch_closed_positions_paginated(wallet_address)
-        
-        open_realized_pnl = sum(float(p.get('realizedPnl', 0) or 0) for p in open_positions)
-        closed_realized_pnl = sum(float(p.get('realizedPnl', 0) or 0) for p in closed_positions)
-        total_realized_pnl = open_realized_pnl + closed_realized_pnl
-        
-        all_positions = open_positions + closed_positions
-        winning = sum(1 for p in all_positions if float(p.get('realizedPnl', 0) or 0) > 0)
-        total_with_realized = sum(1 for p in all_positions if float(p.get('realizedPnl', 0) or 0) != 0)
-        
-        win_rate = (winning / total_with_realized * 100) if total_with_realized > 0 else 0.0
-        
-        stats = {
-            'pnl': total_realized_pnl,
-            'win_rate': win_rate,
-            'total_positions': len(open_positions) + len(closed_positions),
-            'winning_positions': winning
-        }
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/v1/leaderboard",
+                params={"user": wallet_address, "timePeriod": "ALL"}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        user_data = data[0]
+                        stats = {
+                            'pnl': float(user_data.get('pnl', 0) or 0),
+                            'volume': float(user_data.get('vol', 0) or 0),
+                            'rank': user_data.get('rank'),
+                            'username': user_data.get('userName')
+                        }
+        except Exception as e:
+            print(f"Error fetching leaderboard stats for {wallet_address}: {e}")
         
         self._wallet_stats_cache[wallet_lower] = stats
         self._wallet_stats_updated[wallet_lower] = now
