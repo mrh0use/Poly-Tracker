@@ -152,15 +152,22 @@ def create_custom_wallet_alert_embed(
     market_title: str = "Unknown Market",
     wallet_address: str = "Unknown",
     wallet_label: Optional[str] = None,
-    market_url: str = "https://polymarket.com"
+    market_url: str = "https://polymarket.com",
+    pnl: Optional[float] = None,
+    win_rate: Optional[float] = None
 ) -> Embed:
     title = f"Tracked Wallet Alert"
     if wallet_label:
         title += f" - {wallet_label}"
     
+    stats_line = ""
+    if pnl is not None and win_rate is not None:
+        pnl_sign = "+" if pnl >= 0 else ""
+        stats_line = f"📊 {pnl_sign}${pnl:,.0f} PnL | {win_rate:.0f}% Win Rate\n\n"
+    
     embed = Embed(
         title=title,
-        description=f"Activity detected from a tracked wallet",
+        description=f"{stats_line}Activity detected from a tracked wallet",
         color=0xFFE66D,
         timestamp=datetime.utcnow()
     )

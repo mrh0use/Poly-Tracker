@@ -619,13 +619,16 @@ async def monitor_loop():
                         if sports_channel:
                             if wallet in tracked_addresses:
                                 tw = tracked_addresses[wallet]
+                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_custom_wallet_alert_embed(
                                     trade=trade,
                                     value_usd=value,
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     wallet_label=tw.label,
-                                    market_url=market_url
+                                    market_url=market_url,
+                                    pnl=wallet_stats.get('pnl'),
+                                    win_rate=wallet_stats.get('win_rate')
                                 )
                                 try:
                                     await sports_channel.send(embed=embed, view=button_view)
@@ -662,13 +665,16 @@ async def monitor_loop():
                         
                         if wallet in tracked_addresses:
                             tw = tracked_addresses[wallet]
+                            wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                             embed = create_custom_wallet_alert_embed(
                                 trade=trade,
                                 value_usd=value,
                                 market_title=market_title,
                                 wallet_address=wallet,
                                 wallet_label=tw.label,
-                                market_url=market_url
+                                market_url=market_url,
+                                pnl=wallet_stats.get('pnl'),
+                                win_rate=wallet_stats.get('win_rate')
                             )
                             try:
                                 await channel.send(embed=embed, view=button_view)

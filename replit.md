@@ -71,6 +71,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: Added lifetime PnL and win rate to tracked wallet alerts (fetched from Polymarket API with 10-min caching)
 - 2026-01-05: Added /sports_threshold command - configurable threshold for sports market alerts (default $5k)
 - 2026-01-05: Added separate sports channel (/sports command) - sports markets now route to dedicated channel instead of being excluded
 - 2026-01-05: Fixed sports detection with market metadata caching for accurate identification

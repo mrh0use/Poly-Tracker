@@ -19,6 +19,8 @@ class PolymarketClient:
         self._sports_tag_ids: set = set()
         self._market_cache: Dict[str, Dict[str, Any]] = {}
         self._cache_last_updated: Optional[datetime] = None
+        self._wallet_stats_cache: Dict[str, Dict[str, Any]] = {}
+        self._wallet_stats_updated: Dict[str, datetime] = {}
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -278,6 +280,59 @@ class PolymarketClient:
         except Exception as e:
             print(f"Error fetching positions for {wallet_address}: {e}")
             return []
+    
+    async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
+        wallet_lower = wallet_address.lower()
+        now = datetime.utcnow()
+        
+        if not force_refresh and wallet_lower in self._wallet_stats_cache:
+            last_updated = self._wallet_stats_updated.get(wallet_lower)
+            if last_updated and (now - last_updated).total_seconds() < 600:
+                return self._wallet_stats_cache[wallet_lower]
+        
+        await self.ensure_session()
+        stats = {'pnl': 0.0, 'win_rate': 0.0, 'total_positions': 0, 'winning_positions': 0}
+        
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/positions",
+                params={"user": wallet_address}
+            ) as resp:
+                if resp.status == 200:
+                    positions = await resp.json()
+                    if isinstance(positions, list):
+                        total_pnl = 0.0
+                        resolved_count = 0
+                        winning_count = 0
+                        
+                        for pos in positions:
+                            realized_pnl = float(pos.get('realizedPnl', 0) or 0)
+                            current_value = float(pos.get('currentValue', 0) or 0)
+                            size = float(pos.get('size', 0) or 0)
+                            
+                            is_closed = size == 0 or current_value == 0
+                            
+                            total_pnl += realized_pnl
+                            
+                            if is_closed and realized_pnl != 0:
+                                resolved_count += 1
+                                if realized_pnl > 0:
+                                    winning_count += 1
+                        
+                        win_rate = (winning_count / resolved_count * 100) if resolved_count > 0 else 0.0
+                        
+                        stats = {
+                            'pnl': total_pnl,
+                            'win_rate': win_rate,
+                            'total_positions': resolved_count,
+                            'winning_positions': winning_count
+                        }
+        except Exception as e:
+            print(f"Error fetching PnL stats for {wallet_address}: {e}")
+        
+        self._wallet_stats_cache[wallet_lower] = stats
+        self._wallet_stats_updated[wallet_lower] = now
+        return stats
     
     def get_market_slug(self, trade_or_activity: Dict[str, Any]) -> Optional[str]:
         return trade_or_activity.get('slug') or trade_or_activity.get('marketSlug')
