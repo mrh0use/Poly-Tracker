@@ -222,6 +222,11 @@ async def list_settings(interaction: discord.Interaction):
             vol_channel = interaction.guild.get_channel(config.volatility_channel_id)
             volatility_channel_name = vol_channel.name if vol_channel else None
         
+        sports_channel_name = None
+        if config.sports_channel_id:
+            sports_channel = interaction.guild.get_channel(config.sports_channel_id)
+            sports_channel_name = sports_channel.name if sports_channel else None
+        
         embed = create_settings_embed(
             guild_name=interaction.guild.name,
             channel_name=channel_name,
@@ -230,7 +235,8 @@ async def list_settings(interaction: discord.Interaction):
             is_paused=config.is_paused,
             tracked_wallets=tracked,
             volatility_channel_name=volatility_channel_name,
-            volatility_threshold=config.volatility_threshold or 20.0
+            volatility_threshold=config.volatility_threshold or 20.0,
+            sports_channel_name=sports_channel_name
         )
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -308,6 +314,28 @@ async def volatility(interaction: discord.Interaction, channel: discord.TextChan
         session.close()
 
 
+@bot.tree.command(name="sports", description="Set the channel for sports market alerts")
+@app_commands.describe(channel="The channel to send sports alerts to")
+@app_commands.checks.has_permissions(administrator=True)
+async def sports(interaction: discord.Interaction, channel: discord.TextChannel):
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.sports_channel_id = channel.id
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Sports market alerts will be sent to {channel.mention}. All sports/esports trading activity will be routed here.",
+            ephemeral=True
+        )
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="help", description="Show available commands")
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
@@ -324,6 +352,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/volatility #channel",
         value="Set the channel for volatility alerts (20%+ swings)",
+        inline=False
+    )
+    embed.add_field(
+        name="/sports #channel",
+        value="Set the channel for sports/esports market alerts",
         inline=False
     )
     embed.add_field(
@@ -368,7 +401,7 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     
-    embed.set_footer(text="Administrator permissions required for configuration commands | Sports markets excluded from all alerts")
+    embed.set_footer(text="Administrator permissions required for configuration commands")
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -463,12 +496,15 @@ async def rename(interaction: discord.Interaction, wallet: str, name: str):
 @tasks.loop(seconds=30)
 async def monitor_loop():
     try:
+        await polymarket_client.refresh_market_cache()
+        
         session = get_session()
         try:
             configs = session.query(ServerConfig).filter(
-                ServerConfig.alert_channel_id.isnot(None),
                 ServerConfig.is_paused == False
             ).all()
+            
+            configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id]
             
             if not configs:
                 return
@@ -540,53 +576,95 @@ async def monitor_loop():
                 is_sports = polymarket_client.is_sports_market(trade)
                 
                 for config in configs:
-                    channel = bot.get_channel(config.alert_channel_id)
-                    if not channel:
-                        continue
-                    
                     tracked_addresses = tracked_by_guild.get(config.guild_id, {})
                     button_view = create_trade_button_view(market_url)
                     
-                    if wallet in tracked_addresses and not is_sports:
-                        tw = tracked_addresses[wallet]
-                        embed = create_custom_wallet_alert_embed(
-                            trade=trade,
-                            value_usd=value,
-                            market_title=market_title,
-                            wallet_address=wallet,
-                            wallet_label=tw.label,
-                            market_url=market_url
-                        )
-                        try:
-                            await channel.send(embed=embed, view=button_view)
-                        except Exception as e:
-                            print(f"Error sending custom wallet alert: {e}")
-                    
-                    elif is_fresh and value >= config.fresh_wallet_threshold and not is_sports:
-                        embed = create_fresh_wallet_alert_embed(
-                            trade=trade,
-                            value_usd=value,
-                            market_title=market_title,
-                            wallet_address=wallet,
-                            market_url=market_url
-                        )
-                        try:
-                            await channel.send(embed=embed, view=button_view)
-                        except Exception as e:
-                            print(f"Error sending fresh wallet alert: {e}")
-                    
-                    elif value >= config.whale_threshold and not is_sports:
-                        embed = create_whale_alert_embed(
-                            trade=trade,
-                            value_usd=value,
-                            market_title=market_title,
-                            wallet_address=wallet,
-                            market_url=market_url
-                        )
-                        try:
-                            await channel.send(embed=embed, view=button_view)
-                        except Exception as e:
-                            print(f"Error sending whale alert: {e}")
+                    if is_sports:
+                        sports_channel = bot.get_channel(config.sports_channel_id) if config.sports_channel_id else None
+                        if sports_channel:
+                            if wallet in tracked_addresses:
+                                tw = tracked_addresses[wallet]
+                                embed = create_custom_wallet_alert_embed(
+                                    trade=trade,
+                                    value_usd=value,
+                                    market_title=market_title,
+                                    wallet_address=wallet,
+                                    wallet_label=tw.label,
+                                    market_url=market_url
+                                )
+                                try:
+                                    await sports_channel.send(embed=embed, view=button_view)
+                                except Exception as e:
+                                    print(f"Error sending sports tracked wallet alert: {e}")
+                            elif is_fresh and value >= config.fresh_wallet_threshold:
+                                embed = create_fresh_wallet_alert_embed(
+                                    trade=trade,
+                                    value_usd=value,
+                                    market_title=market_title,
+                                    wallet_address=wallet,
+                                    market_url=market_url
+                                )
+                                try:
+                                    await sports_channel.send(embed=embed, view=button_view)
+                                except Exception as e:
+                                    print(f"Error sending sports fresh wallet alert: {e}")
+                            elif value >= config.whale_threshold:
+                                embed = create_whale_alert_embed(
+                                    trade=trade,
+                                    value_usd=value,
+                                    market_title=market_title,
+                                    wallet_address=wallet,
+                                    market_url=market_url
+                                )
+                                try:
+                                    await sports_channel.send(embed=embed, view=button_view)
+                                except Exception as e:
+                                    print(f"Error sending sports whale alert: {e}")
+                    else:
+                        channel = bot.get_channel(config.alert_channel_id) if config.alert_channel_id else None
+                        if not channel:
+                            continue
+                        
+                        if wallet in tracked_addresses:
+                            tw = tracked_addresses[wallet]
+                            embed = create_custom_wallet_alert_embed(
+                                trade=trade,
+                                value_usd=value,
+                                market_title=market_title,
+                                wallet_address=wallet,
+                                wallet_label=tw.label,
+                                market_url=market_url
+                            )
+                            try:
+                                await channel.send(embed=embed, view=button_view)
+                            except Exception as e:
+                                print(f"Error sending custom wallet alert: {e}")
+                        
+                        elif is_fresh and value >= config.fresh_wallet_threshold:
+                            embed = create_fresh_wallet_alert_embed(
+                                trade=trade,
+                                value_usd=value,
+                                market_title=market_title,
+                                wallet_address=wallet,
+                                market_url=market_url
+                            )
+                            try:
+                                await channel.send(embed=embed, view=button_view)
+                            except Exception as e:
+                                print(f"Error sending fresh wallet alert: {e}")
+                        
+                        elif value >= config.whale_threshold:
+                            embed = create_whale_alert_embed(
+                                trade=trade,
+                                value_usd=value,
+                                market_title=market_title,
+                                wallet_address=wallet,
+                                market_url=market_url
+                            )
+                            try:
+                                await channel.send(embed=embed, view=button_view)
+                            except Exception as e:
+                                print(f"Error sending whale alert: {e}")
             
             session.commit()
         finally:

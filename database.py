@@ -18,6 +18,7 @@ class ServerConfig(Base):
     guild_id = Column(BigInteger, primary_key=True)
     alert_channel_id = Column(BigInteger, nullable=True)
     volatility_channel_id = Column(BigInteger, nullable=True)
+    sports_channel_id = Column(BigInteger, nullable=True)
     whale_threshold = Column(Float, default=10000.0)
     fresh_wallet_threshold = Column(Float, default=10000.0)
     volatility_threshold = Column(Float, default=20.0)

@@ -17,6 +17,8 @@ class PolymarketClient:
         self.session: Optional[aiohttp.ClientSession] = None
         self._known_wallets: set = set()
         self._sports_tag_ids: set = set()
+        self._market_cache: Dict[str, Dict[str, Any]] = {}
+        self._cache_last_updated: Optional[datetime] = None
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -108,7 +110,89 @@ class PolymarketClient:
             print(f"Error fetching sports tags: {e}")
         return set()
     
+    async def refresh_market_cache(self, force: bool = False) -> None:
+        now = datetime.utcnow()
+        if not force and self._cache_last_updated:
+            age = (now - self._cache_last_updated).total_seconds()
+            if age < 300:
+                return
+        
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/markets",
+                params={"limit": 1000, "active": "true", "closed": "false"}
+            ) as resp:
+                if resp.status == 200:
+                    markets = await resp.json()
+                    for market in markets:
+                        condition_id = market.get('conditionId', market.get('condition_id', ''))
+                        if condition_id:
+                            self._market_cache[condition_id] = {
+                                'slug': market.get('slug', ''),
+                                'title': market.get('question', market.get('title', '')),
+                                'tags': market.get('tags', []),
+                                'groupSlug': market.get('groupSlug', ''),
+                            }
+                        tokens = market.get('tokens', [])
+                        for token in tokens:
+                            token_id = token.get('token_id', '')
+                            if token_id:
+                                self._market_cache[token_id] = {
+                                    'slug': market.get('slug', ''),
+                                    'title': market.get('question', market.get('title', '')),
+                                    'tags': market.get('tags', []),
+                                    'groupSlug': market.get('groupSlug', ''),
+                                }
+                    self._cache_last_updated = now
+                    print(f"Market cache refreshed: {len(self._market_cache)} entries")
+        except Exception as e:
+            print(f"Error refreshing market cache: {e}")
+    
+    def get_market_info(self, trade: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        asset = trade.get('asset', '')
+        if asset and asset in self._market_cache:
+            return self._market_cache[asset]
+        
+        condition_id = trade.get('conditionId', trade.get('condition_id', ''))
+        if condition_id and condition_id in self._market_cache:
+            return self._market_cache[condition_id]
+        
+        return None
+    
     def is_sports_market(self, trade_or_event: Dict[str, Any]) -> bool:
+        market_info = self.get_market_info(trade_or_event)
+        if market_info:
+            group_slug = market_info.get('groupSlug', '').lower()
+            if group_slug in self.SPORTS_SLUGS:
+                return True
+            
+            tags = market_info.get('tags', [])
+            if isinstance(tags, list):
+                for tag in tags:
+                    if isinstance(tag, dict):
+                        slug = tag.get('slug', '').lower()
+                        tag_id = str(tag.get('id', ''))
+                        if slug in self.SPORTS_SLUGS or tag_id in self._sports_tag_ids:
+                            return True
+                    elif isinstance(tag, str):
+                        if tag.lower() in self.SPORTS_SLUGS or tag in self._sports_tag_ids:
+                            return True
+            
+            slug = market_info.get('slug', '').lower()
+            title = market_info.get('title', '').lower()
+            
+            sports_terms = ['nba', 'nfl', 'mlb', 'nhl', 'ufc', 'boxing', 'soccer', 
+                           'basketball', 'baseball', 'hockey', 'tennis', 'golf', 
+                           'f1', 'epl', 'premier-league', 'super-bowl', 'world-series', 
+                           'stanley-cup', 'esports', 'league-of-legends', 'dota', 'csgo',
+                           'valorant', 'champions-league', 'mma', 'cricket', 'fifa',
+                           'world-cup', 'olympics', 'ncaa', 'college-football', 'college-basketball']
+            
+            for term in sports_terms:
+                if term in slug or term in title:
+                    return True
+        
         tags = trade_or_event.get('tags', [])
         if isinstance(tags, list):
             for tag in tags:
@@ -123,15 +207,23 @@ class PolymarketClient:
         
         slug = trade_or_event.get('slug', '').lower()
         title = trade_or_event.get('title', '').lower()
+        outcome = trade_or_event.get('outcome', '').lower()
         
-        sports_terms = ['nba ', 'nfl ', 'mlb ', 'nhl ', 'ufc ', 'boxing ', 'soccer ', 
-                       'basketball ', 'baseball ', 'hockey ', 'tennis ', 'golf ', 
-                       'f1 ', 'epl ', 'premier-league', 'super-bowl', 'world-series', 
-                       'stanley-cup', 'esports', 'league-of-legends', 'dota ', 'csgo',
-                       'valorant', 'champions-league', 'mma ', 'cricket ']
+        all_text = f"{slug} {title} {outcome}"
+        
+        sports_terms = ['nba', 'nfl', 'mlb', 'nhl', 'ufc', 'boxing', 'soccer', 
+                       'basketball', 'baseball', 'hockey', 'tennis', 'golf', 
+                       'f1', 'epl', 'premier-league', 'super-bowl', 'world-series', 
+                       'stanley-cup', 'esports', 'league-of-legends', 'dota', 'csgo',
+                       'valorant', 'champions-league', 'mma', 'cricket', 'fifa',
+                       'world-cup', 'olympics', 'ncaa', 'college-football', 'college-basketball',
+                       'warriors', 'lakers', 'celtics', 'nets', 'bulls', 'knicks',
+                       'patriots', 'chiefs', 'cowboys', 'eagles', 'packers', '49ers',
+                       'yankees', 'dodgers', 'red sox', 'cubs', 'mets', 'braves',
+                       'lebron', 'curry', 'durant', 'mahomes', 'brady', 'ronaldo', 'messi']
         
         for term in sports_terms:
-            if term in slug or term in title:
+            if term in all_text:
                 return True
         
         return False

@@ -8,7 +8,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Fresh Wallet Alerts**: Detect new wallets making their first trades
 - **Custom Wallet Tracking**: Monitor specific wallet addresses (any trade amount)
 - **Volatility Alerts**: Track markets with 20%+ price swings within 1 hour
-- **Sports Filtering**: Automatically excludes sports/esports markets from all alerts
+- **Sports Channel**: Separate channel for sports/esports market alerts
 - **Sell Filtering**: Excludes sells above 99% (position closures)
 - **Position Viewing**: View current holdings of tracked wallets with drill-down
 - **Market Links**: Clickable links to Polymarket + Trade via Onsight buttons
@@ -42,6 +42,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 |---------|-------------|-------------|
 | `/setup #channel` | Set trade alerts channel | Admin |
 | `/volatility #channel` | Set volatility alerts channel | Admin |
+| `/sports #channel` | Set sports alerts channel | Admin |
 | `/threshold <amount>` | Set USD threshold | Admin |
 | `/track <wallet> [label]` | Track a wallet | Admin |
 | `/untrack <wallet>` | Stop tracking | Admin |
@@ -58,8 +59,9 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Fresh Wallet Alerts**: New wallets making first trades $10k+
 - **Tracked Wallet Alerts**: Any activity from tracked wallets (no minimum)
 - **Volatility Alerts**: Markets with 20%+ price swings within 1 hour (separate channel)
+- **Sports Alerts**: All sports/esports market activity (separate channel)
 
-Note: Sports/esports markets and sells above 99% are automatically excluded from all alerts.
+Note: Sells above 99% are automatically excluded from all alerts. Sports markets go to their own dedicated channel when configured.
 
 ## Environment Variables
 
@@ -68,10 +70,11 @@ Note: Sports/esports markets and sells above 99% are automatically excluded from
 
 ## Recent Changes
 
+- 2026-01-05: Added separate sports channel (/sports command) - sports markets now route to dedicated channel instead of being excluded
+- 2026-01-05: Fixed sports detection with market metadata caching for accurate identification
 - 2026-01-05: Removed redeem alerts and filtered out sells above 99%
 - 2026-01-05: Updated trade button to "Trade via Onsight"
 - 2026-01-05: Added volatility tracker with separate channel (/volatility command) for 20%+ price swings
-- 2026-01-05: Added sports market filtering - excludes all sports/esports from alerts
 - 2026-01-05: Added /positions command with wallet buttons for drill-down views
 - 2026-01-05: Added /rename command to update tracked wallet labels
 - 2026-01-05: Fixed tracked wallet alerts to query each wallet directly via API (catches all trades regardless of amount)
