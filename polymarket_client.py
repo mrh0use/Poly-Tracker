@@ -302,29 +302,25 @@ class PolymarketClient:
                     positions = await resp.json()
                     if isinstance(positions, list):
                         total_pnl = 0.0
-                        resolved_count = 0
-                        winning_count = 0
+                        positions_with_realized = 0
+                        winning_positions = 0
                         
                         for pos in positions:
                             realized_pnl = float(pos.get('realizedPnl', 0) or 0)
-                            current_value = float(pos.get('currentValue', 0) or 0)
-                            size = float(pos.get('size', 0) or 0)
-                            
                             total_pnl += realized_pnl
                             
-                            is_closed = size == 0 or current_value == 0
-                            if is_closed and realized_pnl != 0:
-                                resolved_count += 1
+                            if realized_pnl != 0:
+                                positions_with_realized += 1
                                 if realized_pnl > 0:
-                                    winning_count += 1
+                                    winning_positions += 1
                         
-                        win_rate = (winning_count / resolved_count * 100) if resolved_count > 0 else 0.0
+                        win_rate = (winning_positions / positions_with_realized * 100) if positions_with_realized > 0 else 0.0
                         
                         stats = {
                             'pnl': total_pnl,
                             'win_rate': win_rate,
-                            'total_positions': resolved_count,
-                            'winning_positions': winning_count
+                            'total_positions': positions_with_realized,
+                            'winning_positions': winning_positions
                         }
                 else:
                     print(f"Positions API returned status {resp.status} for {wallet_address}")
