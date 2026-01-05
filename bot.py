@@ -60,10 +60,31 @@ class PolymarketBot(commands.Bot):
 bot = PolymarketBot()
 
 
-@bot.tree.command(name="setup", description="Set the channel for Polymarket alerts")
-@app_commands.describe(channel="The channel to send alerts to")
+@bot.tree.command(name="setup", description="Configure all alert channels at once")
+@app_commands.describe(
+    whale="Channel for whale alerts ($10k+)",
+    fresh_wallet="Channel for fresh wallet alerts",
+    tracked_wallet="Channel for tracked wallet alerts",
+    volatility="Channel for volatility alerts (20%+ swings)",
+    sports="Channel for sports/esports alerts"
+)
 @app_commands.checks.has_permissions(administrator=True)
-async def setup(interaction: discord.Interaction, channel: discord.TextChannel):
+async def setup(
+    interaction: discord.Interaction,
+    whale: Optional[discord.TextChannel] = None,
+    fresh_wallet: Optional[discord.TextChannel] = None,
+    tracked_wallet: Optional[discord.TextChannel] = None,
+    volatility: Optional[discord.TextChannel] = None,
+    sports: Optional[discord.TextChannel] = None
+):
+    if not any([whale, fresh_wallet, tracked_wallet, volatility, sports]):
+        await interaction.response.send_message(
+            "Please specify at least one channel to configure.\n"
+            "Example: `/setup whale:#whale-alerts fresh_wallet:#fresh-alerts`",
+            ephemeral=True
+        )
+        return
+    
     session = get_session()
     try:
         config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
@@ -71,11 +92,29 @@ async def setup(interaction: discord.Interaction, channel: discord.TextChannel):
             config = ServerConfig(guild_id=interaction.guild_id)
             session.add(config)
         
-        config.alert_channel_id = channel.id
+        configured = []
+        if whale:
+            config.whale_channel_id = whale.id
+            config.alert_channel_id = whale.id
+            configured.append(f"Whale: {whale.mention}")
+        if fresh_wallet:
+            config.fresh_wallet_channel_id = fresh_wallet.id
+            configured.append(f"Fresh Wallet: {fresh_wallet.mention}")
+        if tracked_wallet:
+            config.tracked_wallet_channel_id = tracked_wallet.id
+            configured.append(f"Tracked Wallet: {tracked_wallet.mention}")
+        if volatility:
+            config.volatility_channel_id = volatility.id
+            configured.append(f"Volatility: {volatility.mention}")
+        if sports:
+            config.sports_channel_id = sports.id
+            configured.append(f"Sports: {sports.mention}")
+        
         session.commit()
         
         await interaction.response.send_message(
-            f"Alerts will now be sent to {channel.mention}. Use `/threshold` to adjust alert thresholds.",
+            f"**Channels configured:**\n" + "\n".join(configured) +
+            "\n\nUse `/threshold` to adjust alert thresholds or `/list` to view all settings.",
             ephemeral=True
         )
     finally:
@@ -526,8 +565,8 @@ async def help_command(interaction: discord.Interaction):
     )
     
     embed.add_field(
-        name="/setup #channel",
-        value="Set the channel for trade alerts",
+        name="/setup",
+        value="Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports)",
         inline=False
     )
     embed.add_field(
