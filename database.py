@@ -17,8 +17,11 @@ class ServerConfig(Base):
     
     guild_id = Column(BigInteger, primary_key=True)
     alert_channel_id = Column(BigInteger, nullable=True)
+    volatility_channel_id = Column(BigInteger, nullable=True)
     whale_threshold = Column(Float, default=10000.0)
     fresh_wallet_threshold = Column(Float, default=10000.0)
+    volatility_threshold = Column(Float, default=20.0)
+    volatility_window_minutes = Column(BigInteger, default=60)
     is_paused = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -52,6 +55,27 @@ class WalletActivity(Base):
     wallet_address = Column(String(42), primary_key=True)
     first_seen = Column(DateTime, default=datetime.utcnow)
     transaction_count = Column(BigInteger, default=0)
+
+
+class PriceSnapshot(Base):
+    __tablename__ = 'price_snapshots'
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    condition_id = Column(String(100), nullable=False, index=True)
+    title = Column(Text, nullable=True)
+    slug = Column(String(200), nullable=True)
+    yes_price = Column(Float, nullable=False)
+    volume = Column(Float, default=0)
+    captured_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class VolatilityAlert(Base):
+    __tablename__ = 'volatility_alerts'
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    condition_id = Column(String(100), nullable=False, index=True)
+    alerted_at = Column(DateTime, default=datetime.utcnow)
+    price_change = Column(Float, nullable=False)
 
 
 def init_db():

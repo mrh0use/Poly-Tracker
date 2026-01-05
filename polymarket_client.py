@@ -8,9 +8,15 @@ class PolymarketClient:
     DATA_API_BASE_URL = "https://data-api.polymarket.com"
     GAMMA_BASE_URL = "https://gamma-api.polymarket.com"
     
+    SPORTS_SLUGS = {'sports', 'nba', 'nfl', 'mlb', 'nhl', 'soccer', 'football', 'basketball', 
+                   'baseball', 'hockey', 'tennis', 'golf', 'ufc', 'mma', 'boxing', 'f1', 
+                   'formula-1', 'cricket', 'esports', 'league-of-legends', 'dota', 'csgo',
+                   'valorant', 'nba-games', 'nfl-games', 'epl', 'premier-league', 'champions-league'}
+    
     def __init__(self):
         self.session: Optional[aiohttp.ClientSession] = None
         self._known_wallets: set = set()
+        self._sports_tag_ids: set = set()
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -84,6 +90,52 @@ class PolymarketClient:
             print(f"Error fetching events: {e}")
             return []
     
+    async def fetch_sports_tags(self) -> set:
+        await self.ensure_session()
+        try:
+            async with self.session.get(f"{self.GAMMA_BASE_URL}/sports") as resp:
+                if resp.status == 200:
+                    sports_data = await resp.json()
+                    tag_ids = set()
+                    for sport in sports_data:
+                        tags_str = sport.get('tags', '')
+                        if tags_str:
+                            for tag_id in tags_str.split(','):
+                                tag_ids.add(tag_id.strip())
+                    self._sports_tag_ids = tag_ids
+                    return tag_ids
+        except Exception as e:
+            print(f"Error fetching sports tags: {e}")
+        return set()
+    
+    def is_sports_market(self, trade_or_event: Dict[str, Any]) -> bool:
+        tags = trade_or_event.get('tags', [])
+        if isinstance(tags, list):
+            for tag in tags:
+                if isinstance(tag, dict):
+                    slug = tag.get('slug', '').lower()
+                    tag_id = str(tag.get('id', ''))
+                    if slug in self.SPORTS_SLUGS or tag_id in self._sports_tag_ids:
+                        return True
+                elif isinstance(tag, str):
+                    if tag.lower() in self.SPORTS_SLUGS or tag in self._sports_tag_ids:
+                        return True
+        
+        slug = trade_or_event.get('slug', '').lower()
+        title = trade_or_event.get('title', '').lower()
+        
+        sports_terms = ['nba ', 'nfl ', 'mlb ', 'nhl ', 'ufc ', 'boxing ', 'soccer ', 
+                       'basketball ', 'baseball ', 'hockey ', 'tennis ', 'golf ', 
+                       'f1 ', 'epl ', 'premier-league', 'super-bowl', 'world-series', 
+                       'stanley-cup', 'esports', 'league-of-legends', 'dota ', 'csgo',
+                       'valorant', 'champions-league', 'mma ', 'cricket ']
+        
+        for term in sports_terms:
+            if term in slug or term in title:
+                return True
+        
+        return False
+    
     def calculate_trade_value(self, trade: Dict[str, Any]) -> float:
         try:
             size = float(trade.get('size', 0))
@@ -154,6 +206,51 @@ class PolymarketClient:
         raw_key = f"{tx_hash}_{timestamp}_{activity_type}_{user}_{condition_id}"
         hashed = hashlib.sha256(raw_key.encode()).hexdigest()[:64]
         return f"A_{hashed}"
+    
+    async def get_active_markets_prices(self, limit: int = 200) -> List[Dict[str, Any]]:
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/markets",
+                params={"limit": limit, "active": "true", "closed": "false"}
+            ) as resp:
+                if resp.status == 200:
+                    markets = await resp.json()
+                    result = []
+                    for m in markets:
+                        if self.is_sports_market(m):
+                            continue
+                        condition_id = m.get('conditionId')
+                        if not condition_id:
+                            continue
+                        
+                        outcome_prices = m.get('outcomePrices', [0.5, 0.5])
+                        if isinstance(outcome_prices, str):
+                            try:
+                                outcome_prices = outcome_prices.strip('[]').split(',')
+                                yes_price = float(outcome_prices[0]) if outcome_prices else 0.5
+                            except (ValueError, IndexError):
+                                yes_price = 0.5
+                        elif isinstance(outcome_prices, list) and len(outcome_prices) > 0:
+                            try:
+                                yes_price = float(outcome_prices[0])
+                            except (ValueError, TypeError):
+                                yes_price = 0.5
+                        else:
+                            yes_price = 0.5
+                        
+                        result.append({
+                            'condition_id': condition_id,
+                            'title': m.get('question', m.get('title', 'Unknown')),
+                            'slug': m.get('slug', ''),
+                            'yes_price': yes_price,
+                            'volume': float(m.get('volume', 0) or 0)
+                        })
+                    return result
+                return []
+        except Exception as e:
+            print(f"Error fetching market prices: {e}")
+            return []
 
 
 polymarket_client = PolymarketClient()

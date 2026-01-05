@@ -7,7 +7,7 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
-from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity
+from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
 from polymarket_client import polymarket_client
 from alerts import (
     create_whale_alert_embed,
@@ -17,7 +17,8 @@ from alerts import (
     create_settings_embed,
     create_trade_button_view,
     create_positions_overview_embed,
-    create_wallet_positions_embed
+    create_wallet_positions_embed,
+    create_volatility_alert_embed
 )
 
 
@@ -44,6 +45,17 @@ class PolymarketBot(commands.Bot):
         if not monitor_loop.is_running():
             monitor_loop.start()
             print("Monitor loop started")
+        
+        if not volatility_loop.is_running():
+            volatility_loop.start()
+            print("Volatility loop started")
+        
+        if not cleanup_loop.is_running():
+            cleanup_loop.start()
+            print("Cleanup loop started")
+        
+        await polymarket_client.fetch_sports_tags()
+        print("Sports tags loaded")
 
 
 bot = PolymarketBot()
@@ -206,13 +218,20 @@ async def list_settings(interaction: discord.Interaction):
         
         tracked = session.query(TrackedWallet).filter_by(guild_id=interaction.guild_id).all()
         
+        volatility_channel_name = None
+        if config.volatility_channel_id:
+            vol_channel = interaction.guild.get_channel(config.volatility_channel_id)
+            volatility_channel_name = vol_channel.name if vol_channel else None
+        
         embed = create_settings_embed(
             guild_name=interaction.guild.name,
             channel_name=channel_name,
             whale_threshold=config.whale_threshold,
             fresh_wallet_threshold=config.fresh_wallet_threshold,
             is_paused=config.is_paused,
-            tracked_wallets=tracked
+            tracked_wallets=tracked,
+            volatility_channel_name=volatility_channel_name,
+            volatility_threshold=config.volatility_threshold or 20.0
         )
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -268,6 +287,28 @@ async def resume(interaction: discord.Interaction):
         session.close()
 
 
+@bot.tree.command(name="volatility", description="Set the channel for volatility alerts")
+@app_commands.describe(channel="The channel to send volatility alerts to")
+@app_commands.checks.has_permissions(administrator=True)
+async def volatility(interaction: discord.Interaction, channel: discord.TextChannel):
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.volatility_channel_id = channel.id
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Volatility alerts will be sent to {channel.mention}. Markets with 20%+ price swings within 1 hour will trigger alerts.",
+            ephemeral=True
+        )
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="help", description="Show available commands")
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
@@ -278,7 +319,12 @@ async def help_command(interaction: discord.Interaction):
     
     embed.add_field(
         name="/setup #channel",
-        value="Set the channel for alerts",
+        value="Set the channel for trade alerts",
+        inline=False
+    )
+    embed.add_field(
+        name="/volatility #channel",
+        value="Set the channel for volatility alerts (20%+ swings)",
         inline=False
     )
     embed.add_field(
@@ -323,7 +369,7 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     
-    embed.set_footer(text="Administrator permissions required for configuration commands")
+    embed.set_footer(text="Administrator permissions required for configuration commands | Sports markets excluded from all alerts")
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -492,6 +538,8 @@ async def monitor_loop():
                         wallet_activity.transaction_count += 1
                     processed_wallets_this_batch.add(wallet)
                 
+                is_sports = polymarket_client.is_sports_market(trade)
+                
                 for config in configs:
                     channel = bot.get_channel(config.alert_channel_id)
                     if not channel:
@@ -500,7 +548,7 @@ async def monitor_loop():
                     tracked_addresses = tracked_by_guild.get(config.guild_id, {})
                     button_view = create_trade_button_view(market_url)
                     
-                    if wallet in tracked_addresses:
+                    if wallet in tracked_addresses and not is_sports:
                         tw = tracked_addresses[wallet]
                         embed = create_custom_wallet_alert_embed(
                             trade=trade,
@@ -515,7 +563,7 @@ async def monitor_loop():
                         except Exception as e:
                             print(f"Error sending custom wallet alert: {e}")
                     
-                    elif is_fresh and value >= config.fresh_wallet_threshold:
+                    elif is_fresh and value >= config.fresh_wallet_threshold and not is_sports:
                         embed = create_fresh_wallet_alert_embed(
                             trade=trade,
                             value_usd=value,
@@ -528,7 +576,7 @@ async def monitor_loop():
                         except Exception as e:
                             print(f"Error sending fresh wallet alert: {e}")
                     
-                    elif value >= config.whale_threshold:
+                    elif value >= config.whale_threshold and not is_sports:
                         embed = create_whale_alert_embed(
                             trade=trade,
                             value_usd=value,
@@ -556,6 +604,9 @@ async def monitor_loop():
                 value = float(redeem.get('cashValue', 0) or 0)
                 market_title = redeem.get('title', 'Unknown Market')
                 market_url = polymarket_client.get_market_url(redeem)
+                
+                if polymarket_client.is_sports_market(redeem):
+                    continue
                 
                 for config in configs:
                     channel = bot.get_channel(config.alert_channel_id)
@@ -593,6 +644,139 @@ async def before_monitor():
     await bot.wait_until_ready()
 
 
+@tasks.loop(minutes=5)
+async def volatility_loop():
+    try:
+        from datetime import timedelta
+        session = get_session()
+        try:
+            configs = session.query(ServerConfig).filter(
+                ServerConfig.volatility_channel_id.isnot(None),
+                ServerConfig.is_paused == False
+            ).all()
+            
+            if not configs:
+                return
+            
+            markets = await polymarket_client.get_active_markets_prices(limit=200)
+            now = datetime.utcnow()
+            
+            for market in markets:
+                condition_id = market['condition_id']
+                current_price = market['yes_price']
+                title = market['title']
+                slug = market['slug']
+                volume = market['volume']
+                
+                session.add(PriceSnapshot(
+                    condition_id=condition_id,
+                    title=title,
+                    slug=slug,
+                    yes_price=current_price,
+                    volume=volume
+                ))
+            
+            session.commit()
+            
+            one_hour_ago = now - timedelta(minutes=60)
+            cooldown_time = now - timedelta(minutes=120)
+            
+            for market in markets:
+                condition_id = market['condition_id']
+                current_price = market['yes_price']
+                
+                old_snapshot = session.query(PriceSnapshot).filter(
+                    PriceSnapshot.condition_id == condition_id,
+                    PriceSnapshot.captured_at <= one_hour_ago
+                ).order_by(PriceSnapshot.captured_at.desc()).first()
+                
+                if not old_snapshot:
+                    continue
+                
+                old_price = old_snapshot.yes_price
+                if old_price <= 0.01 or old_price >= 0.99:
+                    continue
+                
+                price_change_pct = ((current_price - old_price) / old_price) * 100
+                
+                if abs(price_change_pct) < 20.0:
+                    continue
+                
+                recent_alert = session.query(VolatilityAlert).filter(
+                    VolatilityAlert.condition_id == condition_id,
+                    VolatilityAlert.alerted_at >= cooldown_time
+                ).first()
+                
+                if recent_alert:
+                    continue
+                
+                session.add(VolatilityAlert(
+                    condition_id=condition_id,
+                    price_change=price_change_pct
+                ))
+                
+                for config in configs:
+                    channel = bot.get_channel(config.volatility_channel_id)
+                    if not channel:
+                        continue
+                    
+                    embed, market_url = create_volatility_alert_embed(
+                        market_title=market['title'],
+                        slug=market['slug'],
+                        old_price=old_price,
+                        new_price=current_price,
+                        price_change=price_change_pct,
+                        time_window_minutes=60
+                    )
+                    button_view = create_trade_button_view(market_url)
+                    
+                    try:
+                        await channel.send(embed=embed, view=button_view)
+                    except Exception as e:
+                        print(f"Error sending volatility alert: {e}")
+            
+            session.commit()
+        finally:
+            session.close()
+    except Exception as e:
+        print(f"Error in volatility loop: {e}")
+
+
+@volatility_loop.before_loop
+async def before_volatility():
+    await bot.wait_until_ready()
+
+
+@tasks.loop(hours=1)
+async def cleanup_loop():
+    try:
+        from datetime import timedelta
+        session = get_session()
+        try:
+            cutoff = datetime.utcnow() - timedelta(hours=3)
+            deleted = session.query(PriceSnapshot).filter(
+                PriceSnapshot.captured_at < cutoff
+            ).delete()
+            
+            alert_cutoff = datetime.utcnow() - timedelta(hours=24)
+            session.query(VolatilityAlert).filter(
+                VolatilityAlert.alerted_at < alert_cutoff
+            ).delete()
+            
+            session.commit()
+            if deleted > 0:
+                print(f"Cleaned up {deleted} old price snapshots")
+        finally:
+            session.close()
+    except Exception as e:
+        print(f"Error in cleanup loop: {e}")
+
+
+@cleanup_loop.before_loop
+async def before_cleanup():
+    await bot.wait_until_ready()
+
+
 @setup.error
 @threshold.error
 @track.error
@@ -600,6 +784,7 @@ async def before_monitor():
 @pause.error
 @resume.error
 @rename.error
+@volatility.error
 async def command_error(interaction: discord.Interaction, error):
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message(

@@ -354,13 +354,66 @@ def create_wallet_positions_embed(
     return embed
 
 
+def create_volatility_alert_embed(
+    market_title: str,
+    slug: str,
+    old_price: float,
+    new_price: float,
+    price_change: float,
+    time_window_minutes: int = 60
+) -> Embed:
+    direction = "up" if price_change > 0 else "down"
+    arrow = "+" if price_change > 0 else ""
+    color = 0x27AE60 if price_change > 0 else 0xE74C3C
+    
+    market_url = f"https://polymarket.com/event/{slug}" if slug else "https://polymarket.com"
+    market_display = get_market_link(market_title, market_url)
+    
+    embed = Embed(
+        title=f"Volatility Alert",
+        description=f"Market moved {arrow}{price_change:.1f}% in {time_window_minutes} minutes",
+        color=color,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Market",
+        value=market_display,
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Previous Price",
+        value=f"{old_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Current Price",
+        value=f"{new_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Change",
+        value=f"{arrow}{price_change:.1f}%",
+        inline=True
+    )
+    
+    embed.set_footer(text="Polymarket Volatility Monitor")
+    
+    return embed, market_url
+
+
 def create_settings_embed(
     guild_name: str,
     channel_name: Optional[str],
     whale_threshold: float,
     fresh_wallet_threshold: float,
     is_paused: bool,
-    tracked_wallets: list
+    tracked_wallets: list,
+    volatility_channel_name: Optional[str] = None,
+    volatility_threshold: float = 20.0
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -393,6 +446,18 @@ def create_settings_embed(
     embed.add_field(
         name="Fresh Wallet Threshold",
         value=f"${fresh_wallet_threshold:,.0f}",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Volatility Channel",
+        value=f"#{volatility_channel_name}" if volatility_channel_name else "Not configured",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Volatility Threshold",
+        value=f"{volatility_threshold:.0f}%",
         inline=True
     )
     
