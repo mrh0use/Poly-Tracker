@@ -71,6 +71,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: Switched to paginated Data API calls for accurate PnL matching Polymarket's displayed values - fetches open + closed positions up to 10,000 offset with realized PnL summing
 - 2026-01-05: Integrated Goldsky PnL Subgraph for complete wallet statistics - now fetches ALL positions (unlimited) via GraphQL with pagination, eliminating the 500 position limit from Data API
 - 2026-01-05: Added PnL and win rate display to /list command for each tracked wallet
 - 2026-01-05: Fixed PnL to fetch both open AND closed positions from API for accurate all-time totals (was missing historical closed positions)
