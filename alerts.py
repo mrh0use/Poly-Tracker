@@ -445,7 +445,10 @@ def create_settings_embed(
     volatility_threshold: float = 20.0,
     sports_channel_name: Optional[str] = None,
     sports_threshold: float = 5000.0,
-    wallet_stats: Optional[Dict[str, Any]] = None
+    wallet_stats: Optional[Dict[str, Any]] = None,
+    whale_channel_name: Optional[str] = None,
+    fresh_wallet_channel_name: Optional[str] = None,
+    tracked_wallet_channel_name: Optional[str] = None
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -464,44 +467,53 @@ def create_settings_embed(
     )
     
     embed.add_field(
-        name="Alert Channel",
+        name="Fallback Channel",
         value=f"#{channel_name}" if channel_name else "Not configured",
         inline=True
     )
     
     embed.add_field(
-        name="Whale Threshold",
-        value=f"${whale_threshold:,.0f}",
+        name="\u200b",
+        value="\u200b",
+        inline=True
+    )
+    
+    whale_ch = whale_channel_name or channel_name
+    embed.add_field(
+        name="Whale Alerts",
+        value=f"#{whale_ch} (${whale_threshold:,.0f}+)" if whale_ch else "Not configured",
+        inline=True
+    )
+    
+    fresh_ch = fresh_wallet_channel_name or channel_name
+    embed.add_field(
+        name="Fresh Wallet Alerts",
+        value=f"#{fresh_ch} (${fresh_wallet_threshold:,.0f}+)" if fresh_ch else "Not configured",
+        inline=True
+    )
+    
+    tracked_ch = tracked_wallet_channel_name or channel_name
+    embed.add_field(
+        name="Tracked Wallet Alerts",
+        value=f"#{tracked_ch}" if tracked_ch else "Not configured",
         inline=True
     )
     
     embed.add_field(
-        name="Fresh Wallet Threshold",
-        value=f"${fresh_wallet_threshold:,.0f}",
+        name="Volatility Alerts",
+        value=f"#{volatility_channel_name} ({volatility_threshold:.0f}%+)" if volatility_channel_name else "Not configured",
         inline=True
     )
     
     embed.add_field(
-        name="Volatility Channel",
-        value=f"#{volatility_channel_name}" if volatility_channel_name else "Not configured",
+        name="Sports Alerts",
+        value=f"#{sports_channel_name} (${sports_threshold:,.0f}+)" if sports_channel_name else "Not configured",
         inline=True
     )
     
     embed.add_field(
-        name="Volatility Threshold",
-        value=f"{volatility_threshold:.0f}%",
-        inline=True
-    )
-    
-    embed.add_field(
-        name="Sports Channel",
-        value=f"#{sports_channel_name}" if sports_channel_name else "Not configured",
-        inline=True
-    )
-    
-    embed.add_field(
-        name="Sports Threshold",
-        value=f"${sports_threshold:,.0f}",
+        name="\u200b",
+        value="\u200b",
         inline=True
     )
     

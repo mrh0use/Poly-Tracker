@@ -40,7 +40,10 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 
 | Command | Description | Permissions |
 |---------|-------------|-------------|
-| `/setup #channel` | Set trade alerts channel | Admin |
+| `/setup #channel` | Set fallback alerts channel | Admin |
+| `/whale_channel #channel` | Set whale alerts channel | Admin |
+| `/fresh_wallet_channel #channel` | Set fresh wallet alerts channel | Admin |
+| `/tracked_wallet_channel #channel` | Set tracked wallet alerts channel | Admin |
 | `/volatility #channel` | Set volatility alerts channel | Admin |
 | `/sports #channel` | Set sports alerts channel | Admin |
 | `/threshold <amount>` | Set USD threshold | Admin |
