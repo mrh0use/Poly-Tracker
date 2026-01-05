@@ -131,12 +131,15 @@ class PolymarketClient:
                     markets = await resp.json()
                     for market in markets:
                         condition_id = market.get('conditionId', market.get('condition_id', ''))
+                        events = market.get('events', [])
+                        event_slug = events[0].get('slug', '') if events else ''
                         if condition_id:
                             self._market_cache[condition_id] = {
                                 'slug': market.get('slug', ''),
                                 'title': market.get('question', market.get('title', '')),
                                 'tags': market.get('tags', []),
                                 'groupSlug': market.get('groupSlug', ''),
+                                'eventSlug': event_slug,
                             }
                         tokens = market.get('tokens', [])
                         for token in tokens:
@@ -147,6 +150,7 @@ class PolymarketClient:
                                     'title': market.get('question', market.get('title', '')),
                                     'tags': market.get('tags', []),
                                     'groupSlug': market.get('groupSlug', ''),
+                                    'eventSlug': event_slug,
                                 }
                     self._cache_last_updated = now
                     print(f"Market cache refreshed: {len(self._market_cache)} entries")
@@ -417,6 +421,33 @@ class PolymarketClient:
         condition_id = trade_or_activity.get('conditionId', trade_or_activity.get('condition_id', ''))
         if condition_id:
             return f"https://polymarket.com/market/{condition_id}"
+        
+        return "https://polymarket.com"
+    
+    def get_onsight_url(self, trade_or_activity: Dict[str, Any]) -> str:
+        market_info = self.get_market_info(trade_or_activity)
+        if market_info:
+            event_slug = market_info.get('eventSlug', '')
+            if event_slug:
+                return f"https://polymarket.com/event/{event_slug}"
+        
+        slug = self.get_market_slug(trade_or_activity)
+        if slug:
+            clean_slug = slug.split('?')[0].strip('/')
+            return f"https://polymarket.com/event/{clean_slug}"
+        
+        return "https://polymarket.com"
+    
+    def get_onsight_url_by_condition(self, condition_id: str, fallback_slug: str = '') -> str:
+        if condition_id and condition_id in self._market_cache:
+            market_info = self._market_cache[condition_id]
+            event_slug = market_info.get('eventSlug', '')
+            if event_slug:
+                return f"https://polymarket.com/event/{event_slug}"
+        
+        if fallback_slug:
+            clean_slug = fallback_slug.split('?')[0].strip('/')
+            return f"https://polymarket.com/event/{clean_slug}"
         
         return "https://polymarket.com"
     
