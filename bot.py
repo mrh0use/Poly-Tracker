@@ -19,7 +19,6 @@ from alerts import (
 class PolymarketBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
-        intents.message_content = True
         intents.guilds = True
         
         super().__init__(command_prefix="!", intents=intents)
@@ -332,16 +331,21 @@ async def monitor_loop():
                 return
             
             for trade in trades:
-                tx_hash = trade.get('id') or trade.get('transactionHash') or str(trade.get('timestamp', ''))
+                trade_id = trade.get('id')
+                tx_hash = trade.get('transactionHash', '')
+                timestamp = str(trade.get('timestamp', ''))
+                fill_index = str(trade.get('fillIndex', trade.get('tradeIndex', '')))
                 
-                if not tx_hash:
+                unique_key = trade_id or f"{tx_hash}_{timestamp}_{fill_index}"
+                
+                if not unique_key or unique_key == "__":
                     continue
                 
-                seen = session.query(SeenTransaction).filter_by(tx_hash=tx_hash).first()
+                seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key).first()
                 if seen:
                     continue
                 
-                session.add(SeenTransaction(tx_hash=tx_hash))
+                session.add(SeenTransaction(tx_hash=unique_key))
                 
                 value = polymarket_client.calculate_trade_value(trade)
                 wallet = polymarket_client.get_wallet_from_trade(trade)
