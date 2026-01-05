@@ -71,6 +71,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-05: Fixed PnL calculation to count all positions with realized PnL (not just fully closed ones) for accurate totals
 - 2026-01-05: Fixed tracked wallet alerts to only show trades made AFTER wallet was added to tracking (prevents old historical trades from appearing)
 - 2026-01-05: Fixed PnL stats to use Data API endpoint (was using wrong Gamma API endpoint which returned no data)
 - 2026-01-05: Improved alert display - shows "BUY Yes" / "SELL No" action format, full wallet addresses (copyable), and better market URL construction with cache lookup and conditionId fallback
