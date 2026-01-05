@@ -36,6 +36,21 @@ class PolymarketClient:
             print(f"Error fetching trades: {e}")
             return []
     
+    async def get_wallet_trades(self, wallet_address: str, limit: int = 20) -> List[Dict[str, Any]]:
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/trades",
+                params={"user": wallet_address, "limit": limit}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data if isinstance(data, list) else []
+                return []
+        except Exception as e:
+            print(f"Error fetching wallet trades for {wallet_address}: {e}")
+            return []
+    
     async def get_markets(self, limit: int = 100, active: bool = True) -> List[Dict[str, Any]]:
         await self.ensure_session()
         params = {

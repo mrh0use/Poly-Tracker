@@ -49,6 +49,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 
 ## Recent Changes
 
+- 2026-01-05: Fixed tracked wallet alerts to query each wallet directly via API (catches all trades regardless of amount)
 - 2026-01-05: Initial project setup with full bot implementation
 
 ## User Preferences

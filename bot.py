@@ -315,11 +315,6 @@ async def help_command(interaction: discord.Interaction):
 @tasks.loop(seconds=30)
 async def monitor_loop():
     try:
-        trades = await polymarket_client.get_recent_trades(limit=50)
-        
-        if not trades:
-            return
-        
         session = get_session()
         try:
             configs = session.query(ServerConfig).filter(
@@ -330,9 +325,37 @@ async def monitor_loop():
             if not configs:
                 return
             
+            all_tracked = session.query(TrackedWallet).all()
+            tracked_by_guild = {}
+            unique_tracked_addresses = set()
+            for tw in all_tracked:
+                if tw.guild_id not in tracked_by_guild:
+                    tracked_by_guild[tw.guild_id] = {}
+                tracked_by_guild[tw.guild_id][tw.wallet_address] = tw
+                unique_tracked_addresses.add(tw.wallet_address)
+            
+            global_trades = await polymarket_client.get_recent_trades(limit=50)
+            
+            tracked_trades = []
+            for wallet_addr in unique_tracked_addresses:
+                wallet_trades = await polymarket_client.get_wallet_trades(wallet_addr, limit=10)
+                if wallet_trades:
+                    tracked_trades.extend(wallet_trades)
+            
+            all_trades = global_trades or []
+            seen_keys = set()
+            for trade in tracked_trades:
+                key = polymarket_client.get_unique_trade_id(trade)
+                if key not in seen_keys:
+                    all_trades.append(trade)
+                    seen_keys.add(key)
+            
+            if not all_trades:
+                return
+            
             processed_wallets_this_batch = set()
             
-            for trade in trades:
+            for trade in all_trades:
                 unique_key = polymarket_client.get_unique_trade_id(trade)
                 
                 if not unique_key or len(unique_key) < 10:
@@ -368,8 +391,7 @@ async def monitor_loop():
                     if not channel:
                         continue
                     
-                    tracked_wallets = session.query(TrackedWallet).filter_by(guild_id=config.guild_id).all()
-                    tracked_addresses = {tw.wallet_address: tw for tw in tracked_wallets}
+                    tracked_addresses = tracked_by_guild.get(config.guild_id, {})
                     
                     if wallet in tracked_addresses:
                         tw = tracked_addresses[wallet]
