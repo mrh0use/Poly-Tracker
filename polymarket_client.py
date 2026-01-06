@@ -616,76 +616,105 @@ class PolymarketClient:
 
 
     async def search_markets(self, query: str, limit: int = 30) -> List[Dict[str, Any]]:
-        """Search markets by keyword and return matches with stats."""
+        """Search markets by keyword with pagination to fetch all active markets."""
         await self.ensure_session()
         try:
-            async with self.session.get(
-                f"{self.GAMMA_BASE_URL}/markets",
-                params={
-                    "limit": 200,
-                    "active": "true",
-                    "closed": "false"
-                }
-            ) as resp:
-                if resp.status == 200:
-                    markets = await resp.json()
-                    query_lower = query.lower()
-                    keywords = query_lower.split()
+            all_markets = []
+            offset = 0
+            page_size = 500
+            max_pages = 10
+            
+            for page in range(max_pages):
+                async with self.session.get(
+                    f"{self.GAMMA_BASE_URL}/markets",
+                    params={
+                        "limit": page_size,
+                        "offset": offset,
+                        "active": "true",
+                        "closed": "false"
+                    }
+                ) as resp:
+                    if resp.status == 200:
+                        markets = await resp.json()
+                        if not markets:
+                            break
+                        all_markets.extend(markets)
+                        offset += page_size
+                        if len(markets) < page_size:
+                            break
+                    else:
+                        print(f"Markets API returned {resp.status} at offset {offset}")
+                        break
+            
+            print(f"Search fetched {len(all_markets)} total markets")
+            
+            query_lower = query.lower()
+            keywords = query_lower.split()
+            
+            matches = []
+            for m in all_markets:
+                question = m.get('question', '').lower()
+                slug = m.get('slug', '').lower()
+                
+                if all(kw in question or kw in slug for kw in keywords):
+                    volume_str = m.get('volume', '0') or '0'
+                    liquidity_str = m.get('liquidity', '0') or '0'
                     
-                    matches = []
-                    for m in markets:
-                        question = m.get('question', '').lower()
-                        slug = m.get('slug', '').lower()
-                        
-                        if all(kw in question or kw in slug for kw in keywords):
-                            volume_str = m.get('volume', '0') or '0'
-                            liquidity_str = m.get('liquidity', '0') or '0'
-                            
-                            try:
-                                volume = float(volume_str)
-                            except (ValueError, TypeError):
-                                volume = 0.0
-                            
-                            try:
-                                liquidity = float(liquidity_str)
-                            except (ValueError, TypeError):
-                                liquidity = 0.0
-                            
-                            outcomes = m.get('outcomes', ['Yes', 'No'])
-                            outcome_prices = m.get('outcomePrices', [0.5, 0.5])
-                            
-                            if isinstance(outcome_prices, str):
-                                try:
-                                    outcome_prices = [float(p) for p in outcome_prices.strip('[]').split(',')]
-                                except (ValueError, IndexError):
-                                    outcome_prices = [0.5, 0.5]
-                            
-                            tokens = m.get('tokens', [])
-                            token_ids = []
-                            for token in tokens:
-                                token_ids.append({
-                                    'outcome': token.get('outcome', ''),
-                                    'token_id': token.get('token_id', '')
-                                })
-                            
-                            events = m.get('events', [])
-                            event_slug = events[0].get('slug', '') if events else m.get('slug', '')
-                            
-                            matches.append({
-                                'question': m.get('question', 'Unknown'),
-                                'slug': m.get('slug', ''),
-                                'event_slug': event_slug,
-                                'condition_id': m.get('conditionId', ''),
-                                'volume': volume,
-                                'liquidity': liquidity,
-                                'outcomes': outcomes if isinstance(outcomes, list) else ['Yes', 'No'],
-                                'outcome_prices': outcome_prices,
-                                'token_ids': token_ids
+                    try:
+                        volume = float(volume_str)
+                    except (ValueError, TypeError):
+                        volume = 0.0
+                    
+                    try:
+                        liquidity = float(liquidity_str)
+                    except (ValueError, TypeError):
+                        liquidity = 0.0
+                    
+                    outcomes = m.get('outcomes', ['Yes', 'No'])
+                    outcome_prices = m.get('outcomePrices', [0.5, 0.5])
+                    
+                    if isinstance(outcome_prices, str):
+                        try:
+                            outcome_prices = [float(p) for p in outcome_prices.strip('[]').split(',')]
+                        except (ValueError, IndexError):
+                            outcome_prices = [0.5, 0.5]
+                    
+                    tokens = m.get('tokens', [])
+                    token_ids = []
+                    for token in tokens:
+                        token_ids.append({
+                            'outcome': token.get('outcome', ''),
+                            'token_id': token.get('token_id', '')
+                        })
+                    
+                    clob_token_ids = m.get('clobTokenIds', [])
+                    if not token_ids and clob_token_ids:
+                        outcomes_list = outcomes if isinstance(outcomes, list) else ['Yes', 'No']
+                        for idx, tid in enumerate(clob_token_ids):
+                            outcome_name = outcomes_list[idx] if idx < len(outcomes_list) else f"Outcome {idx}"
+                            token_ids.append({
+                                'outcome': outcome_name,
+                                'token_id': tid
                             })
                     
-                    matches.sort(key=lambda x: x['volume'], reverse=True)
-                    return matches[:limit]
-                return []
+                    events = m.get('events', [])
+                    event_slug = events[0].get('slug', '') if events else m.get('slug', '')
+                    
+                    matches.append({
+                        'question': m.get('question', 'Unknown'),
+                        'slug': m.get('slug', ''),
+                        'event_slug': event_slug,
+                        'condition_id': m.get('conditionId', ''),
+                        'volume': volume,
+                        'liquidity': liquidity,
+                        'outcomes': outcomes if isinstance(outcomes, list) else ['Yes', 'No'],
+                        'outcome_prices': outcome_prices,
+                        'token_ids': token_ids
+                    })
+            
+            print(f"Search found {len(matches)} matches for '{query}'")
+            matches.sort(key=lambda x: x['volume'], reverse=True)
+            return matches[:limit]
         except Exception as e:
             print(f"Error searching markets: {e}")
             return []
