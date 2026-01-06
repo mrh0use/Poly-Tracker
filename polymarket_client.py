@@ -837,6 +837,8 @@ class PolymarketClient:
 class PolymarketWebSocket:
     RTDS_URL = "wss://ws-live-data.polymarket.com"
     ACTIVITY_TIMEOUT = 120
+    DEBUG_MODE = True
+    DEBUG_LOG_FIRST_N = 10
     
     def __init__(self, on_trade_callback: Callable[[Dict[str, Any]], None] = None):
         self.on_trade_callback = on_trade_callback
@@ -845,6 +847,14 @@ class PolymarketWebSocket:
         self._reconnect_delay = 5
         self._max_reconnect_delay = 60
         self._last_activity = time.time()
+        self._debug_msg_count = 0
+        self._debug_trade_count = 0
+        self._debug_non_trade_count = 0
+        self._debug_empty_count = 0
+        self._debug_error_count = 0
+        self._debug_last_msg_time = None
+        self._debug_topics_seen = set()
+        self._debug_types_seen = set()
     
     async def connect(self):
         self._running = True
@@ -872,22 +882,39 @@ class PolymarketWebSocket:
                             }
                         ]
                     }
-                    await ws.send(json.dumps(subscription))
+                    sub_json = json.dumps(subscription)
+                    if self.DEBUG_MODE:
+                        print(f"[WS DEBUG] Sending subscription: {sub_json}", flush=True)
+                    await ws.send(sub_json)
                     print("[WebSocket] Subscribed to global trades feed", flush=True)
                     
                     reconnect_delay = self._reconnect_delay
                     self._first_message_logged = False
+                    self._debug_msg_count = 0
+                    self._debug_trade_count = 0
+                    self._debug_non_trade_count = 0
+                    self._debug_empty_count = 0
+                    self._debug_error_count = 0
+                    self._debug_topics_seen = set()
+                    self._debug_types_seen = set()
+                    
+                    if self.DEBUG_MODE:
+                        print(f"[WS DEBUG] Starting message loop, timeout={self.ACTIVITY_TIMEOUT}s", flush=True)
                     
                     while self._running:
                         try:
+                            if self.DEBUG_MODE and self._debug_msg_count == 0:
+                                print("[WS DEBUG] Waiting for first message...", flush=True)
                             message = await asyncio.wait_for(ws.recv(), timeout=self.ACTIVITY_TIMEOUT)
                             self._last_activity = time.time()
                             if not self._first_message_logged:
-                                print("[WebSocket] Receiving messages...", flush=True)
+                                print(f"[WebSocket] Receiving messages... (len={len(message) if message else 0})", flush=True)
                                 self._first_message_logged = True
                             await self._handle_message(message)
                             await asyncio.sleep(0)
                         except asyncio.TimeoutError:
+                            if self.DEBUG_MODE:
+                                print(f"[WS DEBUG] Timeout stats: msgs={self._debug_msg_count}, trades={self._debug_trade_count}, non_trades={self._debug_non_trade_count}, errors={self._debug_error_count}", flush=True)
                             print(f"[WebSocket] No activity for {self.ACTIVITY_TIMEOUT}s, reconnecting...")
                             break
                         
@@ -901,28 +928,62 @@ class PolymarketWebSocket:
                 reconnect_delay = min(reconnect_delay * 2, self._max_reconnect_delay)
     
     async def _handle_message(self, raw_message: str):
+        now = time.time()
+        
         try:
             if not raw_message or not raw_message.strip():
+                self._debug_empty_count += 1
+                if self.DEBUG_MODE:
+                    print(f"[WS DEBUG] Empty message #{self._debug_empty_count}", flush=True)
                 return
             
-            self._message_count = getattr(self, '_message_count', 0) + 1
+            self._debug_msg_count += 1
+            
+            if self.DEBUG_MODE and self._debug_msg_count <= self.DEBUG_LOG_FIRST_N:
+                preview = raw_message[:500] if len(raw_message) > 500 else raw_message
+                print(f"[WS DEBUG] Message #{self._debug_msg_count} (len={len(raw_message)}): {preview}", flush=True)
+            
+            if self._debug_last_msg_time and self.DEBUG_MODE:
+                gap = now - self._debug_last_msg_time
+                if self._debug_msg_count <= 20 or gap > 5:
+                    print(f"[WS DEBUG] Time since last msg: {gap:.2f}s", flush=True)
+            self._debug_last_msg_time = now
             
             message = json.loads(raw_message)
+            
+            topic = message.get('topic', 'unknown')
+            msg_type = message.get('type', 'unknown')
+            self._debug_topics_seen.add(topic)
+            self._debug_types_seen.add(msg_type)
+            
+            if self.DEBUG_MODE and self._debug_msg_count <= self.DEBUG_LOG_FIRST_N:
+                print(f"[WS DEBUG] topic={topic}, type={msg_type}, has_payload={message.get('payload') is not None}", flush=True)
             
             payload = message.get('payload')
             if payload and self.on_trade_callback:
                 trade = self._normalize_trade(payload)
                 if trade:
-                    self._trade_count = getattr(self, '_trade_count', 0) + 1
-                    if self._trade_count % 1000 == 0:
-                        print(f"[WS] Trades processed: {self._trade_count}", flush=True)
+                    self._debug_trade_count += 1
+                    if self._debug_trade_count % 1000 == 0:
+                        print(f"[WS] Trades processed: {self._debug_trade_count}", flush=True)
+                        if self.DEBUG_MODE:
+                            print(f"[WS DEBUG STATS] msgs={self._debug_msg_count}, trades={self._debug_trade_count}, non_trades={self._debug_non_trade_count}, errors={self._debug_error_count}", flush=True)
+                            print(f"[WS DEBUG STATS] topics_seen={self._debug_topics_seen}, types_seen={self._debug_types_seen}", flush=True)
                     await self.on_trade_callback(trade)
                     await asyncio.sleep(0)
+            else:
+                self._debug_non_trade_count += 1
+                if self.DEBUG_MODE and self._debug_non_trade_count <= 5:
+                    print(f"[WS DEBUG] Non-trade message #{self._debug_non_trade_count}: topic={topic}, type={msg_type}", flush=True)
                         
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            self._debug_error_count += 1
+            if self.DEBUG_MODE:
+                preview = raw_message[:200] if raw_message and len(raw_message) > 200 else raw_message
+                print(f"[WS DEBUG] JSON decode error #{self._debug_error_count}: {e}, msg={preview}", flush=True)
         except Exception as e:
-            print(f"[WebSocket] Error handling message: {e}")
+            self._debug_error_count += 1
+            print(f"[WebSocket] Error handling message #{self._debug_msg_count}: {e}", flush=True)
     
     def _normalize_trade(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
