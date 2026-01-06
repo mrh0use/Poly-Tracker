@@ -67,7 +67,8 @@ bot = PolymarketBot()
     fresh_wallet="Channel for fresh wallet alerts",
     tracked_wallet="Channel for tracked wallet alerts",
     volatility="Channel for volatility alerts (20%+ swings)",
-    sports="Channel for sports/esports alerts"
+    sports="Channel for sports/esports alerts",
+    top_trader="Channel for top 25 trader alerts"
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def setup(
@@ -76,9 +77,10 @@ async def setup(
     fresh_wallet: Optional[discord.TextChannel] = None,
     tracked_wallet: Optional[discord.TextChannel] = None,
     volatility: Optional[discord.TextChannel] = None,
-    sports: Optional[discord.TextChannel] = None
+    sports: Optional[discord.TextChannel] = None,
+    top_trader: Optional[discord.TextChannel] = None
 ):
-    if not any([whale, fresh_wallet, tracked_wallet, volatility, sports]):
+    if not any([whale, fresh_wallet, tracked_wallet, volatility, sports, top_trader]):
         await interaction.response.send_message(
             "Please specify at least one channel to configure.\n"
             "Example: `/setup whale:#whale-alerts fresh_wallet:#fresh-alerts`",
@@ -110,6 +112,9 @@ async def setup(
         if sports:
             config.sports_channel_id = sports.id
             configured.append(f"Sports: {sports.mention}")
+        if top_trader:
+            config.top_trader_channel_id = top_trader.id
+            configured.append(f"Top Trader: {top_trader.mention}")
         
         session.commit()
         
@@ -870,7 +875,7 @@ async def help_command(interaction: discord.Interaction):
     
     embed.add_field(
         name="/setup",
-        value="Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports)",
+        value="Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports, top_trader)",
         inline=False
     )
     embed.add_field(
@@ -896,6 +901,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/tracked_wallet_channel #channel",
         value="Set the channel for tracked wallet alerts",
+        inline=False
+    )
+    embed.add_field(
+        name="/top_trader_channel #channel",
+        value="Set the channel for top 25 trader alerts",
         inline=False
     )
     embed.add_field(
