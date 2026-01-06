@@ -852,7 +852,7 @@ class PolymarketWebSocket:
         
         while self._running:
             try:
-                print("[WebSocket] Connecting to Polymarket RTDS...")
+                print("[WebSocket] Connecting to Polymarket RTDS...", flush=True)
                 async with websockets.connect(
                     self.RTDS_URL,
                     ping_interval=20,
@@ -861,7 +861,7 @@ class PolymarketWebSocket:
                 ) as ws:
                     self.ws = ws
                     self._last_activity = time.time()
-                    print("[WebSocket] Connected! Subscribing to all trades...")
+                    print("[WebSocket] Connected! Subscribing to all trades...", flush=True)
                     
                     subscription = {
                         "action": "subscribe",
@@ -873,14 +873,18 @@ class PolymarketWebSocket:
                         ]
                     }
                     await ws.send(json.dumps(subscription))
-                    print("[WebSocket] Subscribed to global trades feed")
+                    print("[WebSocket] Subscribed to global trades feed", flush=True)
                     
                     reconnect_delay = self._reconnect_delay
+                    self._first_message_logged = False
                     
                     while self._running:
                         try:
                             message = await asyncio.wait_for(ws.recv(), timeout=self.ACTIVITY_TIMEOUT)
                             self._last_activity = time.time()
+                            if not self._first_message_logged:
+                                print("[WebSocket] Receiving messages...", flush=True)
+                                self._first_message_logged = True
                             await self._handle_message(message)
                         except asyncio.TimeoutError:
                             print(f"[WebSocket] No activity for {self.ACTIVITY_TIMEOUT}s, reconnecting...")
@@ -910,7 +914,7 @@ class PolymarketWebSocket:
                 if trade:
                     self._trade_count = getattr(self, '_trade_count', 0) + 1
                     if self._trade_count % 500 == 0:
-                        print(f"[WS] Trades processed: {self._trade_count}")
+                        print(f"[WS] Trades processed: {self._trade_count}", flush=True)
                     await self.on_trade_callback(trade)
                         
         except json.JSONDecodeError:
