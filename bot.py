@@ -1272,7 +1272,8 @@ async def monitor_loop():
                                     wallet_address=wallet,
                                     market_url=market_url,
                                     pnl=wallet_stats.get('pnl'),
-                                    rank=wallet_stats.get('rank')
+                                    rank=wallet_stats.get('rank'),
+                                    is_sports=True
                                 )
                                 try:
                                     await sports_channel.send(embed=embed, view=button_view)
@@ -1287,7 +1288,8 @@ async def monitor_loop():
                                     wallet_address=wallet,
                                     market_url=market_url,
                                     pnl=wallet_stats.get('pnl'),
-                                    rank=wallet_stats.get('rank')
+                                    rank=wallet_stats.get('rank'),
+                                    is_sports=True
                                 )
                                 try:
                                     await sports_channel.send(embed=embed, view=button_view)

@@ -76,8 +76,8 @@ def create_bonds_alert_embed(
     price_pct = price * 100
     
     embed = Embed(
-        title=f"Bond Alert ({price_pct:.0f}%)",
-        description=f"{stats_line}High-certainty market trade detected",
+        title=f"🏦 Bond Alert ({price_pct:.0f}%)",
+        description=f"{stats_line}Someone is locking in profits on a near-certain market!",
         color=0x9B59B6,
         timestamp=datetime.utcnow()
     )
@@ -140,7 +140,8 @@ def create_whale_alert_embed(
     wallet_address: str = "Unknown",
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
-    rank: Optional[int] = None
+    rank: Optional[int] = None,
+    is_sports: bool = False
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
@@ -150,9 +151,16 @@ def create_whale_alert_embed(
             stats_line += f" | Rank #{rank}"
         stats_line += "\n\n"
     
+    if is_sports:
+        title = "⚽ Sports Whale Alert"
+        description = f"{stats_line}Someone just placed a massive bet on sports!"
+    else:
+        title = "🐋 Whale Alert"
+        description = f"{stats_line}A whale just made a massive move!"
+    
     embed = Embed(
-        title="Whale Alert",
-        description=f"{stats_line}Large transaction detected on Polymarket",
+        title=title,
+        description=description,
         color=0xFF6B6B,
         timestamp=datetime.utcnow()
     )
@@ -216,7 +224,8 @@ def create_fresh_wallet_alert_embed(
     wallet_address: str = "Unknown",
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
-    rank: Optional[int] = None
+    rank: Optional[int] = None,
+    is_sports: bool = False
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
@@ -226,9 +235,16 @@ def create_fresh_wallet_alert_embed(
             stats_line += f" | Rank #{rank}"
         stats_line += "\n\n"
     
+    if is_sports:
+        title = "⚽ Fresh Wallet Sports Alert"
+        description = f"{stats_line}A brand new wallet just made their first sports bet!"
+    else:
+        title = "🆕 Fresh Wallet Alert"
+        description = f"{stats_line}A brand new wallet just placed their first big bet!"
+    
     embed = Embed(
-        title="Fresh Wallet Alert",
-        description=f"{stats_line}New wallet making first large transaction",
+        title=title,
+        description=description,
         color=0x4ECDC4,
         timestamp=datetime.utcnow()
     )
@@ -290,9 +306,9 @@ def create_top_trader_alert_embed(
     username = trader_info.get('username') if trader_info else None
     pnl = trader_info.get('pnl') if trader_info else None
     
-    title = f"Top Trader Alert"
+    title = f"🏆 Top Trader Alert"
     if rank:
-        title = f"#{rank} Top Trader Alert"
+        title = f"🏆 #{rank} Top Trader Alert"
     if username:
         title += f" - {username}"
     
@@ -303,7 +319,7 @@ def create_top_trader_alert_embed(
     
     embed = Embed(
         title=title,
-        description=f"{stats_line}Trade from a top 25 all-time profit leader",
+        description=f"{stats_line}One of the top 25 traders just made a move!",
         color=0xFFD700,
         timestamp=datetime.utcnow()
     )
@@ -371,7 +387,7 @@ def create_custom_wallet_alert_embed(
     volume: Optional[float] = None,
     rank: Optional[str] = None
 ) -> Embed:
-    title = f"Tracked Wallet Alert"
+    title = f"👀 Tracked Wallet Alert"
     if wallet_label:
         title += f" - {wallet_label}"
     
@@ -385,7 +401,7 @@ def create_custom_wallet_alert_embed(
     
     embed = Embed(
         title=title,
-        description=f"{stats_line}Activity detected from a tracked wallet",
+        description=f"{stats_line}One of your tracked wallets just made a trade!",
         color=0xFFE66D,
         timestamp=datetime.utcnow()
     )
@@ -622,8 +638,8 @@ def create_volatility_alert_embed(
     market_display = get_market_link(market_title, market_url)
     
     embed = Embed(
-        title=f"Volatility Alert",
-        description=f"Market moved {arrow}{price_change:.1f}% in {time_window_minutes} minutes",
+        title=f"📈 Volatility Alert",
+        description=f"A market is swinging wildly! Moved {arrow}{price_change:.1f}% in just {time_window_minutes} minutes!",
         color=color,
         timestamp=datetime.utcnow()
     )
