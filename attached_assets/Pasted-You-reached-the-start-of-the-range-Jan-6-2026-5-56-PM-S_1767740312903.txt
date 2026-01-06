@@ -1,0 +1,68 @@
+You reached the start of the range
+Jan 6, 2026, 5:56 PM
+Starting Container
+Using PRODUCTION bot token
+Starting Polymarket Discord Bot...
+[2026-01-06 22:57:20] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+[2026-01-06 22:57:20] [INFO    ] discord.client: logging in using static token
+Database initialized
+[2026-01-06 22:57:22] [INFO    ] discord.gateway: Shard ID None has connected to Gateway (Session ID: 48615693740257b6faaf88c9fe5cfa71).
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+Slash commands synced
+Monitor loop started (backup for tracked wallets)
+Volatility loop started
+Cleanup loop started
+Sports tags loaded
+WebSocket task scheduled
+[WebSocket] Starting real-time trade feed...
+[WebSocket] Connecting to Polymarket RTDS...
+Market cache refreshed: 500 entries
+[WebSocket] Connected! Subscribing to all trades...
+[WS DEBUG] Sending subscription: {"action": "subscribe", "subscriptions": [{"topic": "activity", "type": "trades"}]}
+[WebSocket] Subscribed to global trades feed
+[WS DEBUG] Keepalive task started (ping every 30s)
+[WS DEBUG] Starting message loop, timeout=120s
+[WS DEBUG] Waiting for first message...
+[WebSocket] Receiving messages... (len=0)
+[WS DEBUG] Empty message #1
+[WS DEBUG] Waiting for first message...
+Top traders cache refreshed: 25 entries
+[WS DEBUG] Message #1 (len=810): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"107478037665701548603477072866795480570961319512104254134465224764609907450329","bio":"","conditionId":"0x0aa78882f46cf9518dfa8713a6420e2dbadb980763fe3ae783dad66568042110","eventSlug":"sol-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL+fullsize.png","name":"kingRashford","outcome":"Up","outcomeIndex":0,"price":0.98,"profileImage":"","proxyWallet":"0x8908F30c4338933eA335bc86241dCE1b3f8678e2","pseudony
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #2 (len=823): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"104049605503339399868799994825171549793843689419306884360799827603628113033108","bio":"","conditionId":"0xf5b3982c3f29bf4b445f698da9fa18f21160af1cead042c11385ffd477eac809","eventSlug":"bitcoin-up-or-down-january-6-5pm-et","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"n0madsplice","outcome":"Up","outcomeIndex":0,"price":0.72,"profileImage":"","proxyWallet":"0xb548B896C743BAed7502077a819F4E6AfEa108F3",
+[WS DEBUG] Time since last msg: 1.34s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #3 (len=885): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"5161623255678193352839985156330393796378434470119114669671615782853260939535","bio":"","conditionId":"0xd595eb9b81885ff018738300c79047e3ec89e87294424f57a29a7fa9162bf116","eventSlug":"will-trump-acquire-greenland-before-2027","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/will-trump-acquire-greenland-in-2025-5ZDkcIGhdBMW.jpg","name":"vakarsi","outcome":"Yes","outcomeIndex":0,"price":0.1499998874999719,"profileImage":"","proxyWa
+[WS DEBUG] Time since last msg: 0.34s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #4 (len=824): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"59135737825741645227598976372931171823784515317412391410888877451063049577160","bio":"","conditionId":"0xf5b3982c3f29bf4b445f698da9fa18f21160af1cead042c11385ffd477eac809","eventSlug":"bitcoin-up-or-down-january-6-5pm-et","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"napes21","outcome":"Down","outcomeIndex":1,"price":0.28,"profileImage":"","proxyWallet":"0x56C43AA7ecF42dF4411c85cdd2E29c081EA328Ab","ps
+[WS DEBUG] Time since last msg: 0.35s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #5 (len=812): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"107478037665701548603477072866795480570961319512104254134465224764609907450329","bio":"","conditionId":"0x0aa78882f46cf9518dfa8713a6420e2dbadb980763fe3ae783dad66568042110","eventSlug":"sol-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL+fullsize.png","name":"turtlebeach","outcome":"Up","outcomeIndex":0,"price":0.98,"profileImage":"","proxyWallet":"0xc27fC367E3C720930DEF7D5a4F686BFB78E11627","pseudonym
+[WS DEBUG] Time since last msg: 0.27s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #6 (len=936): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"76647756421777021750296882729097877947244398058587662047702870166960832653622","bio":"","conditionId":"0x0e7f0ffe845b05bdbd172958464fa20bcd9a048781d73e4090e07b03a4da254f","eventSlug":"peru-presidential-election-winner","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/will-mario-vizcarra-win-the-2026-peruvian-presidential-election-gNpS0RiQzFez.jpg","name":"Ardtysrt01","outcome":"Yes","outcomeIndex":0,"price":0.031,"profileImage":
+[WS DEBUG] Time since last msg: 0.27s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #7 (len=936): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"87048058140607839077917415447158941112086606824479198286281986963033007181784","bio":"","conditionId":"0xbcb33ad98c8141b10f2350ef687eddf0660484ecc15be42ecdae64339e64dce1","eventSlug":"portugal-presidential-election","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/will-andr-ventura-win-the-2026-portugal-presidential-election-ijMH0Z3qmCMK.jpg","name":"simplystupid188","outcome":"Yes","outcomeIndex":0,"price":0.044,"profileImage":
+[WS DEBUG] Time since last msg: 1.24s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #8 (len=924): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"86779013079664172883908811831313794318863735864737868421697280990610213707691","bio":"","conditionId":"0xe4aba6582d03b5d01ca63775b477ed2f82a45c5296a2a2e549c24abd5b59d903","eventSlug":"nba-lal-nop-2026-01-06","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png","name":"cassiuswinston","outcome":"Pelicans","outcomeIndex":1,"price":0.32,"profileImage":"https://polymarket-upload.s3.us-east-
+[WS DEBUG] Time since last msg: 0.34s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #9 (len=1058): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"105108334823274411453837752322302146951506166827237470954759784982159162094956","bio":"Send tipz please","conditionId":"0xbcb33ad98c8141b10f2350ef687eddf0660484ecc15be42ecdae64339e64dce1","eventSlug":"portugal-presidential-election","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/will-andr-ventura-win-the-2026-portugal-presidential-election-ijMH0Z3qmCMK.jpg","name":"Iook-at-me","outcome":"No","outcomeIndex":1,"price":0.956,"pro
+[WS DEBUG] Time since last msg: 1.07s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #10 (len=841): {"connection_id":"WyP1lerHLPECJ9g=","payload":{"asset":"59135737825741645227598976372931171823784515317412391410888877451063049577160","bio":"","conditionId":"0xf5b3982c3f29bf4b445f698da9fa18f21160af1cead042c11385ffd477eac809","eventSlug":"bitcoin-up-or-down-january-6-5pm-et","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"napes21","outcome":"Down","outcomeIndex":1,"price":0.2899998470908507,"profileImage":"","proxyWallet":"0x56C43AA7ecF42dF4411c85cdd2E29c0
+[WS DEBUG] Time since last msg: 0.27s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Time since last msg: 1.07s
+[WS DEBUG] Time since last msg: 0.36s
+[WS DEBUG] Time since last msg: 1.07s
+[WS DEBUG] Time since last msg: 0.26s
+[WS DEBUG] Time since last msg: 1.40s
+[WS DEBUG] Time since last msg: 0.33s
+[WS DEBUG] Time since last msg: 1.21s
+[WS DEBUG] Time since last msg: 1.23s
+[WS DEBUG] Time since last msg: 0.27s
+[WS DEBUG] Time since last msg: 0.33s
