@@ -14,6 +14,7 @@ from alerts import (
     create_fresh_wallet_alert_embed,
     create_custom_wallet_alert_embed,
     create_top_trader_alert_embed,
+    create_bonds_alert_embed,
     create_settings_embed,
     create_trade_button_view,
     create_positions_overview_embed,
@@ -68,7 +69,8 @@ bot = PolymarketBot()
     tracked_wallet="Channel for tracked wallet alerts",
     volatility="Channel for volatility alerts (20%+ swings)",
     sports="Channel for sports/esports alerts",
-    top_trader="Channel for top 25 trader alerts"
+    top_trader="Channel for top 25 trader alerts",
+    bonds="Channel for bond alerts (>=95% price markets)"
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def setup(
@@ -78,9 +80,10 @@ async def setup(
     tracked_wallet: Optional[discord.TextChannel] = None,
     volatility: Optional[discord.TextChannel] = None,
     sports: Optional[discord.TextChannel] = None,
-    top_trader: Optional[discord.TextChannel] = None
+    top_trader: Optional[discord.TextChannel] = None,
+    bonds: Optional[discord.TextChannel] = None
 ):
-    if not any([whale, fresh_wallet, tracked_wallet, volatility, sports, top_trader]):
+    if not any([whale, fresh_wallet, tracked_wallet, volatility, sports, top_trader, bonds]):
         await interaction.response.send_message(
             "Please specify at least one channel to configure.\n"
             "Example: `/setup whale:#whale-alerts fresh_wallet:#fresh-alerts`",
@@ -115,6 +118,9 @@ async def setup(
         if top_trader:
             config.top_trader_channel_id = top_trader.id
             configured.append(f"Top Trader: {top_trader.mention}")
+        if bonds:
+            config.bonds_channel_id = bonds.id
+            configured.append(f"Bonds: {bonds.mention}")
         
         session.commit()
         
@@ -510,6 +516,28 @@ async def sports(interaction: discord.Interaction, channel: discord.TextChannel)
         session.close()
 
 
+@bot.tree.command(name="bonds", description="Set the channel for bond alerts (>=95% price markets)")
+@app_commands.describe(channel="The channel to send bond alerts to")
+@app_commands.checks.has_permissions(administrator=True)
+async def bonds(interaction: discord.Interaction, channel: discord.TextChannel):
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.bonds_channel_id = channel.id
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Bond alerts will be sent to {channel.mention}. Trades on markets with >=95% price ($5k+) will be routed here.",
+            ephemeral=True
+        )
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="sports_threshold", description="Set the minimum USD value for sports market alerts")
 @app_commands.describe(amount="Minimum USD value for sports alerts (e.g., 5000)")
 @app_commands.checks.has_permissions(administrator=True)
@@ -875,7 +903,7 @@ async def help_command(interaction: discord.Interaction):
     
     embed.add_field(
         name="/setup",
-        value="Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports, top_trader)",
+        value="Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports, top_trader, bonds)",
         inline=False
     )
     embed.add_field(
@@ -906,6 +934,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/top_trader_channel #channel",
         value="Set the channel for top 25 trader alerts",
+        inline=False
+    )
+    embed.add_field(
+        name="/bonds #channel",
+        value="Set the channel for bond alerts (>=95% price markets, $5k+)",
         inline=False
     )
     embed.add_field(
@@ -1173,6 +1206,7 @@ async def monitor_loop():
                     processed_wallets_this_batch.add(wallet)
                 
                 is_sports = polymarket_client.is_sports_market(trade)
+                is_bond = price >= 0.95
                 
                 for config in configs:
                     tracked_addresses = tracked_by_guild.get(config.guild_id, {})
@@ -1300,7 +1334,26 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"Error sending top trader alert: {e}")
                         
-                        if is_fresh and value >= (config.fresh_wallet_threshold or 10000.0):
+                        if is_bond and value >= 5000.0 and config.bonds_channel_id:
+                            bonds_channel = bot.get_channel(config.bonds_channel_id)
+                            if bonds_channel:
+                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                                embed = create_bonds_alert_embed(
+                                    trade=trade,
+                                    value_usd=value,
+                                    market_title=market_title,
+                                    wallet_address=wallet,
+                                    market_url=market_url,
+                                    pnl=wallet_stats.get('pnl'),
+                                    rank=wallet_stats.get('rank')
+                                )
+                                try:
+                                    await bonds_channel.send(embed=embed, view=button_view)
+                                    alerts_sent += 1
+                                except Exception as e:
+                                    print(f"Error sending bonds alert: {e}")
+                        
+                        elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             fresh_channel = bot.get_channel(fresh_channel_id) if fresh_channel_id else None
                             if fresh_channel:
@@ -1319,7 +1372,7 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"Error sending fresh wallet alert: {e}")
                         
-                        elif value >= config.whale_threshold:
+                        elif value >= config.whale_threshold and not is_bond:
                             whale_channel_id = config.whale_channel_id or config.alert_channel_id
                             whale_channel = bot.get_channel(whale_channel_id) if whale_channel_id else None
                             if whale_channel:

@@ -55,6 +55,84 @@ def create_trade_button_view(onsight_slug: str, market_url: str) -> View:
     return view
 
 
+def create_bonds_alert_embed(
+    trade: Dict[str, Any],
+    value_usd: float,
+    market_title: str = "Unknown Market",
+    wallet_address: str = "Unknown",
+    market_url: str = "https://polymarket.com",
+    pnl: Optional[float] = None,
+    rank: Optional[int] = None
+) -> Embed:
+    stats_line = ""
+    if pnl is not None:
+        pnl_sign = "+" if pnl >= 0 else ""
+        stats_line = f"📊 Wallet PnL: {pnl_sign}${pnl:,.0f}"
+        if rank:
+            stats_line += f" | Rank #{rank}"
+        stats_line += "\n\n"
+    
+    price = float(trade.get('price', 0) or 0)
+    price_pct = price * 100
+    
+    embed = Embed(
+        title=f"Bond Alert ({price_pct:.0f}%)",
+        description=f"{stats_line}High-certainty market trade detected",
+        color=0x9B59B6,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Transaction Value",
+        value=f"${value_usd:,.2f}",
+        inline=True
+    )
+    
+    market_display = get_market_link(market_title, market_url)
+    embed.add_field(
+        name="Market",
+        value=market_display,
+        inline=True
+    )
+    
+    side = trade.get('side', '').upper()
+    outcome = trade.get('outcome', '')
+    if side and outcome:
+        action = f"{side} {outcome}"
+    elif side:
+        action = side
+    else:
+        action = "Unknown"
+    embed.add_field(
+        name="Action",
+        value=action,
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Wallet",
+        value=f"`{wallet_address}`",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Price",
+        value=f"{price_pct:.1f}%",
+        inline=True
+    )
+    
+    size = trade.get('size', 0)
+    embed.add_field(
+        name="Size",
+        value=f"{float(size):,.2f}" if size else "N/A",
+        inline=True
+    )
+    
+    embed.set_footer(text="Polymarket Bond Monitor (>=95%)")
+    
+    return embed
+
+
 def create_whale_alert_embed(
     trade: Dict[str, Any],
     value_usd: float,

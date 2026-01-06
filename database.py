@@ -23,6 +23,7 @@ class ServerConfig(Base):
     fresh_wallet_channel_id = Column(BigInteger, nullable=True)
     tracked_wallet_channel_id = Column(BigInteger, nullable=True)
     top_trader_channel_id = Column(BigInteger, nullable=True)
+    bonds_channel_id = Column(BigInteger, nullable=True)
     whale_threshold = Column(Float, default=10000.0)
     fresh_wallet_threshold = Column(Float, default=10000.0)
     sports_threshold = Column(Float, default=5000.0)
