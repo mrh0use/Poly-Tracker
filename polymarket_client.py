@@ -1,7 +1,9 @@
 import aiohttp
 import asyncio
+import websockets
+import json
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Callable
 
 
 class PolymarketClient:
@@ -829,6 +831,111 @@ class PolymarketClient:
         except Exception as e:
             print(f"Error fetching orderbook: {e}")
             return {'bids': [], 'asks': [], 'mid': 0.5, 'spread': 0, 'total_bid_size': 0, 'total_ask_size': 0}
+
+
+class PolymarketWebSocket:
+    RTDS_URL = "wss://ws-live-data.polymarket.com"
+    
+    def __init__(self, on_trade_callback: Callable[[Dict[str, Any]], None] = None):
+        self.on_trade_callback = on_trade_callback
+        self.ws = None
+        self._running = False
+        self._reconnect_delay = 5
+        self._max_reconnect_delay = 60
+    
+    async def connect(self):
+        self._running = True
+        reconnect_delay = self._reconnect_delay
+        
+        while self._running:
+            try:
+                print("[WebSocket] Connecting to Polymarket RTDS...")
+                async with websockets.connect(
+                    self.RTDS_URL,
+                    ping_interval=20,
+                    ping_timeout=10,
+                    close_timeout=5
+                ) as ws:
+                    self.ws = ws
+                    print("[WebSocket] Connected! Subscribing to all trades...")
+                    
+                    subscription = {
+                        "action": "subscribe",
+                        "subscriptions": [
+                            {
+                                "topic": "activity",
+                                "type": "trades"
+                            }
+                        ]
+                    }
+                    await ws.send(json.dumps(subscription))
+                    print("[WebSocket] Subscribed to global trades feed")
+                    
+                    reconnect_delay = self._reconnect_delay
+                    
+                    async for message in ws:
+                        if not self._running:
+                            break
+                        await self._handle_message(message)
+                        
+            except websockets.exceptions.ConnectionClosed as e:
+                print(f"[WebSocket] Connection closed: {e}. Reconnecting in {reconnect_delay}s...")
+            except Exception as e:
+                print(f"[WebSocket] Error: {e}. Reconnecting in {reconnect_delay}s...")
+            
+            if self._running:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 2, self._max_reconnect_delay)
+    
+    async def _handle_message(self, raw_message: str):
+        try:
+            message = json.loads(raw_message)
+            
+            if message.get('topic') == 'activity' and message.get('type') == 'trades':
+                payload = message.get('payload')
+                if payload and self.on_trade_callback:
+                    trade = self._normalize_trade(payload)
+                    if trade:
+                        await self.on_trade_callback(trade)
+                        
+        except json.JSONDecodeError:
+            pass
+        except Exception as e:
+            print(f"[WebSocket] Error handling message: {e}")
+    
+    def _normalize_trade(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            size = float(payload.get('size', 0) or 0)
+            price = float(payload.get('price', 0) or 0)
+            
+            return {
+                'proxyWallet': payload.get('proxyWallet', ''),
+                'side': payload.get('side', 'BUY'),
+                'asset': payload.get('asset', ''),
+                'conditionId': payload.get('conditionId', ''),
+                'size': size,
+                'price': price,
+                'timestamp': payload.get('timestamp', 0),
+                'title': payload.get('title', ''),
+                'slug': payload.get('slug', ''),
+                'icon': payload.get('icon', ''),
+                'eventSlug': payload.get('eventSlug', ''),
+                'outcome': payload.get('outcome', 'Yes'),
+                'outcomeIndex': payload.get('outcomeIndex', 0),
+                'name': payload.get('name', ''),
+                'pseudonym': payload.get('pseudonym', ''),
+                'transactionHash': payload.get('transactionHash', ''),
+            }
+        except Exception as e:
+            print(f"[WebSocket] Error normalizing trade: {e}")
+            return None
+    
+    async def disconnect(self):
+        self._running = False
+        if self.ws:
+            await self.ws.close()
+            self.ws = None
+        print("[WebSocket] Disconnected")
 
 
 polymarket_client = PolymarketClient()

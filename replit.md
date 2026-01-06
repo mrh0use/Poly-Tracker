@@ -85,6 +85,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-06: **Switched to real-time WebSocket feed** - Now uses Polymarket's RTDS WebSocket (wss://ws-live-data.polymarket.com) for instant trade alerts instead of polling. This catches every trade in real-time with no gaps. Polling loop remains as backup for tracked wallets.
 - 2026-01-06: **Added adjustable volatility threshold** - /volatility_threshold command allows each server to set their own % swing threshold (5-50%, default 20%)
 - 2026-01-06: **Added Bonds Alerts** - trades on markets with >=95% price ($5k+ minimum) now route to dedicated bonds channel, configurable via /bonds command. These are filtered from regular whale/fresh wallet alerts.
 - 2026-01-06: **Added wallet PnL to all alerts** - whale alerts, fresh wallet alerts, and sports alerts now display the trader's lifetime PnL and rank
