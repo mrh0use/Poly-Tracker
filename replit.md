@@ -75,7 +75,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Sports Alerts**: Sports/esports market activity $5k+ (separate channel, configurable threshold)
 - **Bonds Alerts**: Trades on high-certainty markets (>=95% price) with $5k+ value (separate channel)
 
-Note: Sells above 99% are automatically excluded from all alerts. Sports markets and bonds (>=95% price trades) go to their own dedicated channels when configured.
+Note: Only BUY transactions are tracked (sells are excluded). Sports markets and bonds (>=95% price trades) go to their own dedicated channels when configured.
 
 ## Environment Variables
 
