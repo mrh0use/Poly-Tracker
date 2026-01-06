@@ -596,6 +596,41 @@ async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: f
         session.close()
 
 
+@bot.tree.command(name="volatility_threshold", description="Set the minimum percentage swing for volatility alerts")
+@app_commands.describe(percentage="Minimum percentage swing for volatility alerts (e.g., 20 for 20%)")
+@app_commands.checks.has_permissions(administrator=True)
+async def volatility_threshold_cmd(interaction: discord.Interaction, percentage: float):
+    if percentage < 5:
+        await interaction.response.send_message(
+            "Volatility threshold must be at least 5%",
+            ephemeral=True
+        )
+        return
+    if percentage > 50:
+        await interaction.response.send_message(
+            "Volatility threshold cannot exceed 50%",
+            ephemeral=True
+        )
+        return
+    
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.volatility_threshold = percentage
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Volatility alert threshold set to {percentage:.0f}% price swing",
+            ephemeral=True
+        )
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="top_trader_channel", description="Set the channel for top 25 trader alerts")
 @app_commands.describe(channel="The channel to send top trader alerts to")
 @app_commands.checks.has_permissions(administrator=True)
@@ -954,6 +989,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/fresh_wallet_threshold <amount>",
         value="Set the minimum USD value for fresh wallet alerts (default: $10,000)",
+        inline=False
+    )
+    embed.add_field(
+        name="/volatility_threshold <percentage>",
+        value="Set the minimum % swing for volatility alerts (default: 20%)",
         inline=False
     )
     embed.add_field(
@@ -1451,9 +1491,6 @@ async def volatility_loop():
                 
                 price_change_pct = ((current_price - old_price) / old_price) * 100
                 
-                if abs(price_change_pct) < 20.0:
-                    continue
-                
                 recent_alert = session.query(VolatilityAlert).filter(
                     VolatilityAlert.condition_id == condition_id,
                     VolatilityAlert.alerted_at >= cooldown_time
@@ -1462,12 +1499,13 @@ async def volatility_loop():
                 if recent_alert:
                     continue
                 
-                session.add(VolatilityAlert(
-                    condition_id=condition_id,
-                    price_change=price_change_pct
-                ))
-                
+                alert_sent = False
                 for config in configs:
+                    threshold = config.volatility_threshold or 20.0
+                    
+                    if abs(price_change_pct) < threshold:
+                        continue
+                    
                     channel = bot.get_channel(config.volatility_channel_id)
                     if not channel:
                         continue
@@ -1485,8 +1523,15 @@ async def volatility_loop():
                     
                     try:
                         await channel.send(embed=embed, view=button_view)
+                        alert_sent = True
                     except Exception as e:
                         print(f"Error sending volatility alert: {e}")
+                
+                if alert_sent:
+                    session.add(VolatilityAlert(
+                        condition_id=condition_id,
+                        price_change=price_change_pct
+                    ))
             
             session.commit()
         finally:

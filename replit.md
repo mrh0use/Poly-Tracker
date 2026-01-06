@@ -53,6 +53,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 | `/threshold <amount>` | Set USD threshold | Admin |
 | `/sports_threshold <amount>` | Set sports USD threshold (default: $5k) | Admin |
 | `/fresh_wallet_threshold <amount>` | Set fresh wallet USD threshold (default: $10k) | Admin |
+| `/volatility_threshold <percentage>` | Set volatility swing % (default: 20%) | Admin |
 | `/track <wallet> [label]` | Track a wallet | Admin |
 | `/untrack <wallet>` | Stop tracking | Admin |
 | `/rename <wallet> <name>` | Rename a tracked wallet | Admin |
@@ -84,6 +85,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-06: **Added adjustable volatility threshold** - /volatility_threshold command allows each server to set their own % swing threshold (5-50%, default 20%)
 - 2026-01-06: **Added Bonds Alerts** - trades on markets with >=95% price ($5k+ minimum) now route to dedicated bonds channel, configurable via /bonds command. These are filtered from regular whale/fresh wallet alerts.
 - 2026-01-06: **Added wallet PnL to all alerts** - whale alerts, fresh wallet alerts, and sports alerts now display the trader's lifetime PnL and rank
 - 2026-01-06: **Added cash balance to /positions** - shows USDC balance for each tracked wallet (queried from Polygon blockchain)
