@@ -687,7 +687,16 @@ class PolymarketClient:
                             'token_id': token.get('token_id', '')
                         })
                     
-                    clob_token_ids = m.get('clobTokenIds', [])
+                    clob_token_ids_raw = m.get('clobTokenIds', [])
+                    if isinstance(clob_token_ids_raw, str):
+                        try:
+                            import json
+                            clob_token_ids = json.loads(clob_token_ids_raw)
+                        except (json.JSONDecodeError, TypeError):
+                            clob_token_ids = []
+                    else:
+                        clob_token_ids = clob_token_ids_raw or []
+                    
                     if not token_ids and clob_token_ids:
                         outcomes_list = outcomes if isinstance(outcomes, list) else ['Yes', 'No']
                         for idx, tid in enumerate(clob_token_ids):
