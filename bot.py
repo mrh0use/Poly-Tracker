@@ -647,6 +647,215 @@ async def sports_trending_command(interaction: discord.Interaction):
     await interaction.followup.send(embed=embed)
 
 
+class MarketSearchSelect(discord.ui.Select):
+    def __init__(self, markets: list):
+        self.markets_data = {str(i): m for i, m in enumerate(markets[:25])}
+        options = []
+        for i, m in enumerate(markets[:25]):
+            vol_str = f"${m['volume']:,.0f}" if m['volume'] >= 1000 else f"${m['volume']:.0f}"
+            liq_str = f"${m['liquidity']:,.0f}" if m['liquidity'] >= 1000 else f"${m['liquidity']:.0f}"
+            
+            prices = m.get('outcome_prices', [0.5, 0.5])
+            outcomes = m.get('outcomes', ['Yes', 'No'])
+            
+            price_parts = []
+            for j, outcome in enumerate(outcomes[:2]):
+                if j < len(prices):
+                    try:
+                        p = float(prices[j]) * 100
+                        price_parts.append(f"{outcome}: {p:.1f}c")
+                    except (ValueError, TypeError):
+                        price_parts.append(f"{outcome}: ?")
+            
+            desc = f"Vol: {vol_str} | Liq: {liq_str} | {' | '.join(price_parts)}"
+            
+            question = m['question'][:100] if len(m['question']) <= 100 else m['question'][:97] + "..."
+            
+            options.append(discord.SelectOption(
+                label=question[:100],
+                value=str(i),
+                description=desc[:100]
+            ))
+        
+        super().__init__(
+            placeholder="Choose a market to view its orderbook...",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        market = self.markets_data.get(self.values[0])
+        if not market:
+            await interaction.followup.send("Market not found.", ephemeral=True)
+            return
+        
+        token_ids = market.get('token_ids', [])
+        if not token_ids:
+            await interaction.followup.send("No orderbook data available for this market.", ephemeral=True)
+            return
+        
+        yes_token = None
+        for t in token_ids:
+            if t.get('outcome', '').lower() == 'yes':
+                yes_token = t.get('token_id')
+                break
+        
+        if not yes_token and token_ids:
+            yes_token = token_ids[0].get('token_id')
+        
+        if not yes_token:
+            await interaction.followup.send("Could not find token ID for orderbook.", ephemeral=True)
+            return
+        
+        orderbook = await polymarket_client.get_orderbook(yes_token)
+        
+        embed = create_orderbook_embed(
+            market_title=market['question'],
+            orderbook=orderbook,
+            outcomes=market.get('outcomes', ['Yes', 'No'])
+        )
+        
+        event_slug = market.get('event_slug', market.get('slug', ''))
+        market_url = f"https://polymarket.com/market/{market.get('slug', '')}"
+        
+        from alerts import create_trade_button_view
+        view = create_trade_button_view(event_slug, market_url)
+        
+        await interaction.followup.send(embed=embed, view=view)
+
+
+class MarketSearchView(discord.ui.View):
+    def __init__(self, markets: list):
+        super().__init__(timeout=300)
+        self.add_item(MarketSearchSelect(markets))
+
+
+def create_orderbook_embed(market_title: str, orderbook: dict, outcomes: list) -> discord.Embed:
+    mid = orderbook.get('mid', 0.5)
+    spread = orderbook.get('spread', 0)
+    bids = orderbook.get('bids', [])
+    asks = orderbook.get('asks', [])
+    total_bid_size = orderbook.get('total_bid_size', 0)
+    total_ask_size = orderbook.get('total_ask_size', 0)
+    
+    outcome_name = outcomes[0] if outcomes else "Yes"
+    
+    embed = discord.Embed(
+        title=f"{market_title[:80]}",
+        description=f"**{outcome_name.upper()}** | Mid: {mid*100:.1f}c | Spread: {spread*100:.1f}c",
+        color=0x4ECDC4,
+        timestamp=datetime.utcnow()
+    )
+    
+    asks_text = ""
+    for ask in reversed(asks[:5]):
+        price_cents = ask['price'] * 100
+        size = ask['size']
+        total = ask.get('total', size) * ask['price']
+        asks_text += f"🔴 `{price_cents:5.1f}c` | {size:>8,.0f} | ${total:>8,.0f}\n"
+    
+    if asks_text:
+        embed.add_field(
+            name="🔴 Asks (Sell Orders)",
+            value=f"Price  |    Size  |    Total\n{asks_text}",
+            inline=False
+        )
+    
+    depth_bar_width = 20
+    if total_bid_size + total_ask_size > 0:
+        bid_pct = total_bid_size / (total_bid_size + total_ask_size)
+        bid_blocks = int(bid_pct * depth_bar_width)
+        ask_blocks = depth_bar_width - bid_blocks
+        depth_bar = f"{'🟢' * bid_blocks}{'🔴' * ask_blocks}"
+        bid_k = total_bid_size / 1000 if total_bid_size >= 1000 else total_bid_size
+        ask_k = total_ask_size / 1000 if total_ask_size >= 1000 else total_ask_size
+        bid_suffix = "K" if total_bid_size >= 1000 else ""
+        ask_suffix = "K" if total_ask_size >= 1000 else ""
+        embed.add_field(
+            name="Depth",
+            value=f"{bid_k:.0f}{bid_suffix} {depth_bar} {ask_k:.0f}{ask_suffix}",
+            inline=False
+        )
+    
+    bids_text = ""
+    for bid in bids[:5]:
+        price_cents = bid['price'] * 100
+        size = bid['size']
+        total = bid.get('total', size) * bid['price']
+        bids_text += f"🟢 `{price_cents:5.1f}c` | {size:>8,.0f} | ${total:>8,.0f}\n"
+    
+    if bids_text:
+        embed.add_field(
+            name="🟢 Bids (Buy Orders)",
+            value=f"Price  |    Size  |    Total\n{bids_text}",
+            inline=False
+        )
+    
+    if not bids and not asks:
+        embed.add_field(
+            name="Orderbook",
+            value="No orders currently available",
+            inline=False
+        )
+    
+    return embed
+
+
+@bot.tree.command(name="search", description="Search markets by keyword and view orderbooks")
+@app_commands.describe(query="Keywords to search for (e.g., 'knicks', 'trump', 'bitcoin')")
+async def search_command(interaction: discord.Interaction, query: str):
+    await interaction.response.defer()
+    
+    markets = await polymarket_client.search_markets(query, limit=30)
+    
+    if not markets:
+        await interaction.followup.send(f"No markets found matching '{query}'", ephemeral=True)
+        return
+    
+    embed = discord.Embed(
+        title=f'Multiple Markets Found: "{query}"',
+        description=f"Found {len(markets)} active markets matching your search.\nUse the dropdown menu below to select which market to view:",
+        color=0x4ECDC4
+    )
+    
+    for i, m in enumerate(markets[:5], 1):
+        vol_str = f"${m['volume']:,.0f}" if m['volume'] >= 1000 else f"${m['volume']:.0f}"
+        liq_str = f"${m['liquidity']:,.0f}" if m['liquidity'] >= 1000 else f"${m['liquidity']:.0f}"
+        
+        prices = m.get('outcome_prices', [0.5, 0.5])
+        outcomes = m.get('outcomes', ['Yes', 'No'])
+        
+        price_parts = []
+        for j, outcome in enumerate(outcomes[:2]):
+            if j < len(prices):
+                try:
+                    p = float(prices[j]) * 100
+                    price_parts.append(f"{outcome}: {p:.1f}c")
+                except (ValueError, TypeError):
+                    pass
+        
+        question = m['question'][:60] + "..." if len(m['question']) > 60 else m['question']
+        
+        embed.add_field(
+            name=f"{i}. {question}",
+            value=f"📊 Vol: {vol_str} | Liq: {liq_str}\n💰 {' | '.join(price_parts)}",
+            inline=False
+        )
+    
+    if len(markets) > 5:
+        embed.add_field(
+            name="+ More options",
+            value=f"And {len(markets) - 5} more markets available in the dropdown...",
+            inline=False
+        )
+    
+    view = MarketSearchView(markets)
+    await interaction.followup.send(embed=embed, view=view)
+
+
 @bot.tree.command(name="help", description="Show available commands")
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
@@ -744,6 +953,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/sports_trending",
         value="Show top 10 trending sports markets by 24h volume",
+        inline=False
+    )
+    embed.add_field(
+        name="/search <keywords>",
+        value="Search markets and view orderbooks (e.g., /search knicks)",
         inline=False
     )
     

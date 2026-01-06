@@ -60,6 +60,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 | `/resume` | Resume alerts | Admin |
 | `/trending` | Show top 10 trending markets by 24h volume | Anyone |
 | `/sports_trending` | Show top 10 trending sports markets by 24h volume | Anyone |
+| `/search <keywords>` | Search markets and view orderbooks | Anyone |
 | `/help` | Show commands | Anyone |
 
 ## Alert Types
