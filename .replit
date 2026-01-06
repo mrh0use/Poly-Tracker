@@ -30,6 +30,6 @@ args = "python bot.py"
 outputType = "console"
 
 [deployment]
-run = ["sh", "-c", "python bot.py"]
-deploymentTarget = "gce"
+run = ["python", "-u", "bot.py"]
+deploymentTarget = "vm"
 ignorePorts = true
