@@ -1163,14 +1163,14 @@ async def monitor_loop():
                 ServerConfig.is_paused == False
             ).all()
             
-            configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id or c.top_trader_channel_id]
+            configs = [c for c in configs if c.alert_channel_id or c.tracked_wallet_channel_id]
             
             if not configs:
                 return
             
-            min_threshold = min([c.whale_threshold for c in configs] + [c.sports_threshold or 5000.0 for c in configs])
-            
             all_tracked = session.query(TrackedWallet).all()
+            if not all_tracked:
+                return
             tracked_by_guild = {}
             unique_tracked_addresses = set()
             for tw in all_tracked:
@@ -1179,28 +1179,13 @@ async def monitor_loop():
                 tracked_by_guild[tw.guild_id][tw.wallet_address] = tw
                 unique_tracked_addresses.add(tw.wallet_address)
             
-            global_trades = await polymarket_client.get_recent_trades(limit=200)
-            
-            if global_trades:
-                trade_values = [polymarket_client.calculate_trade_value(t) for t in global_trades]
-                max_val = max(trade_values) if trade_values else 0
-                above_threshold = [v for v in trade_values if v >= min_threshold]
-                if above_threshold:
-                    print(f"[Monitor] Found {len(above_threshold)} trades >= ${min_threshold:,.0f} (max: ${max_val:,.0f}) out of {len(global_trades)} total")
-            
             tracked_trades = []
             for wallet_addr in unique_tracked_addresses:
                 wallet_trades = await polymarket_client.get_wallet_trades(wallet_addr, limit=10)
                 if wallet_trades:
                     tracked_trades.extend(wallet_trades)
             
-            all_trades = global_trades or []
-            seen_keys = set()
-            for trade in tracked_trades:
-                key = polymarket_client.get_unique_trade_id(trade)
-                if key not in seen_keys:
-                    all_trades.append(trade)
-                    seen_keys.add(key)
+            all_trades = tracked_trades
             
             processed_wallets_this_batch = set()
             
@@ -1426,8 +1411,8 @@ async def monitor_loop():
                         if value >= min_threshold:
                             trades_above_threshold += 1
             
-            if new_trades_count > 0 or skipped_seen_count > 0:
-                print(f"[Monitor] Processed: {new_trades_count} new, {skipped_seen_count} seen, {trades_above_threshold} above threshold, {alerts_sent} alerts sent")
+            if new_trades_count > 0 or alerts_sent > 0:
+                print(f"[Monitor] Tracked wallets: {new_trades_count} new trades, {alerts_sent} alerts sent")
             
             session.commit()
         finally:
@@ -1581,12 +1566,27 @@ async def before_cleanup():
     await bot.wait_until_ready()
 
 
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
+
 async def handle_websocket_trade(trade: dict):
+    global _ws_stats
     try:
         session = get_session()
         try:
             value = polymarket_client.calculate_trade_value(trade)
             wallet = polymarket_client.get_wallet_from_trade(trade)
+            
+            _ws_stats['processed'] += 1
+            if _ws_stats['processed'] <= 3:
+                print(f"[WS Debug] Trade data: size={trade.get('size')}, price={trade.get('price')}, value=${value:.2f}")
+            if value >= 5000:
+                _ws_stats['above_5k'] += 1
+            if value >= 10000:
+                _ws_stats['above_10k'] += 1
+                print(f"[WS] $10k+ trade: ${value:,.0f} - {trade.get('title', 'Unknown')[:50]} - wallet: {wallet[:10] if wallet else 'None'}...")
+            
+            if _ws_stats['processed'] % 500 == 0:
+                print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+: {_ws_stats['above_5k']}, $10k+: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
             
             if not wallet:
                 return

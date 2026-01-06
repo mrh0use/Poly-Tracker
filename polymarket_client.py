@@ -889,14 +889,26 @@ class PolymarketWebSocket:
     
     async def _handle_message(self, raw_message: str):
         try:
+            if not raw_message or not raw_message.strip():
+                return
+            
+            self._message_count = getattr(self, '_message_count', 0) + 1
+            
+            if self._message_count <= 3:
+                print(f"[WS] Raw message #{self._message_count}: {raw_message[:300]}")
+            elif self._message_count % 500 == 0:
+                print(f"[WS] Messages received: {self._message_count}")
+            
             message = json.loads(raw_message)
             
-            if message.get('topic') == 'activity' and message.get('type') == 'trades':
-                payload = message.get('payload')
-                if payload and self.on_trade_callback:
-                    trade = self._normalize_trade(payload)
-                    if trade:
-                        await self.on_trade_callback(trade)
+            payload = message.get('payload')
+            if payload and self.on_trade_callback:
+                trade = self._normalize_trade(payload)
+                if trade:
+                    self._trade_count = getattr(self, '_trade_count', 0) + 1
+                    if self._trade_count % 500 == 0:
+                        print(f"[WS] Trades processed: {self._trade_count}")
+                    await self.on_trade_callback(trade)
                         
         except json.JSONDecodeError:
             pass
