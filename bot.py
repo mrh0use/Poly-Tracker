@@ -1127,6 +1127,8 @@ async def monitor_loop():
             
             new_trades_count = 0
             skipped_seen_count = 0
+            alerts_sent = 0
+            trades_above_threshold = 0
             
             for trade in all_trades:
                 unique_key = polymarket_client.get_unique_trade_id(trade)
@@ -1333,11 +1335,16 @@ async def monitor_loop():
                                 )
                                 try:
                                     await whale_channel.send(embed=embed, view=button_view)
+                                    alerts_sent += 1
+                                    print(f"[Alert] Sent whale alert: ${value:,.0f} to channel {whale_channel_id}")
                                 except Exception as e:
                                     print(f"Error sending whale alert: {e}")
+                        
+                        if value >= min_threshold:
+                            trades_above_threshold += 1
             
             if new_trades_count > 0 or skipped_seen_count > 0:
-                print(f"[Monitor] Processed: {new_trades_count} new trades, {skipped_seen_count} already seen")
+                print(f"[Monitor] Processed: {new_trades_count} new, {skipped_seen_count} seen, {trades_above_threshold} above threshold, {alerts_sent} alerts sent")
             
             session.commit()
         finally:
