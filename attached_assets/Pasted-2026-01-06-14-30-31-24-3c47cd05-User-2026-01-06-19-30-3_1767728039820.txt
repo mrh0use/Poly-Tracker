@@ -1,0 +1,192 @@
+2026-01-06 14:30:31.24
+3c47cd05
+User
+[2026-01-06 19:30:31] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+2026-01-06 14:30:32.41
+3c47cd05
+User
+Database initialized
+2026-01-06 14:30:33.02
+3c47cd05
+User
+[2026-01-06 19:30:33] [INFO ] discord.gateway: Shard ID None has connected to Gateway (Session ID: 33a41c391d72ca607a83fd7610068d39).
+2026-01-06 14:30:35.03
+3c47cd05
+User
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+2026-01-06 14:30:35.43
+3c47cd05
+User
+Slash commands synced
+2026-01-06 14:30:35.43
+3c47cd05
+User
+Cleanup loop started
+2026-01-06 14:30:35.43
+3c47cd05
+User
+Volatility loop started
+2026-01-06 14:30:35.43
+3c47cd05
+User
+Monitor loop started (backup for tracked wallets)
+2026-01-06 14:30:35.90
+3c47cd05
+User
+Cleaned up 65 old price snapshots
+2026-01-06 14:30:36.12
+3c47cd05
+User
+Sports tags loaded
+2026-01-06 14:30:36.12
+3c47cd05
+User
+[WebSocket] Connecting to Polymarket RTDS...
+2026-01-06 14:30:36.12
+3c47cd05
+User
+[WebSocket] Starting real-time trade feed...
+2026-01-06 14:30:36.12
+3c47cd05
+User
+WebSocket task scheduled
+2026-01-06 14:30:41.17
+3c47cd05
+User
+Market cache refreshed: 500 entries
+2026-01-06 14:30:41.17
+3c47cd05
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 14:30:41.17
+3c47cd05
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 14:30:41.30
+3c47cd05
+User
+[WebSocket] Receiving messages...
+2026-01-06 14:30:41.35
+3c47cd05
+User
+Top traders cache refreshed: 25 entries
+2026-01-06 14:30:41.77
+8f9529bb
+System
+system: received signal terminated
+2026-01-06 14:30:41.79
+8f9529bb
+System
+command finished with error [python -u bot.py]: signal: terminated
+2026-01-06 14:30:41.85
+8f9529bb
+System
+main done, exiting
+2026-01-06 14:32:32.41
+f7c45304
+System
+starting up user application
+2026-01-06 14:32:32.41
+f7c45304
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-01-06 14:32:41.70
+f7c45304
+User
+Starting Polymarket Discord Bot...
+2026-01-06 14:32:41.70
+f7c45304
+User
+Using PRODUCTION bot token
+2026-01-06 14:32:41.70
+f7c45304
+User
+[2026-01-06 19:32:41] [INFO ] discord.client: logging in using static token
+2026-01-06 14:32:41.70
+f7c45304
+User
+[2026-01-06 19:32:41] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+2026-01-06 14:32:42.41
+f7c45304
+System
+initializing deployment without listening for application ports
+2026-01-06 14:32:42.90
+f7c45304
+User
+Database initialized
+2026-01-06 14:32:43.29
+f7c45304
+User
+[2026-01-06 19:32:43] [INFO ] discord.gateway: Shard ID None has connected to Gateway (Session ID: 7ee769666b14a33690d12fb52ec11e76).
+2026-01-06 14:32:45.05
+3c47cd05
+System
+system: received signal terminated
+2026-01-06 14:32:45.06
+3c47cd05
+System
+command finished with error [python -u bot.py]: signal: terminated
+2026-01-06 14:32:45.10
+3c47cd05
+System
+main done, exiting
+2026-01-06 14:32:45.29
+f7c45304
+User
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+2026-01-06 14:32:45.60
+f7c45304
+User
+Slash commands synced
+2026-01-06 14:32:45.60
+f7c45304
+User
+Volatility loop started
+2026-01-06 14:32:45.60
+f7c45304
+User
+Monitor loop started (backup for tracked wallets)
+2026-01-06 14:32:45.60
+f7c45304
+User
+Cleanup loop started
+2026-01-06 14:32:46.05
+f7c45304
+User
+Cleaned up 65 old price snapshots
+2026-01-06 14:32:46.24
+f7c45304
+User
+[WebSocket] Connecting to Polymarket RTDS...
+2026-01-06 14:32:46.24
+f7c45304
+User
+Sports tags loaded
+2026-01-06 14:32:46.24
+f7c45304
+User
+[WebSocket] Starting real-time trade feed...
+2026-01-06 14:32:46.24
+f7c45304
+User
+WebSocket task scheduled
+2026-01-06 14:32:51.58
+f7c45304
+User
+Market cache refreshed: 500 entries
+2026-01-06 14:32:51.79
+f7c45304
+User
+Top traders cache refreshed: 25 entries
+2026-01-06 14:32:51.96
+f7c45304
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 14:32:51.96
+f7c45304
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 14:32:52.42
+f7c45304
+User
+[WebSocket] Receiving messages...
