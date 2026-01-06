@@ -1,0 +1,92 @@
+2026-01-06 14:21:31.43
+030c431a
+User
+The above exception was the direct cause of the following exception:
+2026-01-06 14:21:31.43
+030c431a
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+2026-01-06 14:21:31.43
+030c431a
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 14:21:31.43
+030c431a
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+2026-01-06 14:21:31.43
+030c431a
+User
+File "/home/runner/workspace/bot.py", line 358, in list_settings
+2026-01-06 14:21:31.43
+030c431a
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 14:21:31.43
+030c431a
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/tree.py", line 1297, in _call
+2026-01-06 14:21:31.43
+030c431a
+User
+await command._invoke_with_namespace(interaction, namespace)
+2026-01-06 14:21:31.43
+030c431a
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/interactions.py", line 858, in defer
+2026-01-06 14:21:31.43
+030c431a
+User
+await interaction.response.defer(ephemeral=True)
+2026-01-06 14:21:31.43
+030c431a
+User
+Traceback (most recent call last):
+2026-01-06 14:21:31.43
+030c431a
+User
+response = await adapter.create_interaction_response(
+2026-01-06 14:21:31.43
+030c431a
+User
+return await self._do_call(interaction, transformed_values)
+2026-01-06 14:21:31.43
+030c431a
+User
+discord.errors.HTTPException: 400 Bad Request (error code: 40060): Interaction has already been acknowledged.
+2026-01-06 14:21:31.43
+030c431a
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+2026-01-06 14:21:31.43
+030c431a
+User
+Traceback (most recent call last):
+2026-01-06 14:21:31.43
+030c431a
+User
+[2026-01-06 19:21:31] [ERROR ] discord.app_commands.tree: Ignoring exception in command 'list'
+2026-01-06 14:21:31.43
+030c431a
+User
+raise HTTPException(response, data)
+2026-01-06 14:21:31.43
+030c431a
+User
+discord.app_commands.errors.CommandInvokeError: Command 'list' raised an exception: HTTPException: 400 Bad Request (error code: 40060): Interaction has already been acknowledged.
+2026-01-06 14:21:31.43
+030c431a
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/webhook/async_.py", line 226, in request
+2026-01-06 14:21:31.43
+030c431a
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-06 14:21:31.43
+030c431a
+User
+raise CommandInvokeError(self, e) from e
+2026-01-06 14:21:31.43
+030c431a
+User
+return await self._callback(interaction, **params) # type: ignore
