@@ -615,4 +615,146 @@ class PolymarketClient:
             return []
 
 
+    async def search_markets(self, query: str, limit: int = 30) -> List[Dict[str, Any]]:
+        """Search markets by keyword and return matches with stats."""
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/markets",
+                params={
+                    "limit": 200,
+                    "active": "true",
+                    "closed": "false"
+                }
+            ) as resp:
+                if resp.status == 200:
+                    markets = await resp.json()
+                    query_lower = query.lower()
+                    keywords = query_lower.split()
+                    
+                    matches = []
+                    for m in markets:
+                        question = m.get('question', '').lower()
+                        slug = m.get('slug', '').lower()
+                        
+                        if all(kw in question or kw in slug for kw in keywords):
+                            volume_str = m.get('volume', '0') or '0'
+                            liquidity_str = m.get('liquidity', '0') or '0'
+                            
+                            try:
+                                volume = float(volume_str)
+                            except (ValueError, TypeError):
+                                volume = 0.0
+                            
+                            try:
+                                liquidity = float(liquidity_str)
+                            except (ValueError, TypeError):
+                                liquidity = 0.0
+                            
+                            outcomes = m.get('outcomes', ['Yes', 'No'])
+                            outcome_prices = m.get('outcomePrices', [0.5, 0.5])
+                            
+                            if isinstance(outcome_prices, str):
+                                try:
+                                    outcome_prices = [float(p) for p in outcome_prices.strip('[]').split(',')]
+                                except (ValueError, IndexError):
+                                    outcome_prices = [0.5, 0.5]
+                            
+                            tokens = m.get('tokens', [])
+                            token_ids = []
+                            for token in tokens:
+                                token_ids.append({
+                                    'outcome': token.get('outcome', ''),
+                                    'token_id': token.get('token_id', '')
+                                })
+                            
+                            events = m.get('events', [])
+                            event_slug = events[0].get('slug', '') if events else m.get('slug', '')
+                            
+                            matches.append({
+                                'question': m.get('question', 'Unknown'),
+                                'slug': m.get('slug', ''),
+                                'event_slug': event_slug,
+                                'condition_id': m.get('conditionId', ''),
+                                'volume': volume,
+                                'liquidity': liquidity,
+                                'outcomes': outcomes if isinstance(outcomes, list) else ['Yes', 'No'],
+                                'outcome_prices': outcome_prices,
+                                'token_ids': token_ids
+                            })
+                    
+                    matches.sort(key=lambda x: x['volume'], reverse=True)
+                    return matches[:limit]
+                return []
+        except Exception as e:
+            print(f"Error searching markets: {e}")
+            return []
+    
+    async def get_orderbook(self, token_id: str) -> Dict[str, Any]:
+        """Fetch orderbook from Polymarket CLOB API."""
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                "https://clob.polymarket.com/book",
+                params={"token_id": token_id}
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    
+                    bids = []
+                    asks = []
+                    
+                    for bid in data.get('bids', []):
+                        try:
+                            price = float(bid.get('price', 0))
+                            size = float(bid.get('size', 0))
+                            bids.append({'price': price, 'size': size})
+                        except (ValueError, TypeError):
+                            continue
+                    
+                    for ask in data.get('asks', []):
+                        try:
+                            price = float(ask.get('price', 0))
+                            size = float(ask.get('size', 0))
+                            asks.append({'price': price, 'size': size})
+                        except (ValueError, TypeError):
+                            continue
+                    
+                    bids.sort(key=lambda x: x['price'], reverse=True)
+                    asks.sort(key=lambda x: x['price'])
+                    
+                    best_bid = bids[0]['price'] if bids else 0
+                    best_ask = asks[0]['price'] if asks else 1
+                    mid = (best_bid + best_ask) / 2 if bids and asks else 0.5
+                    spread = (best_ask - best_bid) if bids and asks else 0
+                    
+                    total_bid_size = sum(b['size'] for b in bids)
+                    total_ask_size = sum(a['size'] for a in asks)
+                    
+                    running_total = 0
+                    for bid in bids:
+                        running_total += bid['size']
+                        bid['total'] = running_total
+                    
+                    running_total = 0
+                    for ask in asks:
+                        running_total += ask['size']
+                        ask['total'] = running_total
+                    
+                    return {
+                        'bids': bids[:10],
+                        'asks': asks[:10],
+                        'mid': mid,
+                        'spread': spread,
+                        'total_bid_size': total_bid_size,
+                        'total_ask_size': total_ask_size
+                    }
+                else:
+                    print(f"CLOB API returned {resp.status}")
+                    return {'bids': [], 'asks': [], 'mid': 0.5, 'spread': 0, 'total_bid_size': 0, 'total_ask_size': 0}
+        except Exception as e:
+            print(f"Error fetching orderbook: {e}")
+            return {'bids': [], 'asks': [], 'mid': 0.5, 'spread': 0, 'total_bid_size': 0, 'total_ask_size': 0}
+
+
 polymarket_client = PolymarketClient()
