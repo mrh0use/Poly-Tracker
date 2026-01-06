@@ -855,8 +855,8 @@ class PolymarketWebSocket:
                 print("[WebSocket] Connecting to Polymarket RTDS...", flush=True)
                 async with websockets.connect(
                     self.RTDS_URL,
-                    ping_interval=30,
-                    ping_timeout=30,
+                    ping_interval=None,
+                    ping_timeout=None,
                     close_timeout=10
                 ) as ws:
                     self.ws = ws
