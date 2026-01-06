@@ -836,18 +836,27 @@ class PolymarketClient:
 
 class PolymarketWebSocket:
     RTDS_URL = "wss://ws-live-data.polymarket.com"
-    ACTIVITY_TIMEOUT = 120
-    KEEPALIVE_INTERVAL = 30
+    PING_INTERVAL = 5
+    DATA_TIMEOUT = 120
+    MAX_CONNECTION_AGE = 900
     DEBUG_MODE = True
     DEBUG_LOG_FIRST_N = 10
     
     def __init__(self, on_trade_callback: Callable[[Dict[str, Any]], None] = None):
         self.on_trade_callback = on_trade_callback
-        self.ws = None
         self._running = False
-        self._reconnect_delay = 5
-        self._max_reconnect_delay = 60
-        self._last_activity = time.time()
+        self._reconnect_delay = 2
+        self._max_reconnect_delay = 30
+        
+        self._primary_ws = None
+        self._backup_ws = None
+        self._active_connection = "primary"
+        
+        self._last_data_time = time.time()
+        self._connection_start_time = time.time()
+        self._ping_count = 0
+        self._total_trades = 0
+        
         self._debug_msg_count = 0
         self._debug_trade_count = 0
         self._debug_non_trade_count = 0
@@ -856,112 +865,207 @@ class PolymarketWebSocket:
         self._debug_last_msg_time = None
         self._debug_topics_seen = set()
         self._debug_types_seen = set()
+        
         self._keepalive_task = None
-        self._ping_count = 0
+        self._backup_task = None
+        self._monitor_task = None
     
-    async def _keepalive_ping(self, ws):
-        """Send periodic pings to keep the connection alive on platforms like Railway."""
-        while self._running and ws and not ws.closed:
+    async def _create_connection(self, name: str):
+        """Create and subscribe a new WebSocket connection."""
+        try:
+            ws = await websockets.connect(
+                self.RTDS_URL,
+                ping_interval=None,
+                ping_timeout=None,
+                close_timeout=10
+            )
+            
+            subscription = {
+                "action": "subscribe",
+                "subscriptions": [{"topic": "activity", "type": "trades"}]
+            }
+            await ws.send(json.dumps(subscription))
+            
+            if self.DEBUG_MODE:
+                print(f"[WS {name.upper()}] Connected and subscribed", flush=True)
+            
+            return ws
+        except Exception as e:
+            print(f"[WS {name.upper()}] Connection failed: {e}", flush=True)
+            return None
+    
+    async def _keepalive_ping(self):
+        """Send pings every 5 seconds to keep connections alive."""
+        while self._running:
             try:
-                await asyncio.sleep(self.KEEPALIVE_INTERVAL)
+                await asyncio.sleep(self.PING_INTERVAL)
+                
+                ws = self._primary_ws if self._active_connection == "primary" else self._backup_ws
                 if ws and not ws.closed:
                     self._ping_count += 1
-                    if self.DEBUG_MODE:
-                        print(f"[WS KEEPALIVE] Sending ping #{self._ping_count}...", flush=True)
-                    pong = await ws.ping()
-                    await asyncio.wait_for(pong, timeout=10)
-                    if self.DEBUG_MODE:
-                        print(f"[WS KEEPALIVE] Pong received for ping #{self._ping_count}", flush=True)
-            except asyncio.TimeoutError:
-                print(f"[WS KEEPALIVE] Ping #{self._ping_count} timed out - connection may be dead", flush=True)
+                    try:
+                        pong = await ws.ping()
+                        await asyncio.wait_for(pong, timeout=5)
+                        if self.DEBUG_MODE and self._ping_count % 12 == 0:
+                            print(f"[WS PING] #{self._ping_count} OK (every 5s, logging every 60s)", flush=True)
+                    except asyncio.TimeoutError:
+                        print(f"[WS PING] #{self._ping_count} TIMEOUT - switching connections", flush=True)
+                        await self._switch_to_backup()
+                    except Exception as e:
+                        print(f"[WS PING] #{self._ping_count} Error: {e}", flush=True)
+            except asyncio.CancelledError:
                 break
             except Exception as e:
-                if self._running:
-                    print(f"[WS KEEPALIVE] Ping error: {e}", flush=True)
+                print(f"[WS KEEPALIVE] Error: {e}", flush=True)
+    
+    async def _maintain_backup(self):
+        """Maintain a backup connection ready to take over."""
+        while self._running:
+            try:
+                await asyncio.sleep(30)
+                
+                if self._backup_ws is None or self._backup_ws.closed:
+                    if self.DEBUG_MODE:
+                        print("[WS BACKUP] Creating backup connection...", flush=True)
+                    self._backup_ws = await self._create_connection("backup")
+                    
+                    if self._backup_ws:
+                        try:
+                            await asyncio.wait_for(self._backup_ws.recv(), timeout=5)
+                            if self.DEBUG_MODE:
+                                print("[WS BACKUP] Backup connection verified", flush=True)
+                        except asyncio.TimeoutError:
+                            pass
+            except asyncio.CancelledError:
                 break
+            except Exception as e:
+                print(f"[WS BACKUP] Error maintaining backup: {e}", flush=True)
+    
+    async def _monitor_health(self):
+        """Monitor connection health and trigger reconnection if needed."""
+        while self._running:
+            try:
+                await asyncio.sleep(10)
+                
+                now = time.time()
+                data_age = now - self._last_data_time
+                connection_age = now - self._connection_start_time
+                
+                if data_age > self.DATA_TIMEOUT:
+                    print(f"[WS MONITOR] No data for {data_age:.0f}s - switching to backup", flush=True)
+                    await self._switch_to_backup()
+                
+                elif connection_age > self.MAX_CONNECTION_AGE:
+                    print(f"[WS MONITOR] Connection age {connection_age:.0f}s > {self.MAX_CONNECTION_AGE}s - proactive reconnect", flush=True)
+                    await self._switch_to_backup()
+                
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[WS MONITOR] Error: {e}", flush=True)
+    
+    async def _switch_to_backup(self):
+        """Switch from primary to backup connection."""
+        try:
+            if self._backup_ws and not self._backup_ws.closed:
+                old_ws = self._primary_ws
+                self._primary_ws = self._backup_ws
+                self._backup_ws = None
+                self._connection_start_time = time.time()
+                self._last_data_time = time.time()
+                
+                print(f"[WS SWITCH] Switched to backup connection", flush=True)
+                
+                if old_ws:
+                    try:
+                        await old_ws.close()
+                    except:
+                        pass
+            else:
+                print(f"[WS SWITCH] No backup available - creating new primary", flush=True)
+                if self._primary_ws:
+                    try:
+                        await self._primary_ws.close()
+                    except:
+                        pass
+                self._primary_ws = await self._create_connection("primary")
+                self._connection_start_time = time.time()
+                self._last_data_time = time.time()
+        except Exception as e:
+            print(f"[WS SWITCH] Error: {e}", flush=True)
     
     async def connect(self):
+        """Main connection loop with backup WebSocket support."""
         self._running = True
         reconnect_delay = self._reconnect_delay
         
         while self._running:
             try:
                 print("[WebSocket] Connecting to Polymarket RTDS...", flush=True)
-                async with websockets.connect(
-                    self.RTDS_URL,
-                    ping_interval=None,
-                    ping_timeout=None,
-                    close_timeout=10
-                ) as ws:
-                    self.ws = ws
-                    self._last_activity = time.time()
-                    print("[WebSocket] Connected! Subscribing to all trades...", flush=True)
-                    
-                    subscription = {
-                        "action": "subscribe",
-                        "subscriptions": [
-                            {
-                                "topic": "activity",
-                                "type": "trades"
-                            }
-                        ]
-                    }
-                    sub_json = json.dumps(subscription)
-                    if self.DEBUG_MODE:
-                        print(f"[WS DEBUG] Sending subscription: {sub_json}", flush=True)
-                    await ws.send(sub_json)
-                    print("[WebSocket] Subscribed to global trades feed", flush=True)
-                    
-                    reconnect_delay = self._reconnect_delay
-                    self._first_message_logged = False
-                    self._debug_msg_count = 0
-                    self._debug_trade_count = 0
-                    self._debug_non_trade_count = 0
-                    self._debug_empty_count = 0
-                    self._debug_error_count = 0
-                    self._debug_topics_seen = set()
-                    self._debug_types_seen = set()
-                    self._ping_count = 0
-                    
-                    self._keepalive_task = asyncio.create_task(self._keepalive_ping(ws))
-                    if self.DEBUG_MODE:
-                        print(f"[WS DEBUG] Keepalive task started (ping every {self.KEEPALIVE_INTERVAL}s)", flush=True)
-                    
-                    if self.DEBUG_MODE:
-                        print(f"[WS DEBUG] Starting message loop, timeout={self.ACTIVITY_TIMEOUT}s", flush=True)
-                    
-                    while self._running:
-                        try:
-                            if self.DEBUG_MODE and self._debug_msg_count == 0:
-                                print("[WS DEBUG] Waiting for first message...", flush=True)
-                            message = await asyncio.wait_for(ws.recv(), timeout=self.ACTIVITY_TIMEOUT)
-                            self._last_activity = time.time()
-                            if not self._first_message_logged:
-                                print(f"[WebSocket] Receiving messages... (len={len(message) if message else 0})", flush=True)
-                                self._first_message_logged = True
-                            await self._handle_message(message)
-                            await asyncio.sleep(0)
-                        except asyncio.TimeoutError:
-                            if self.DEBUG_MODE:
-                                print(f"[WS DEBUG] Timeout stats: msgs={self._debug_msg_count}, trades={self._debug_trade_count}, non_trades={self._debug_non_trade_count}, errors={self._debug_error_count}", flush=True)
-                            print(f"[WebSocket] No activity for {self.ACTIVITY_TIMEOUT}s, reconnecting...")
+                
+                self._primary_ws = await self._create_connection("primary")
+                if not self._primary_ws:
+                    await asyncio.sleep(reconnect_delay)
+                    reconnect_delay = min(reconnect_delay * 2, self._max_reconnect_delay)
+                    continue
+                
+                self._connection_start_time = time.time()
+                self._last_data_time = time.time()
+                reconnect_delay = self._reconnect_delay
+                
+                self._first_message_logged = False
+                self._debug_msg_count = 0
+                self._debug_trade_count = 0
+                self._debug_non_trade_count = 0
+                self._debug_empty_count = 0
+                self._debug_error_count = 0
+                self._debug_topics_seen = set()
+                self._debug_types_seen = set()
+                self._ping_count = 0
+                
+                self._keepalive_task = asyncio.create_task(self._keepalive_ping())
+                self._backup_task = asyncio.create_task(self._maintain_backup())
+                self._monitor_task = asyncio.create_task(self._monitor_health())
+                
+                if self.DEBUG_MODE:
+                    print(f"[WS DEBUG] Started: ping every {self.PING_INTERVAL}s, data timeout {self.DATA_TIMEOUT}s, max age {self.MAX_CONNECTION_AGE}s", flush=True)
+                
+                while self._running:
+                    try:
+                        ws = self._primary_ws
+                        if not ws or ws.closed:
+                            print("[WS] Primary connection lost, reconnecting...", flush=True)
                             break
-                    
-                    if self._keepalive_task:
-                        self._keepalive_task.cancel()
+                        
+                        message = await asyncio.wait_for(ws.recv(), timeout=30)
+                        self._last_data_time = time.time()
+                        
+                        if not self._first_message_logged:
+                            print(f"[WebSocket] Receiving messages...", flush=True)
+                            self._first_message_logged = True
+                        
+                        await self._handle_message(message)
+                        await asyncio.sleep(0)
+                        
+                    except asyncio.TimeoutError:
+                        continue
+                    except websockets.exceptions.ConnectionClosed:
+                        print("[WS] Connection closed, switching to backup...", flush=True)
+                        await self._switch_to_backup()
+                        
+            except Exception as e:
+                print(f"[WebSocket] Error: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
+            finally:
+                for task in [self._keepalive_task, self._backup_task, self._monitor_task]:
+                    if task:
+                        task.cancel()
                         try:
-                            await self._keepalive_task
+                            await task
                         except asyncio.CancelledError:
                             pass
-                        
-            except websockets.exceptions.ConnectionClosed as e:
-                print(f"[WebSocket] Connection closed: {e}. Reconnecting in {reconnect_delay}s...")
-            except Exception as e:
-                print(f"[WebSocket] Error: {e}. Reconnecting in {reconnect_delay}s...")
-            finally:
-                if self._keepalive_task:
-                    self._keepalive_task.cancel()
-                    self._keepalive_task = None
+                self._keepalive_task = None
+                self._backup_task = None
+                self._monitor_task = None
             
             if self._running:
                 await asyncio.sleep(reconnect_delay)
@@ -1054,9 +1158,14 @@ class PolymarketWebSocket:
     
     async def disconnect(self):
         self._running = False
-        if self.ws:
-            await self.ws.close()
-            self.ws = None
+        for ws in [self._primary_ws, self._backup_ws]:
+            if ws:
+                try:
+                    await ws.close()
+                except:
+                    pass
+        self._primary_ws = None
+        self._backup_ws = None
         print("[WebSocket] Disconnected")
 
 
