@@ -1190,7 +1190,7 @@ async def monitor_loop():
                 
                 price = float(trade.get('price', 0) or 0)
                 side = trade.get('side', '').lower()
-                if side == 'sell' and price > 0.99:
+                if side == 'sell':
                     continue
                 
                 is_fresh = False
