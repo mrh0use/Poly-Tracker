@@ -1861,19 +1861,17 @@ async def command_error(interaction: discord.Interaction, error):
 
 
 def main():
-    # Check if we should skip running (to avoid dev/production conflict)
-    if os.environ.get('SKIP_BOT', '').lower() == 'true':
-        print("SKIP_BOT is set - not starting bot (use production deployment instead)")
-        print("Set SKIP_BOT=false or remove it to run the bot here")
-        import time
-        while True:
-            time.sleep(60)
-        return
+    # Try DEV_DISCORD_BOT_TOKEN first (for development), then fall back to DISCORD_BOT_TOKEN (production)
+    token = os.environ.get('DEV_DISCORD_BOT_TOKEN') or os.environ.get('DISCORD_BOT_TOKEN')
     
-    token = os.environ.get('DISCORD_BOT_TOKEN')
+    if os.environ.get('DEV_DISCORD_BOT_TOKEN'):
+        print("Using DEVELOPMENT bot token")
+    else:
+        print("Using PRODUCTION bot token")
+    
     if not token:
-        print("ERROR: DISCORD_BOT_TOKEN not found in environment variables")
-        print("Please set your Discord bot token in the Secrets tab")
+        print("ERROR: No Discord bot token found")
+        print("Set DEV_DISCORD_BOT_TOKEN (development) or DISCORD_BOT_TOKEN (production)")
         return
     
     print("Starting Polymarket Discord Bot...")
