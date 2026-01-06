@@ -50,6 +50,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 | `/top_trader_channel #channel` | Set top 25 trader alerts channel | Admin |
 | `/threshold <amount>` | Set USD threshold | Admin |
 | `/sports_threshold <amount>` | Set sports USD threshold (default: $5k) | Admin |
+| `/fresh_wallet_threshold <amount>` | Set fresh wallet USD threshold (default: $10k) | Admin |
 | `/track <wallet> [label]` | Track a wallet | Admin |
 | `/untrack <wallet>` | Stop tracking | Admin |
 | `/rename <wallet> <name>` | Rename a tracked wallet | Admin |

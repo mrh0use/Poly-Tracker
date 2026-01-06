@@ -201,11 +201,10 @@ async def threshold(interaction: discord.Interaction, amount: float):
             session.add(config)
         
         config.whale_threshold = amount
-        config.fresh_wallet_threshold = amount
         session.commit()
         
         await interaction.response.send_message(
-            f"Alert threshold set to ${amount:,.0f}",
+            f"Whale alert threshold set to ${amount:,.0f}",
             ephemeral=True
         )
     finally:
@@ -535,6 +534,35 @@ async def sports_threshold(interaction: discord.Interaction, amount: float):
         session.close()
 
 
+@bot.tree.command(name="fresh_wallet_threshold", description="Set the minimum USD value for fresh wallet alerts")
+@app_commands.describe(amount="Minimum USD value for fresh wallet alerts (e.g., 10000)")
+@app_commands.checks.has_permissions(administrator=True)
+async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: float):
+    if amount < 100:
+        await interaction.response.send_message(
+            "Threshold must be at least $100",
+            ephemeral=True
+        )
+        return
+    
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.fresh_wallet_threshold = amount
+        session.commit()
+        
+        await interaction.response.send_message(
+            f"Fresh wallet alert threshold set to ${amount:,.0f}",
+            ephemeral=True
+        )
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="top_trader_channel", description="Set the channel for top 25 trader alerts")
 @app_commands.describe(channel="The channel to send top trader alerts to")
 @app_commands.checks.has_permissions(administrator=True)
@@ -665,6 +693,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="/sports_threshold <amount>",
         value="Set the minimum USD value for sports alerts (default: $5,000)",
+        inline=False
+    )
+    embed.add_field(
+        name="/fresh_wallet_threshold <amount>",
+        value="Set the minimum USD value for fresh wallet alerts (default: $10,000)",
         inline=False
     )
     embed.add_field(
@@ -1021,7 +1054,7 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"Error sending top trader alert: {e}")
                         
-                        if is_fresh and value >= config.fresh_wallet_threshold:
+                        if is_fresh and value >= (config.fresh_wallet_threshold or 10000.0):
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             fresh_channel = bot.get_channel(fresh_channel_id) if fresh_channel_id else None
                             if fresh_channel:
