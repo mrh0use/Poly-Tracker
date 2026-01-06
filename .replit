@@ -7,27 +7,6 @@ integrations = ["discord:1.0.0"]
 channel = "stable-25_05"
 
 [workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Polymarket Bot"
-
-[[workflows.workflow]]
-name = "Polymarket Bot"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python bot.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [deployment]
 run = ["python", "-u", "bot.py"]
