@@ -835,6 +835,7 @@ class PolymarketClient:
 
 class PolymarketWebSocket:
     RTDS_URL = "wss://ws-live-data.polymarket.com"
+    ACTIVITY_TIMEOUT = 120
     
     def __init__(self, on_trade_callback: Callable[[Dict[str, Any]], None] = None):
         self.on_trade_callback = on_trade_callback
@@ -842,6 +843,7 @@ class PolymarketWebSocket:
         self._running = False
         self._reconnect_delay = 5
         self._max_reconnect_delay = 60
+        self._last_activity = time.time()
     
     async def connect(self):
         self._running = True
@@ -857,6 +859,7 @@ class PolymarketWebSocket:
                     close_timeout=5
                 ) as ws:
                     self.ws = ws
+                    self._last_activity = time.time()
                     print("[WebSocket] Connected! Subscribing to all trades...")
                     
                     subscription = {
@@ -873,10 +876,14 @@ class PolymarketWebSocket:
                     
                     reconnect_delay = self._reconnect_delay
                     
-                    async for message in ws:
-                        if not self._running:
+                    while self._running:
+                        try:
+                            message = await asyncio.wait_for(ws.recv(), timeout=self.ACTIVITY_TIMEOUT)
+                            self._last_activity = time.time()
+                            await self._handle_message(message)
+                        except asyncio.TimeoutError:
+                            print(f"[WebSocket] No activity for {self.ACTIVITY_TIMEOUT}s, reconnecting...")
                             break
-                        await self._handle_message(message)
                         
             except websockets.exceptions.ConnectionClosed as e:
                 print(f"[WebSocket] Connection closed: {e}. Reconnecting in {reconnect_delay}s...")
