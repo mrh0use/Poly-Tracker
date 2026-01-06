@@ -1578,7 +1578,7 @@ async def handle_websocket_trade(trade: dict):
             
             _ws_stats['processed'] += 1
             
-            if _ws_stats['processed'] % 500 == 0:
+            if _ws_stats['processed'] % 1000 == 0:
                 print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+ BUY: {_ws_stats['above_5k']}, $10k+ BUY: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
             
             if not wallet:

@@ -886,6 +886,7 @@ class PolymarketWebSocket:
                                 print("[WebSocket] Receiving messages...", flush=True)
                                 self._first_message_logged = True
                             await self._handle_message(message)
+                            await asyncio.sleep(0)
                         except asyncio.TimeoutError:
                             print(f"[WebSocket] No activity for {self.ACTIVITY_TIMEOUT}s, reconnecting...")
                             break
@@ -913,9 +914,10 @@ class PolymarketWebSocket:
                 trade = self._normalize_trade(payload)
                 if trade:
                     self._trade_count = getattr(self, '_trade_count', 0) + 1
-                    if self._trade_count % 500 == 0:
+                    if self._trade_count % 1000 == 0:
                         print(f"[WS] Trades processed: {self._trade_count}", flush=True)
                     await self.on_trade_callback(trade)
+                    await asyncio.sleep(0)
                         
         except json.JSONDecodeError:
             pass
