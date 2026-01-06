@@ -412,11 +412,13 @@ def create_positions_overview_embed(
         positions = positions_data.get(addr, [])
         
         if positions:
-            top_positions = sorted(positions, key=lambda p: float(p.get('cashValue', 0) or 0), reverse=True)[:3]
+            def get_pos_value(p):
+                return float(p.get('currentValue', 0) or p.get('cashValue', 0) or 0)
+            top_positions = sorted(positions, key=get_pos_value, reverse=True)[:3]
             pos_text = []
             for pos in top_positions:
                 title = pos.get('title', 'Unknown')[:40]
-                value = float(pos.get('cashValue', 0) or 0)
+                value = get_pos_value(pos)
                 outcome = pos.get('outcome', '')
                 pos_text.append(f"• {title} ({outcome}): ${value:,.0f}")
             
@@ -458,20 +460,23 @@ def create_wallet_positions_embed(
         embed.add_field(name="No Positions", value="This wallet has no open positions", inline=False)
         return embed
     
-    sorted_positions = sorted(positions, key=lambda p: float(p.get('cashValue', 0) or 0), reverse=True)
+    def get_value(p):
+        return float(p.get('currentValue', 0) or p.get('cashValue', 0) or 0)
     
-    total_value = sum(float(p.get('cashValue', 0) or 0) for p in sorted_positions)
+    sorted_positions = sorted(positions, key=get_value, reverse=True)
+    
+    total_value = sum(get_value(p) for p in sorted_positions)
     embed.add_field(name="Total Value", value=f"${total_value:,.2f}", inline=True)
     embed.add_field(name="Position Count", value=str(len(sorted_positions)), inline=True)
     embed.add_field(name="\u200b", value="\u200b", inline=True)
     
     for pos in sorted_positions[:10]:
         title = pos.get('title', 'Unknown')[:50]
-        value = float(pos.get('cashValue', 0) or 0)
+        value = get_value(pos)
         size = float(pos.get('size', 0) or 0)
         outcome = pos.get('outcome', 'Unknown')
         avg_price = float(pos.get('avgPrice', 0) or 0) * 100
-        current_price = float(pos.get('currentPrice', 0) or 0) * 100
+        current_price = float(pos.get('curPrice', 0) or pos.get('currentPrice', 0) or 0) * 100
         
         field_value = f"**{outcome}** | Size: {size:,.0f} | Value: ${value:,.2f}\nEntry: {avg_price:.1f}% → Current: {current_price:.1f}%"
         
