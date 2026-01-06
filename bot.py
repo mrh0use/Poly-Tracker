@@ -1861,6 +1861,23 @@ async def command_error(interaction: discord.Interaction, error):
 
 
 def main():
+    import signal
+    import traceback
+    import sys
+    
+    # Signal handler to log when we receive termination signals
+    def signal_handler(signum, frame):
+        sig_name = signal.Signals(signum).name
+        print(f"[SIGNAL] Received {sig_name} (signal {signum})", flush=True)
+        print(f"[SIGNAL] Stack trace at signal:", flush=True)
+        traceback.print_stack(frame)
+        sys.stdout.flush()
+        sys.exit(0)
+    
+    # Register signal handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
     # Try DEV_DISCORD_BOT_TOKEN first (for development), then fall back to DISCORD_BOT_TOKEN (production)
     token = os.environ.get('DEV_DISCORD_BOT_TOKEN') or os.environ.get('DISCORD_BOT_TOKEN')
     
@@ -1875,8 +1892,21 @@ def main():
         return
     
     print("Starting Polymarket Discord Bot...")
-    bot.run(token)
+    
+    try:
+        bot.run(token)
+    except Exception as e:
+        print(f"[FATAL] Bot crashed with exception: {type(e).__name__}: {e}", flush=True)
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        print(f"[FATAL] Unhandled exception in main: {type(e).__name__}: {e}", flush=True)
+        traceback.print_exc()
+        raise
