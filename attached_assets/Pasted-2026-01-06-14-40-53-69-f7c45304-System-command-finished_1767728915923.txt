@@ -1,0 +1,116 @@
+2026-01-06 14:40:53.69
+f7c45304
+System
+command finished with error [python -u bot.py]: signal: terminated
+2026-01-06 14:40:53.77
+f7c45304
+System
+main done, exiting
+2026-01-06 14:40:53.77
+f7c45304
+System
+main done, exiting
+2026-01-06 14:40:58.66
+59958f08
+User
+Market cache refreshed: 500 entries
+2026-01-06 14:40:58.66
+59958f08
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 14:40:58.66
+59958f08
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 14:40:58.79
+59958f08
+User
+[WebSocket] Receiving messages...
+2026-01-06 14:40:59.07
+59958f08
+User
+Top traders cache refreshed: 25 entries
+2026-01-06 14:42:07.49
+59958f08
+User
+[WebSocket] Connection closed: sent 1011 (internal error) keepalive ping timeout; no close frame received. Reconnecting in 5s...
+2026-01-06 14:42:12.50
+59958f08
+User
+[WebSocket] Connecting to Polymarket RTDS...
+2026-01-06 14:42:12.96
+59958f08
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 14:42:12.96
+59958f08
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 14:42:13.12
+59958f08
+User
+[WebSocket] Receiving messages...
+2026-01-06 14:43:18.31
+59958f08
+User
+[WS] Sports whale: $6,202
+2026-01-06 14:43:34.36
+59958f08
+User
+[WS Stats] Processed: 500, $5k+ BUY: 1, $10k+ BUY: 0, Alerts: 1
+2026-01-06 14:43:34.36
+59958f08
+User
+[WS] Trades processed: 500
+2026-01-06 14:44:32.52
+59958f08
+User
+[WebSocket] Connection closed: sent 1011 (internal error) keepalive ping timeout; no close frame received. Reconnecting in 5s...
+2026-01-06 14:44:37.52
+59958f08
+User
+[WebSocket] Connecting to Polymarket RTDS...
+2026-01-06 14:44:37.93
+59958f08
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 14:44:37.93
+59958f08
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 14:44:38.11
+59958f08
+User
+[WebSocket] Receiving messages...
+2026-01-06 14:46:01.46
+59958f08
+User
+Market cache refreshed: 500 entries
+2026-01-06 14:46:11.49
+59958f08
+User
+[WS] Trades processed: 1000
+2026-01-06 14:46:11.49
+59958f08
+User
+[WS Stats] Processed: 1000, $5k+ BUY: 1, $10k+ BUY: 0, Alerts: 1
+2026-01-06 14:46:12.15
+59958f08
+User
+[WebSocket] Connection closed: sent 1011 (internal error) keepalive ping timeout; no close frame received. Reconnecting in 5s...
+2026-01-06 14:46:17.15
+59958f08
+User
+[WebSocket] Connecting to Polymarket RTDS...
+2026-01-06 14:46:17.57
+59958f08
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 14:46:17.57
+59958f08
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 14:46:17.71
+59958f08
+User
+[WebSocket] Receiving messages...
