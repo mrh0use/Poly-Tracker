@@ -1223,24 +1223,30 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"Error sending sports tracked wallet alert: {e}")
                             elif is_fresh and value >= (config.sports_threshold or 5000.0):
+                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_fresh_wallet_alert_embed(
                                     trade=trade,
                                     value_usd=value,
                                     market_title=market_title,
                                     wallet_address=wallet,
-                                    market_url=market_url
+                                    market_url=market_url,
+                                    pnl=wallet_stats.get('pnl'),
+                                    rank=wallet_stats.get('rank')
                                 )
                                 try:
                                     await sports_channel.send(embed=embed, view=button_view)
                                 except Exception as e:
                                     print(f"Error sending sports fresh wallet alert: {e}")
                             elif value >= (config.sports_threshold or 5000.0):
+                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_whale_alert_embed(
                                     trade=trade,
                                     value_usd=value,
                                     market_title=market_title,
                                     wallet_address=wallet,
-                                    market_url=market_url
+                                    market_url=market_url,
+                                    pnl=wallet_stats.get('pnl'),
+                                    rank=wallet_stats.get('rank')
                                 )
                                 try:
                                     await sports_channel.send(embed=embed, view=button_view)
@@ -1291,12 +1297,15 @@ async def monitor_loop():
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             fresh_channel = bot.get_channel(fresh_channel_id) if fresh_channel_id else None
                             if fresh_channel:
+                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_fresh_wallet_alert_embed(
                                     trade=trade,
                                     value_usd=value,
                                     market_title=market_title,
                                     wallet_address=wallet,
-                                    market_url=market_url
+                                    market_url=market_url,
+                                    pnl=wallet_stats.get('pnl'),
+                                    rank=wallet_stats.get('rank')
                                 )
                                 try:
                                     await fresh_channel.send(embed=embed, view=button_view)
@@ -1307,12 +1316,15 @@ async def monitor_loop():
                             whale_channel_id = config.whale_channel_id or config.alert_channel_id
                             whale_channel = bot.get_channel(whale_channel_id) if whale_channel_id else None
                             if whale_channel:
+                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_whale_alert_embed(
                                     trade=trade,
                                     value_usd=value,
                                     market_title=market_title,
                                     wallet_address=wallet,
-                                    market_url=market_url
+                                    market_url=market_url,
+                                    pnl=wallet_stats.get('pnl'),
+                                    rank=wallet_stats.get('rank')
                                 )
                                 try:
                                     await whale_channel.send(embed=embed, view=button_view)

@@ -60,11 +60,21 @@ def create_whale_alert_embed(
     value_usd: float,
     market_title: str = "Unknown Market",
     wallet_address: str = "Unknown",
-    market_url: str = "https://polymarket.com"
+    market_url: str = "https://polymarket.com",
+    pnl: Optional[float] = None,
+    rank: Optional[int] = None
 ) -> Embed:
+    stats_line = ""
+    if pnl is not None:
+        pnl_sign = "+" if pnl >= 0 else ""
+        stats_line = f"📊 Wallet PnL: {pnl_sign}${pnl:,.0f}"
+        if rank:
+            stats_line += f" | Rank #{rank}"
+        stats_line += "\n\n"
+    
     embed = Embed(
         title="Whale Alert",
-        description=f"Large transaction detected on Polymarket",
+        description=f"{stats_line}Large transaction detected on Polymarket",
         color=0xFF6B6B,
         timestamp=datetime.utcnow()
     )
@@ -126,11 +136,21 @@ def create_fresh_wallet_alert_embed(
     value_usd: float,
     market_title: str = "Unknown Market",
     wallet_address: str = "Unknown",
-    market_url: str = "https://polymarket.com"
+    market_url: str = "https://polymarket.com",
+    pnl: Optional[float] = None,
+    rank: Optional[int] = None
 ) -> Embed:
+    stats_line = ""
+    if pnl is not None:
+        pnl_sign = "+" if pnl >= 0 else ""
+        stats_line = f"📊 Wallet PnL: {pnl_sign}${pnl:,.0f}"
+        if rank:
+            stats_line += f" | Rank #{rank}"
+        stats_line += "\n\n"
+    
     embed = Embed(
         title="Fresh Wallet Alert",
-        description=f"New wallet making first large transaction",
+        description=f"{stats_line}New wallet making first large transaction",
         color=0x4ECDC4,
         timestamp=datetime.utcnow()
     )
