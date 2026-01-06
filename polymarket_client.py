@@ -855,9 +855,9 @@ class PolymarketWebSocket:
                 print("[WebSocket] Connecting to Polymarket RTDS...", flush=True)
                 async with websockets.connect(
                     self.RTDS_URL,
-                    ping_interval=20,
-                    ping_timeout=10,
-                    close_timeout=5
+                    ping_interval=30,
+                    ping_timeout=30,
+                    close_timeout=10
                 ) as ws:
                     self.ws = ws
                     self._last_activity = time.time()
