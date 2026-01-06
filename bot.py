@@ -1577,13 +1577,10 @@ async def handle_websocket_trade(trade: dict):
             wallet = polymarket_client.get_wallet_from_trade(trade)
             
             _ws_stats['processed'] += 1
-            if _ws_stats['processed'] <= 3:
-                print(f"[WS Debug] Trade data: size={trade.get('size')}, price={trade.get('price')}, value=${value:.2f}")
             if value >= 5000:
                 _ws_stats['above_5k'] += 1
             if value >= 10000:
                 _ws_stats['above_10k'] += 1
-                print(f"[WS] $10k+ trade: ${value:,.0f} - {trade.get('title', 'Unknown')[:50]} - wallet: {wallet[:10] if wallet else 'None'}...")
             
             if _ws_stats['processed'] % 500 == 0:
                 print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+: {_ws_stats['above_5k']}, $10k+: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
@@ -1682,6 +1679,7 @@ async def handle_websocket_trade(trade: dict):
                         )
                         try:
                             await tracked_channel.send(embed=embed, view=button_view)
+                            _ws_stats['alerts_sent'] += 1
                             print(f"[WS] Tracked wallet alert: ${value:,.0f} from {tw.label or wallet[:8]}")
                         except Exception as e:
                             print(f"[WS] Error sending tracked wallet alert: {e}")
@@ -1722,6 +1720,7 @@ async def handle_websocket_trade(trade: dict):
                             )
                             try:
                                 await sports_channel.send(embed=embed, view=button_view)
+                                _ws_stats['alerts_sent'] += 1
                                 print(f"[WS] Sports fresh wallet: ${value:,.0f}")
                             except Exception as e:
                                 print(f"[WS] Error sending sports alert: {e}")
@@ -1739,6 +1738,7 @@ async def handle_websocket_trade(trade: dict):
                             )
                             try:
                                 await sports_channel.send(embed=embed, view=button_view)
+                                _ws_stats['alerts_sent'] += 1
                                 print(f"[WS] Sports whale: ${value:,.0f}")
                             except Exception as e:
                                 print(f"[WS] Error sending sports alert: {e}")
@@ -1775,6 +1775,7 @@ async def handle_websocket_trade(trade: dict):
                             )
                             try:
                                 await bonds_channel.send(embed=embed, view=button_view)
+                                _ws_stats['alerts_sent'] += 1
                                 print(f"[WS] Bonds alert: ${value:,.0f}")
                             except Exception as e:
                                 print(f"[WS] Error sending bonds alert: {e}")
@@ -1795,6 +1796,7 @@ async def handle_websocket_trade(trade: dict):
                             )
                             try:
                                 await fresh_channel.send(embed=embed, view=button_view)
+                                _ws_stats['alerts_sent'] += 1
                                 print(f"[WS] Fresh wallet: ${value:,.0f}")
                             except Exception as e:
                                 print(f"[WS] Error sending fresh wallet alert: {e}")
@@ -1815,6 +1817,7 @@ async def handle_websocket_trade(trade: dict):
                             )
                             try:
                                 await whale_channel.send(embed=embed, view=button_view)
+                                _ws_stats['alerts_sent'] += 1
                                 print(f"[WS] Whale alert: ${value:,.0f}")
                             except Exception as e:
                                 print(f"[WS] Error sending whale alert: {e}")

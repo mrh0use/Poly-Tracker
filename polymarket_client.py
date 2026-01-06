@@ -894,11 +894,6 @@ class PolymarketWebSocket:
             
             self._message_count = getattr(self, '_message_count', 0) + 1
             
-            if self._message_count <= 3:
-                print(f"[WS] Raw message #{self._message_count}: {raw_message[:300]}")
-            elif self._message_count % 500 == 0:
-                print(f"[WS] Messages received: {self._message_count}")
-            
             message = json.loads(raw_message)
             
             payload = message.get('payload')
