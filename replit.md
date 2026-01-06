@@ -88,6 +88,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-06: **Major WebSocket resilience overhaul** - Based on Polymarket community best practices (GitHub issue #26): 5-second ping interval (was 30s), backup WebSocket ready for instant failover, 2-minute data timeout detection, proactive 15-minute reconnection to avoid known 20-minute data stream freeze bug.
 - 2026-01-06: **Added CPU-friendly optimizations** - Added asyncio.sleep(0) yields after each trade to prevent CPU monopolization, reduced logging frequency from 500 to 1000 trades. Recommended by Replit support for Reserved VM stability.
 - 2026-01-06: **Added separate dev/prod bot tokens** - Development now uses DEV_DISCORD_BOT_TOKEN to avoid conflicts with production. Both can run simultaneously.
 

@@ -1,6 +1,7 @@
 import aiohttp
 import asyncio
 import websockets
+from websockets.protocol import State as WSState
 import json
 import time
 from datetime import datetime, timedelta
@@ -870,6 +871,15 @@ class PolymarketWebSocket:
         self._backup_task = None
         self._monitor_task = None
     
+    def _is_ws_open(self, ws) -> bool:
+        """Check if a WebSocket connection is open (works with websockets 15.x)."""
+        if ws is None:
+            return False
+        try:
+            return ws.state == WSState.OPEN
+        except:
+            return False
+    
     async def _create_connection(self, name: str):
         """Create and subscribe a new WebSocket connection."""
         try:
@@ -901,7 +911,7 @@ class PolymarketWebSocket:
                 await asyncio.sleep(self.PING_INTERVAL)
                 
                 ws = self._primary_ws if self._active_connection == "primary" else self._backup_ws
-                if ws and not ws.closed:
+                if self._is_ws_open(ws):
                     self._ping_count += 1
                     try:
                         pong = await ws.ping()
@@ -924,7 +934,7 @@ class PolymarketWebSocket:
             try:
                 await asyncio.sleep(30)
                 
-                if self._backup_ws is None or self._backup_ws.closed:
+                if not self._is_ws_open(self._backup_ws):
                     if self.DEBUG_MODE:
                         print("[WS BACKUP] Creating backup connection...", flush=True)
                     self._backup_ws = await self._create_connection("backup")
@@ -967,7 +977,7 @@ class PolymarketWebSocket:
     async def _switch_to_backup(self):
         """Switch from primary to backup connection."""
         try:
-            if self._backup_ws and not self._backup_ws.closed:
+            if self._is_ws_open(self._backup_ws):
                 old_ws = self._primary_ws
                 self._primary_ws = self._backup_ws
                 self._backup_ws = None
@@ -1033,7 +1043,7 @@ class PolymarketWebSocket:
                 while self._running:
                     try:
                         ws = self._primary_ws
-                        if not ws or ws.closed:
+                        if not self._is_ws_open(ws):
                             print("[WS] Primary connection lost, reconnecting...", flush=True)
                             break
                         
