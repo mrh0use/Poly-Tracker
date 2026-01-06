@@ -837,6 +837,7 @@ class PolymarketClient:
 class PolymarketWebSocket:
     RTDS_URL = "wss://ws-live-data.polymarket.com"
     ACTIVITY_TIMEOUT = 120
+    KEEPALIVE_INTERVAL = 30
     DEBUG_MODE = True
     DEBUG_LOG_FIRST_N = 10
     
@@ -855,6 +856,29 @@ class PolymarketWebSocket:
         self._debug_last_msg_time = None
         self._debug_topics_seen = set()
         self._debug_types_seen = set()
+        self._keepalive_task = None
+        self._ping_count = 0
+    
+    async def _keepalive_ping(self, ws):
+        """Send periodic pings to keep the connection alive on platforms like Railway."""
+        while self._running and ws and not ws.closed:
+            try:
+                await asyncio.sleep(self.KEEPALIVE_INTERVAL)
+                if ws and not ws.closed:
+                    self._ping_count += 1
+                    if self.DEBUG_MODE:
+                        print(f"[WS KEEPALIVE] Sending ping #{self._ping_count}...", flush=True)
+                    pong = await ws.ping()
+                    await asyncio.wait_for(pong, timeout=10)
+                    if self.DEBUG_MODE:
+                        print(f"[WS KEEPALIVE] Pong received for ping #{self._ping_count}", flush=True)
+            except asyncio.TimeoutError:
+                print(f"[WS KEEPALIVE] Ping #{self._ping_count} timed out - connection may be dead", flush=True)
+                break
+            except Exception as e:
+                if self._running:
+                    print(f"[WS KEEPALIVE] Ping error: {e}", flush=True)
+                break
     
     async def connect(self):
         self._running = True
@@ -897,6 +921,11 @@ class PolymarketWebSocket:
                     self._debug_error_count = 0
                     self._debug_topics_seen = set()
                     self._debug_types_seen = set()
+                    self._ping_count = 0
+                    
+                    self._keepalive_task = asyncio.create_task(self._keepalive_ping(ws))
+                    if self.DEBUG_MODE:
+                        print(f"[WS DEBUG] Keepalive task started (ping every {self.KEEPALIVE_INTERVAL}s)", flush=True)
                     
                     if self.DEBUG_MODE:
                         print(f"[WS DEBUG] Starting message loop, timeout={self.ACTIVITY_TIMEOUT}s", flush=True)
@@ -917,11 +946,22 @@ class PolymarketWebSocket:
                                 print(f"[WS DEBUG] Timeout stats: msgs={self._debug_msg_count}, trades={self._debug_trade_count}, non_trades={self._debug_non_trade_count}, errors={self._debug_error_count}", flush=True)
                             print(f"[WebSocket] No activity for {self.ACTIVITY_TIMEOUT}s, reconnecting...")
                             break
+                    
+                    if self._keepalive_task:
+                        self._keepalive_task.cancel()
+                        try:
+                            await self._keepalive_task
+                        except asyncio.CancelledError:
+                            pass
                         
             except websockets.exceptions.ConnectionClosed as e:
                 print(f"[WebSocket] Connection closed: {e}. Reconnecting in {reconnect_delay}s...")
             except Exception as e:
                 print(f"[WebSocket] Error: {e}. Reconnecting in {reconnect_delay}s...")
+            finally:
+                if self._keepalive_task:
+                    self._keepalive_task.cancel()
+                    self._keepalive_task = None
             
             if self._running:
                 await asyncio.sleep(reconnect_delay)
