@@ -81,6 +81,8 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-06: **Added wallet PnL to all alerts** - whale alerts, fresh wallet alerts, and sports alerts now display the trader's lifetime PnL and rank
+- 2026-01-06: **Added cash balance to /positions** - shows USDC balance for each tracked wallet (queried from Polygon blockchain)
 - 2026-01-05: **Added Top Trader Alerts** - monitors trades from top 25 all-time profit leaders, configurable via /top_trader_channel
 - 2026-01-05: **Improved /untrack command** - now uses dropdown menu to select wallet instead of pasting address
 - 2026-01-05: **Fixed Onsight trade button** - now uses correct `event_{slug_with_underscores}` format that Polysight bot expects (hyphens replaced with underscores, prefixed with "event_")
