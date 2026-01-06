@@ -80,10 +80,15 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Environment Variables
 
-- `DISCORD_BOT_TOKEN` - Required Discord bot token
+- `DISCORD_BOT_TOKEN` - Production Discord bot token (used in production deployment)
+- `DEV_DISCORD_BOT_TOKEN` - Development Discord bot token (used when running locally, separate bot to avoid conflicts)
 - `DATABASE_URL` - PostgreSQL connection string (auto-configured)
 
+**Note**: Development and production use separate Discord bot tokens to allow both to run simultaneously without conflicts. The bot checks for `DEV_DISCORD_BOT_TOKEN` first, then falls back to `DISCORD_BOT_TOKEN`.
+
 ## Recent Changes
+
+- 2026-01-06: **Added separate dev/prod bot tokens** - Development now uses DEV_DISCORD_BOT_TOKEN to avoid conflicts with production. Both can run simultaneously.
 
 - 2026-01-06: **Added WebSocket activity timeout** - Auto-reconnects if no messages received for 2 minutes (prevents silent disconnections).
 - 2026-01-06: **Fixed alert routing priority** - Top trader alerts now take priority over bonds alerts. Top 25 traders go to top-trader channel even on 95%+ trades.
