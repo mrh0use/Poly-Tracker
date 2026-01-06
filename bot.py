@@ -1125,6 +1125,9 @@ async def monitor_loop():
             
             processed_wallets_this_batch = set()
             
+            new_trades_count = 0
+            skipped_seen_count = 0
+            
             for trade in all_trades:
                 unique_key = polymarket_client.get_unique_trade_id(trade)
                 
@@ -1133,9 +1136,11 @@ async def monitor_loop():
                 
                 seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key[:66]).first()
                 if seen:
+                    skipped_seen_count += 1
                     continue
                 
                 session.add(SeenTransaction(tx_hash=unique_key[:66]))
+                new_trades_count += 1
                 
                 value = polymarket_client.calculate_trade_value(trade)
                 wallet = polymarket_client.get_wallet_from_trade(trade)
@@ -1330,6 +1335,9 @@ async def monitor_loop():
                                     await whale_channel.send(embed=embed, view=button_view)
                                 except Exception as e:
                                     print(f"Error sending whale alert: {e}")
+            
+            if new_trades_count > 0 or skipped_seen_count > 0:
+                print(f"[Monitor] Processed: {new_trades_count} new trades, {skipped_seen_count} already seen")
             
             session.commit()
         finally:
