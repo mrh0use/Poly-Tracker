@@ -85,6 +85,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-06: **Added WebSocket activity timeout** - Auto-reconnects if no messages received for 2 minutes (prevents silent disconnections).
 - 2026-01-06: **Fixed alert routing priority** - Top trader alerts now take priority over bonds alerts. Top 25 traders go to top-trader channel even on 95%+ trades.
 - 2026-01-06: **Fixed trade stats accuracy** - Stats now only count BUY trades (SELLs were being counted as threshold hits but filtered out before alerting).
 - 2026-01-06: **Switched to real-time WebSocket feed** - Now uses Polymarket's RTDS WebSocket (wss://ws-live-data.polymarket.com) for instant trade alerts instead of polling. This catches every trade in real-time with no gaps. Polling loop remains as backup for tracked wallets.
