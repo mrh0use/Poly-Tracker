@@ -991,10 +991,12 @@ class WalletPositionButton(Button):
         await interaction.response.defer(ephemeral=True)
         
         positions = await polymarket_client.get_wallet_positions(self.wallet_address)
+        usdc_balance = await polymarket_client.get_wallet_usdc_balance(self.wallet_address)
         embed = create_wallet_positions_embed(
             wallet_address=self.wallet_address,
             wallet_label=self.wallet_label,
-            positions=positions
+            positions=positions,
+            usdc_balance=usdc_balance
         )
         
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -1016,11 +1018,14 @@ async def positions(interaction: discord.Interaction):
             return
         
         positions_data = {}
+        balance_data = {}
         for wallet in tracked:
             wallet_positions = await polymarket_client.get_wallet_positions(wallet.wallet_address)
             positions_data[wallet.wallet_address] = wallet_positions
+            usdc_balance = await polymarket_client.get_wallet_usdc_balance(wallet.wallet_address)
+            balance_data[wallet.wallet_address] = usdc_balance
         
-        embed = create_positions_overview_embed(tracked, positions_data)
+        embed = create_positions_overview_embed(tracked, positions_data, balance_data)
         
         view = View(timeout=300)
         for i, wallet in enumerate(tracked[:5]):

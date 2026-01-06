@@ -397,7 +397,8 @@ def create_redeem_alert_embed(
 
 def create_positions_overview_embed(
     tracked_wallets: list,
-    positions_data: Dict[str, list]
+    positions_data: Dict[str, list],
+    balance_data: Optional[Dict[str, Optional[float]]] = None
 ) -> Embed:
     embed = Embed(
         title="Tracked Wallet Positions",
@@ -406,10 +407,14 @@ def create_positions_overview_embed(
         timestamp=datetime.utcnow()
     )
     
+    if balance_data is None:
+        balance_data = {}
+    
     for wallet in tracked_wallets:
         addr = wallet.wallet_address
         label = wallet.label or f"{addr[:6]}...{addr[-4:]}"
         positions = positions_data.get(addr, [])
+        usdc_balance = balance_data.get(addr)
         
         if positions:
             def get_pos_value(p):
@@ -425,15 +430,21 @@ def create_positions_overview_embed(
             if len(positions) > 3:
                 pos_text.append(f"*...and {len(positions) - 3} more*")
             
+            balance_str = f"💵 Cash: ${usdc_balance:,.2f}" if usdc_balance is not None else ""
+            full_text = "\n".join(pos_text) if pos_text else "No positions"
+            if balance_str:
+                full_text = f"{balance_str}\n{full_text}"
+            
             embed.add_field(
                 name=label,
-                value="\n".join(pos_text) if pos_text else "No positions",
+                value=full_text,
                 inline=False
             )
         else:
+            balance_str = f"💵 Cash: ${usdc_balance:,.2f}\n" if usdc_balance is not None else ""
             embed.add_field(
                 name=label,
-                value="No positions found",
+                value=f"{balance_str}No positions found",
                 inline=False
             )
     
@@ -445,7 +456,8 @@ def create_positions_overview_embed(
 def create_wallet_positions_embed(
     wallet_address: str,
     wallet_label: Optional[str],
-    positions: list
+    positions: list,
+    usdc_balance: Optional[float] = None
 ) -> Embed:
     label = wallet_label or f"{wallet_address[:6]}...{wallet_address[-4:]}"
     
@@ -457,7 +469,9 @@ def create_wallet_positions_embed(
     )
     
     if not positions:
-        embed.add_field(name="No Positions", value="This wallet has no open positions", inline=False)
+        balance_text = f"💵 Cash Balance: ${usdc_balance:,.2f}" if usdc_balance is not None else ""
+        no_pos_text = "This wallet has no open positions"
+        embed.add_field(name="No Positions", value=f"{balance_text}\n{no_pos_text}" if balance_text else no_pos_text, inline=False)
         return embed
     
     def get_value(p):
@@ -466,9 +480,11 @@ def create_wallet_positions_embed(
     sorted_positions = sorted(positions, key=get_value, reverse=True)
     
     total_value = sum(get_value(p) for p in sorted_positions)
-    embed.add_field(name="Total Value", value=f"${total_value:,.2f}", inline=True)
+    
+    if usdc_balance is not None:
+        embed.add_field(name="💵 Cash Balance", value=f"${usdc_balance:,.2f}", inline=True)
+    embed.add_field(name="Total Position Value", value=f"${total_value:,.2f}", inline=True)
     embed.add_field(name="Position Count", value=str(len(sorted_positions)), inline=True)
-    embed.add_field(name="\u200b", value="\u200b", inline=True)
     
     for pos in sorted_positions[:10]:
         title = pos.get('title', 'Unknown')[:50]

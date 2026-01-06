@@ -289,6 +289,42 @@ class PolymarketClient:
             print(f"Error fetching positions for {wallet_address}: {e}")
             return []
     
+    async def get_wallet_usdc_balance(self, wallet_address: str) -> Optional[float]:
+        """Get USDC.e balance for a wallet on Polygon."""
+        await self.ensure_session()
+        
+        usdc_contract = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+        balance_of_selector = "0x70a08231"
+        padded_address = wallet_address.lower().replace("0x", "").zfill(64)
+        data = f"{balance_of_selector}{padded_address}"
+        
+        rpc_payload = {
+            "jsonrpc": "2.0",
+            "method": "eth_call",
+            "params": [
+                {"to": usdc_contract, "data": data},
+                "latest"
+            ],
+            "id": 1
+        }
+        
+        try:
+            async with self.session.post(
+                "https://polygon-rpc.com",
+                json=rpc_payload,
+                headers={"Content-Type": "application/json"}
+            ) as resp:
+                if resp.status == 200:
+                    result = await resp.json()
+                    if "result" in result and result["result"]:
+                        balance_hex = result["result"]
+                        balance_raw = int(balance_hex, 16)
+                        return balance_raw / 1_000_000
+                return None
+        except Exception as e:
+            print(f"Error fetching USDC balance for {wallet_address}: {e}")
+            return None
+    
     async def _fetch_positions_paginated(self, wallet_address: str) -> List[Dict[str, Any]]:
         await self.ensure_session()
         all_positions = []
