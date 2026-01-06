@@ -1,0 +1,29 @@
+Starting Container
+Using PRODUCTION bot token
+Starting Polymarket Discord Bot...
+[2026-01-06 22:39:10] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+[2026-01-06 22:39:10] [INFO    ] discord.client: logging in using static token
+Database initialized
+[2026-01-06 22:39:13] [INFO    ] discord.gateway: Shard ID None has connected to Gateway (Session ID: 4b4494e9fce1509f9619fc3c5cfba50d).
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+/app/bot.py:1545: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  cutoff = datetime.utcnow() - timedelta(hours=3)
+Slash commands synced
+Monitor loop started (backup for tracked wallets)
+Volatility loop started
+Cleanup loop started
+/app/bot.py:1550: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  alert_cutoff = datetime.utcnow() - timedelta(hours=24)
+Sports tags loaded
+WebSocket task scheduled
+[WebSocket] Starting real-time trade feed...
+[WebSocket] Connecting to Polymarket RTDS...
+/app/bot.py:1445: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow()
+Market cache refreshed: 500 entries
+[WebSocket] Subscribed to global trades feed
+[WebSocket] Receiving messages...
+Top traders cache refreshed: 25 entries
+[WebSocket] Connected! Subscribing to all trades...
+/app/bot.py:1649: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None

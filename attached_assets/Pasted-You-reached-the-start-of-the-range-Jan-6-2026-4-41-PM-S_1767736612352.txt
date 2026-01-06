@@ -1,0 +1,121 @@
+You reached the start of the range
+Jan 6, 2026, 4:41 PM
+Starting Container
+Hello from repl-nix-workspace!
+Starting Container
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Stopping Container
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+ValueError: DATABASE_URL environment variable is required
+  File "/app/bot.py", line 10, in <module>
+  File "/app/database.py", line 9, in <module>
+Traceback (most recent call last):
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+    raise ValueError("DATABASE_URL environment variable is required")
+  File "/app/database.py", line 9, in <module>
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+ValueError: DATABASE_URL environment variable is required
+    raise ValueError("DATABASE_URL environment variable is required")
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
+  File "/app/bot.py", line 10, in <module>
+    from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
+  File "/app/database.py", line 9, in <module>
+    raise ValueError("DATABASE_URL environment variable is required")
+ValueError: DATABASE_URL environment variable is required
+Traceback (most recent call last):
