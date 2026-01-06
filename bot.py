@@ -764,19 +764,23 @@ def create_orderbook_embed(market_title: str, orderbook: dict, outcomes: list) -
             inline=False
         )
     
-    depth_bar_width = 20
     if total_bid_size + total_ask_size > 0:
         bid_pct = total_bid_size / (total_bid_size + total_ask_size)
-        bid_blocks = int(bid_pct * depth_bar_width)
-        ask_blocks = depth_bar_width - bid_blocks
-        depth_bar = f"{'🟢' * bid_blocks}{'🔴' * ask_blocks}"
-        bid_k = total_bid_size / 1000 if total_bid_size >= 1000 else total_bid_size
-        ask_k = total_ask_size / 1000 if total_ask_size >= 1000 else total_ask_size
-        bid_suffix = "K" if total_bid_size >= 1000 else ""
-        ask_suffix = "K" if total_ask_size >= 1000 else ""
+        ask_pct = 1 - bid_pct
+        
+        def format_size(size):
+            if size >= 1_000_000:
+                return f"{size/1_000_000:.1f}M"
+            elif size >= 1000:
+                return f"{size/1000:.0f}K"
+            return f"{size:.0f}"
+        
+        bid_str = format_size(total_bid_size)
+        ask_str = format_size(total_ask_size)
+        
         embed.add_field(
             name="Depth",
-            value=f"{bid_k:.0f}{bid_suffix} {depth_bar} {ask_k:.0f}{ask_suffix}",
+            value=f"🟢 Bids: **{bid_str}** ({bid_pct*100:.0f}%) | 🔴 Asks: **{ask_str}** ({ask_pct*100:.0f}%)",
             inline=False
         )
     
