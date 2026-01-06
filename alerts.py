@@ -67,7 +67,7 @@ def create_bonds_alert_embed(
     stats_line = ""
     if pnl is not None:
         pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f}** PnL"
+        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -146,7 +146,7 @@ def create_whale_alert_embed(
     stats_line = ""
     if pnl is not None:
         pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f}** PnL"
+        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -230,7 +230,7 @@ def create_fresh_wallet_alert_embed(
     stats_line = ""
     if pnl is not None:
         pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f}** PnL"
+        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -315,7 +315,7 @@ def create_top_trader_alert_embed(
     stats_line = ""
     if pnl is not None:
         pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f}** All-Time PnL\n\n"
+        stats_line = f"**{pnl_sign}${pnl:,.0f} All-Time PnL**\n\n"
     
     embed = Embed(
         title=title,
@@ -394,7 +394,7 @@ def create_custom_wallet_alert_embed(
     stats_line = ""
     if pnl is not None:
         pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f}** PnL"
+        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
