@@ -1,0 +1,73 @@
+Starting Container
+[2026-01-06 22:48:24] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+Using PRODUCTION bot token
+Starting Polymarket Discord Bot...
+[2026-01-06 22:48:24] [INFO    ] discord.client: logging in using static token
+Database initialized
+[2026-01-06 22:48:27] [INFO    ] discord.gateway: Shard ID None has connected to Gateway (Session ID: 33df6dd84a43486acb8d4f767ac466b8).
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+Slash commands synced
+Monitor loop started (backup for tracked wallets)
+Volatility loop started
+Cleanup loop started
+/app/bot.py:1545: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  cutoff = datetime.utcnow() - timedelta(hours=3)
+/app/bot.py:1550: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  alert_cutoff = datetime.utcnow() - timedelta(hours=24)
+Sports tags loaded
+WebSocket task scheduled
+[WebSocket] Starting real-time trade feed...
+[WebSocket] Connecting to Polymarket RTDS...
+/app/bot.py:1445: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow()
+Market cache refreshed: 500 entries
+[WebSocket] Connected! Subscribing to all trades...
+[WS DEBUG] Sending subscription: {"action": "subscribe", "subscriptions": [{"topic": "activity", "type": "trades"}]}
+[WebSocket] Subscribed to global trades feed
+[WS DEBUG] Starting message loop, timeout=120s
+[WS DEBUG] Waiting for first message...
+[WebSocket] Receiving messages... (len=0)
+[WS DEBUG] Empty message #1
+[WS DEBUG] Waiting for first message...
+Top traders cache refreshed: 25 entries
+[WS DEBUG] Message #1 (len=918): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"17883635223851710504582449314818330963084451187073062737450802209841635058661","bio":"","conditionId":"0x46f69e16c3544dbec8e49243b07acf21c99b5124e892e0be3b64179036c65b4e","eventSlug":"btc-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"nzo-e","outcome":"Up","outcomeIndex":0,"price":0.79,"profileImage":"https://polymarket-upload.s3.us-east-2.amazonaws.com/profile-image-2855178-3dc
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+  trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
+/app/bot.py:1649: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+[WS DEBUG] Message #2 (len=809): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"54521776139412290395739884260167763500374464588397866667817994896461092457876","bio":"","conditionId":"0x46f69e16c3544dbec8e49243b07acf21c99b5124e892e0be3b64179036c65b4e","eventSlug":"btc-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"asdjopsaop21q","outcome":"Down","outcomeIndex":1,"price":0.21,"profileImage":"","proxyWallet":"0x71200c030935cAe95022D8E8aD727f379725526F","pseudo
+[WS DEBUG] Time since last msg: 1.21s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #3 (len=816): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"54521776139412290395739884260167763500374464588397866667817994896461092457876","bio":"","conditionId":"0x46f69e16c3544dbec8e49243b07acf21c99b5124e892e0be3b64179036c65b4e","eventSlug":"btc-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"btc-up-down-01","outcome":"Down","outcomeIndex":1,"price":0.2,"profileImage":"","proxyWallet":"0xf1bB558012e22b1b580dEac2399cf54642B21953","pseudo
+[WS DEBUG] Time since last msg: 1.20s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #4 (len=926): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"30012110956214406017805885880601873317709341479002473034107514540137861316786","bio":"","conditionId":"0x0aa78882f46cf9518dfa8713a6420e2dbadb980763fe3ae783dad66568042110","eventSlug":"sol-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL+fullsize.png","name":"noscopeblazeit","outcome":"Down","outcomeIndex":1,"price":0.35,"profileImage":"https://polymarket-upload.s3.us-east-2.amazonaws.com/profile-image-
+[WS DEBUG] Time since last msg: 1.34s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Time since last msg: 1.21s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #5 (len=808): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"17883635223851710504582449314818330963084451187073062737450802209841635058661","bio":"","conditionId":"0x46f69e16c3544dbec8e49243b07acf21c99b5124e892e0be3b64179036c65b4e","eventSlug":"btc-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"thelastsamurai","outcome":"Up","outcomeIndex":0,"price":0.8,"profileImage":"","proxyWallet":"0x9de851c79A04376A356F22f7085D94D71795D837","pseudony
+[WS DEBUG] Message #6 (len=799): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"103217793227152027276181044823075395004625479602933433136635100021242345973161","bio":"","conditionId":"0x26137c14bd6e50cee56f4d3feedd9e276cb030aa57ee1c96e0c327ac1ef22abf","eventSlug":"xrp-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png","name":"outsidebet","outcome":"Up","outcomeIndex":0,"price":0.65,"profileImage":"","proxyWallet":"0x8e4c9f85CD2ef7F61D628c302eEFCb617B913880","pseudonym":"Ex
+[WS DEBUG] Time since last msg: 1.19s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #7 (len=803): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"74349816108716182665321174117741303347048533298444491613990450421461514616759","bio":"","conditionId":"0x26137c14bd6e50cee56f4d3feedd9e276cb030aa57ee1c96e0c327ac1ef22abf","eventSlug":"xrp-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png","name":"Account88888","outcome":"Down","outcomeIndex":1,"price":0.35,"profileImage":"","proxyWallet":"0x7F69983eB28245Bba0D5083502a78744a8f66162","pseudonym":
+[WS DEBUG] Time since last msg: 1.19s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #8 (len=814): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"54521776139412290395739884260167763500374464588397866667817994896461092457876","bio":"","conditionId":"0x46f69e16c3544dbec8e49243b07acf21c99b5124e892e0be3b64179036c65b4e","eventSlug":"btc-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"btc-up-down-01","outcome":"Down","outcomeIndex":1,"price":0.2,"profileImage":"","proxyWallet":"0xf1bB558012e22b1b580dEac2399cf54642B21953","pseudo
+[WS DEBUG] Time since last msg: 0.30s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #9 (len=922): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"54521776139412290395739884260167763500374464588397866667817994896461092457876","bio":"","conditionId":"0x46f69e16c3544dbec8e49243b07acf21c99b5124e892e0be3b64179036c65b4e","eventSlug":"btc-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"jacksoft","outcome":"Down","outcomeIndex":1,"price":0.21,"profileImage":"https://polymarket-upload.s3.us-east-2.amazonaws.com/profile-image-475119
+[WS DEBUG] Time since last msg: 1.20s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Message #10 (len=814): {"connection_id":"WyOh7ew5LPECE6w=","payload":{"asset":"54521776139412290395739884260167763500374464588397866667817994896461092457876","bio":"","conditionId":"0x46f69e16c3544dbec8e49243b07acf21c99b5124e892e0be3b64179036c65b4e","eventSlug":"btc-updown-15m-1767739500","icon":"https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png","name":"btc-up-down-01","outcome":"Down","outcomeIndex":1,"price":0.2,"profileImage":"","proxyWallet":"0xf1bB558012e22b1b580dEac2399cf54642B21953","pseudo
+[WS DEBUG] Time since last msg: 0.67s
+[WS DEBUG] topic=activity, type=trades, has_payload=True
+[WS DEBUG] Time since last msg: 0.30s
+[WS DEBUG] Time since last msg: 1.20s
+[WS DEBUG] Time since last msg: 1.20s
+[WS DEBUG] Time since last msg: 1.38s
+[WS DEBUG] Time since last msg: 1.19s
+[WS DEBUG] Time since last msg: 0.30s
+[WS DEBUG] Time since last msg: 1.35s
+[WS DEBUG] Time since last msg: 0.30s
+[WS DEBUG] Time since last msg: 1.35s
+[WS DEBUG] Time since last msg: 0.37s
