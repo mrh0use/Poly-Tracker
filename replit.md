@@ -10,6 +10,7 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Volatility Alerts**: Track markets with 20%+ price swings within 1 hour
 - **Top Trader Alerts**: Monitor trades from top 25 all-time profit leaders
 - **Sports Channel**: Separate channel for sports/esports market alerts
+- **Bonds Channel**: Separate channel for high-certainty markets (>=95% price, $5k+)
 - **Sell Filtering**: Excludes sells above 99% (position closures)
 - **Position Viewing**: View current holdings of tracked wallets with drill-down
 - **Market Links**: Clickable links to Polymarket + Trade via Onsight buttons
@@ -41,13 +42,14 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 
 | Command | Description | Permissions |
 |---------|-------------|-------------|
-| `/setup` | Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports) | Admin |
+| `/setup` | Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports, bonds) | Admin |
 | `/whale_channel #channel` | Set whale alerts channel individually | Admin |
 | `/fresh_wallet_channel #channel` | Set fresh wallet alerts channel individually | Admin |
 | `/tracked_wallet_channel #channel` | Set tracked wallet alerts channel individually | Admin |
 | `/volatility #channel` | Set volatility alerts channel individually | Admin |
 | `/sports #channel` | Set sports alerts channel individually | Admin |
 | `/top_trader_channel #channel` | Set top 25 trader alerts channel | Admin |
+| `/bonds #channel` | Set bonds alerts channel (>=95% price markets) | Admin |
 | `/threshold <amount>` | Set USD threshold | Admin |
 | `/sports_threshold <amount>` | Set sports USD threshold (default: $5k) | Admin |
 | `/fresh_wallet_threshold <amount>` | Set fresh wallet USD threshold (default: $10k) | Admin |
@@ -71,8 +73,9 @@ A Discord bot that monitors Polymarket activity and sends real-time alerts to co
 - **Volatility Alerts**: Markets with 20%+ price swings within 1 hour (separate channel)
 - **Top Trader Alerts**: Any trade from top 25 all-time profit leaders (separate channel)
 - **Sports Alerts**: Sports/esports market activity $5k+ (separate channel, configurable threshold)
+- **Bonds Alerts**: Trades on high-certainty markets (>=95% price) with $5k+ value (separate channel)
 
-Note: Sells above 99% are automatically excluded from all alerts. Sports markets go to their own dedicated channel when configured.
+Note: Sells above 99% are automatically excluded from all alerts. Sports markets and bonds (>=95% price trades) go to their own dedicated channels when configured.
 
 ## Environment Variables
 
@@ -81,6 +84,7 @@ Note: Sells above 99% are automatically excluded from all alerts. Sports markets
 
 ## Recent Changes
 
+- 2026-01-06: **Added Bonds Alerts** - trades on markets with >=95% price ($5k+ minimum) now route to dedicated bonds channel, configurable via /bonds command. These are filtered from regular whale/fresh wallet alerts.
 - 2026-01-06: **Added wallet PnL to all alerts** - whale alerts, fresh wallet alerts, and sports alerts now display the trader's lifetime PnL and rank
 - 2026-01-06: **Added cash balance to /positions** - shows USDC balance for each tracked wallet (queried from Polygon blockchain)
 - 2026-01-05: **Added Top Trader Alerts** - monitors trades from top 25 all-time profit leaders, configurable via /top_trader_channel
