@@ -1,0 +1,108 @@
+2026-01-06 15:45:31.98
+e620a1f6
+System
+starting up user application
+2026-01-06 15:45:31.98
+e620a1f6
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-01-06 15:45:41.98
+e620a1f6
+System
+initializing deployment without listening for application ports
+2026-01-06 15:45:43.86
+e620a1f6
+User
+Starting Polymarket Discord Bot...
+2026-01-06 15:45:43.86
+e620a1f6
+User
+Using PRODUCTION bot token
+2026-01-06 15:45:43.87
+e620a1f6
+User
+[2026-01-06 20:45:43] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+2026-01-06 15:45:43.87
+e620a1f6
+User
+[2026-01-06 20:45:43] [INFO ] discord.client: logging in using static token
+2026-01-06 15:45:45.33
+e620a1f6
+User
+Database initialized
+2026-01-06 15:45:47.62
+e620a1f6
+User
+[2026-01-06 20:45:47] [INFO ] discord.gateway: Shard ID None has connected to Gateway (Session ID: fd66aab957b732a32d99f22d929d0558).
+2026-01-06 15:45:49.63
+e620a1f6
+User
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+2026-01-06 15:45:49.90
+e620a1f6
+User
+Volatility loop started
+2026-01-06 15:45:49.90
+e620a1f6
+User
+Monitor loop started (backup for tracked wallets)
+2026-01-06 15:45:49.90
+e620a1f6
+User
+Slash commands synced
+2026-01-06 15:45:49.90
+e620a1f6
+User
+Cleanup loop started
+2026-01-06 15:45:50.38
+e620a1f6
+User
+Cleaned up 387 old price snapshots
+2026-01-06 15:45:50.55
+e620a1f6
+User
+WebSocket task scheduled
+2026-01-06 15:45:50.55
+e620a1f6
+User
+Sports tags loaded
+2026-01-06 15:45:50.55
+e620a1f6
+User
+[WebSocket] Connecting to Polymarket RTDS...
+2026-01-06 15:45:50.55
+e620a1f6
+User
+[WebSocket] Starting real-time trade feed...
+2026-01-06 15:45:52.07
+e3ab52c3
+System
+system: received signal terminated
+2026-01-06 15:45:52.08
+e3ab52c3
+System
+command finished with error [python -u bot.py]: signal: terminated
+2026-01-06 15:45:52.12
+e3ab52c3
+System
+main done, exiting
+2026-01-06 15:45:55.68
+e620a1f6
+User
+Market cache refreshed: 500 entries
+2026-01-06 15:45:55.68
+e620a1f6
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 15:45:55.68
+e620a1f6
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 15:45:55.81
+e620a1f6
+User
+[WebSocket] Receiving messages...
+2026-01-06 15:45:55.94
+e620a1f6
+User
+Top traders cache refreshed: 25 entries
