@@ -837,10 +837,8 @@ class PolymarketClient:
 
 class PolymarketWebSocket:
     RTDS_URL = "wss://ws-live-data.polymarket.com"
-    PING_INTERVAL = 5
     DATA_TIMEOUT = 120
     MAX_CONNECTION_AGE = 900
-    PING_FAILURES_BEFORE_SWITCH = 3
     DEBUG_MODE = True
     DEBUG_LOG_FIRST_N = 10
     
@@ -856,8 +854,6 @@ class PolymarketWebSocket:
         
         self._last_data_time = time.time()
         self._connection_start_time = time.time()
-        self._ping_count = 0
-        self._consecutive_ping_failures = 0
         self._total_trades = 0
         
         self._debug_msg_count = 0
@@ -869,7 +865,6 @@ class PolymarketWebSocket:
         self._debug_topics_seen = set()
         self._debug_types_seen = set()
         
-        self._keepalive_task = None
         self._backup_task = None
         self._monitor_task = None
     
@@ -905,41 +900,6 @@ class PolymarketWebSocket:
         except Exception as e:
             print(f"[WS {name.upper()}] Connection failed: {e}", flush=True)
             return None
-    
-    async def _keepalive_ping(self):
-        """Send pings every 5 seconds to keep connections alive.
-        
-        Note: Some platforms (Railway, etc) don't properly pass WebSocket pings.
-        We require multiple consecutive failures before switching to avoid
-        unnecessary reconnections when data is still flowing.
-        """
-        while self._running:
-            try:
-                await asyncio.sleep(self.PING_INTERVAL)
-                
-                ws = self._primary_ws if self._active_connection == "primary" else self._backup_ws
-                if self._is_ws_open(ws):
-                    self._ping_count += 1
-                    try:
-                        pong = await ws.ping()
-                        await asyncio.wait_for(pong, timeout=5)
-                        self._consecutive_ping_failures = 0
-                        if self.DEBUG_MODE and self._ping_count % 12 == 0:
-                            print(f"[WS PING] #{self._ping_count} OK (every 5s, logging every 60s)", flush=True)
-                    except asyncio.TimeoutError:
-                        self._consecutive_ping_failures += 1
-                        if self._consecutive_ping_failures >= self.PING_FAILURES_BEFORE_SWITCH:
-                            print(f"[WS PING] #{self._ping_count} TIMEOUT ({self._consecutive_ping_failures} consecutive) - switching connections", flush=True)
-                            self._consecutive_ping_failures = 0
-                            await self._switch_to_backup()
-                        elif self.DEBUG_MODE:
-                            print(f"[WS PING] #{self._ping_count} timeout ({self._consecutive_ping_failures}/{self.PING_FAILURES_BEFORE_SWITCH})", flush=True)
-                    except Exception as e:
-                        print(f"[WS PING] #{self._ping_count} Error: {e}", flush=True)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"[WS KEEPALIVE] Error: {e}", flush=True)
     
     async def _maintain_backup(self):
         """Maintain a backup connection ready to take over."""
@@ -1044,15 +1004,12 @@ class PolymarketWebSocket:
                 self._debug_error_count = 0
                 self._debug_topics_seen = set()
                 self._debug_types_seen = set()
-                self._ping_count = 0
-                self._consecutive_ping_failures = 0
                 
-                self._keepalive_task = asyncio.create_task(self._keepalive_ping())
                 self._backup_task = asyncio.create_task(self._maintain_backup())
                 self._monitor_task = asyncio.create_task(self._monitor_health())
                 
                 if self.DEBUG_MODE:
-                    print(f"[WS DEBUG] Started: ping every {self.PING_INTERVAL}s, data timeout {self.DATA_TIMEOUT}s, max age {self.MAX_CONNECTION_AGE}s", flush=True)
+                    print(f"[WS DEBUG] Started: data timeout {self.DATA_TIMEOUT}s, max age {self.MAX_CONNECTION_AGE}s (NO PING - data activity only)", flush=True)
                 
                 while self._running:
                     try:
@@ -1063,7 +1020,6 @@ class PolymarketWebSocket:
                         
                         message = await asyncio.wait_for(ws.recv(), timeout=30)
                         self._last_data_time = time.time()
-                        self._consecutive_ping_failures = 0
                         
                         if not self._first_message_logged:
                             print(f"[WebSocket] Receiving messages...", flush=True)
@@ -1081,14 +1037,13 @@ class PolymarketWebSocket:
             except Exception as e:
                 print(f"[WebSocket] Error: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
             finally:
-                for task in [self._keepalive_task, self._backup_task, self._monitor_task]:
+                for task in [self._backup_task, self._monitor_task]:
                     if task:
                         task.cancel()
                         try:
                             await task
                         except asyncio.CancelledError:
                             pass
-                self._keepalive_task = None
                 self._backup_task = None
                 self._monitor_task = None
             
