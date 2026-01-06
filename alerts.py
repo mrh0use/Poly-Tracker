@@ -9,6 +9,20 @@ from typing import Dict, Any, Optional
 ONSIGHT_BOT_URL = "https://t.me/polysightbot"
 
 
+def format_pnl(pnl: float) -> str:
+    """Format PnL with proper sign placement: -$54 instead of $-54"""
+    if pnl >= 0:
+        return f"+${pnl:,.0f}"
+    else:
+        return f"-${abs(pnl):,.0f}"
+
+
+def get_wallet_display(wallet_address: str) -> str:
+    """Format wallet address as a clickable link to Polymarket profile"""
+    profile_url = f"https://polymarket.com/profile/{wallet_address}"
+    return f"[`{wallet_address}`]({profile_url})"
+
+
 def get_market_link(title: str, url: str) -> str:
     if url and url != "https://polymarket.com":
         return f"[{title[:80]}]({url})"
@@ -66,8 +80,7 @@ def create_bonds_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -111,7 +124,7 @@ def create_bonds_alert_embed(
     
     embed.add_field(
         name="Wallet",
-        value=f"`{wallet_address}`",
+        value=get_wallet_display(wallet_address),
         inline=False
     )
     
@@ -145,8 +158,7 @@ def create_whale_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -194,7 +206,7 @@ def create_whale_alert_embed(
     
     embed.add_field(
         name="Wallet",
-        value=f"`{wallet_address}`",
+        value=get_wallet_display(wallet_address),
         inline=False
     )
     
@@ -229,8 +241,7 @@ def create_fresh_wallet_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -278,7 +289,7 @@ def create_fresh_wallet_alert_embed(
     
     embed.add_field(
         name="New Wallet",
-        value=f"`{wallet_address}`",
+        value=get_wallet_display(wallet_address),
         inline=False
     )
     
@@ -314,8 +325,7 @@ def create_top_trader_alert_embed(
     
     stats_line = ""
     if pnl is not None:
-        pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f} All-Time PnL**\n\n"
+        stats_line = f"**{format_pnl(pnl)} All-Time PnL**\n\n"
     
     embed = Embed(
         title=title,
@@ -353,7 +363,7 @@ def create_top_trader_alert_embed(
     
     embed.add_field(
         name="Wallet",
-        value=f"`{wallet_address}`",
+        value=get_wallet_display(wallet_address),
         inline=False
     )
     
@@ -393,8 +403,7 @@ def create_custom_wallet_alert_embed(
     
     stats_line = ""
     if pnl is not None:
-        pnl_sign = "+" if pnl >= 0 else ""
-        stats_line = f"**{pnl_sign}${pnl:,.0f} PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -435,7 +444,7 @@ def create_custom_wallet_alert_embed(
     
     embed.add_field(
         name="Wallet",
-        value=f"`{wallet_address}`",
+        value=get_wallet_display(wallet_address),
         inline=False
     )
     
