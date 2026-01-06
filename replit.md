@@ -88,6 +88,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-06: **Added CPU-friendly optimizations** - Added asyncio.sleep(0) yields after each trade to prevent CPU monopolization, reduced logging frequency from 500 to 1000 trades. Recommended by Replit support for Reserved VM stability.
 - 2026-01-06: **Added separate dev/prod bot tokens** - Development now uses DEV_DISCORD_BOT_TOKEN to avoid conflicts with production. Both can run simultaneously.
 
 - 2026-01-06: **Added WebSocket activity timeout** - Auto-reconnects if no messages received for 2 minutes (prevents silent disconnections).
