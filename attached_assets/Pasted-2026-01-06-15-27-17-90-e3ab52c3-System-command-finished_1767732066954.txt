@@ -1,0 +1,152 @@
+2026-01-06 15:27:17.90
+e3ab52c3
+System
+command finished with error [python -u bot.py]: signal: terminated
+2026-01-06 15:27:17.97
+e3ab52c3
+System
+main done, exiting
+2026-01-06 15:29:23.66
+e3ab52c3
+System
+starting up user application
+2026-01-06 15:29:23.66
+e3ab52c3
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-01-06 15:29:33.66
+e3ab52c3
+System
+initializing deployment without listening for application ports
+2026-01-06 15:29:34.16
+e3ab52c3
+User
+Starting Polymarket Discord Bot...
+2026-01-06 15:29:34.16
+e3ab52c3
+User
+Using PRODUCTION bot token
+2026-01-06 15:29:34.16
+e3ab52c3
+User
+[2026-01-06 20:29:34] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+2026-01-06 15:29:34.17
+e3ab52c3
+User
+[2026-01-06 20:29:34] [INFO ] discord.client: logging in using static token
+2026-01-06 15:29:37.83
+e3ab52c3
+User
+Database initialized
+2026-01-06 15:29:38.08
+e3ab52c3
+User
+[2026-01-06 20:29:38] [INFO ] discord.gateway: Shard ID None has connected to Gateway (Session ID: 801dae1d6fb56e39ae3b865585ef6d71).
+2026-01-06 15:29:40.08
+e3ab52c3
+User
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+2026-01-06 15:29:40.43
+e3ab52c3
+User
+Monitor loop started (backup for tracked wallets)
+2026-01-06 15:29:40.43
+e3ab52c3
+User
+Cleanup loop started
+2026-01-06 15:29:40.43
+e3ab52c3
+User
+Volatility loop started
+2026-01-06 15:29:40.43
+e3ab52c3
+User
+Slash commands synced
+2026-01-06 15:29:42.91
+e3ab52c3
+User
+Cleaned up 455 old price snapshots
+2026-01-06 15:29:43.07
+e3ab52c3
+User
+Sports tags loaded
+2026-01-06 15:29:43.07
+e3ab52c3
+User
+[WebSocket] Starting real-time trade feed...
+2026-01-06 15:29:43.07
+e3ab52c3
+User
+WebSocket task scheduled
+2026-01-06 15:29:43.07
+e3ab52c3
+User
+[WebSocket] Connecting to Polymarket RTDS...
+2026-01-06 15:29:47.92
+e3ab52c3
+User
+Market cache refreshed: 500 entries
+2026-01-06 15:29:48.11
+e3ab52c3
+User
+Top traders cache refreshed: 25 entries
+2026-01-06 15:29:48.29
+e3ab52c3
+User
+[WebSocket] Connected! Subscribing to all trades...
+2026-01-06 15:29:48.29
+e3ab52c3
+User
+[WebSocket] Subscribed to global trades feed
+2026-01-06 15:29:48.75
+e3ab52c3
+User
+[WebSocket] Receiving messages...
+2026-01-06 15:30:14.47
+e3ab52c3
+User
+[WS] Bonds alert: $15,593
+2026-01-06 15:32:00.48
+e3ab52c3
+User
+[WS Stats] Processed: 500, $5k+ BUY: 1, $10k+ BUY: 1, Alerts: 1
+2026-01-06 15:32:00.48
+e3ab52c3
+User
+[WS] Trades processed: 500
+2026-01-06 15:34:14.49
+e3ab52c3
+User
+[WS] Trades processed: 1000
+2026-01-06 15:34:14.49
+e3ab52c3
+User
+[WS Stats] Processed: 1000, $5k+ BUY: 1, $10k+ BUY: 1, Alerts: 1
+2026-01-06 15:34:47.51
+e3ab52c3
+User
+Market cache refreshed: 500 entries
+2026-01-06 15:36:37.65
+e3ab52c3
+User
+[WS Stats] Processed: 1500, $5k+ BUY: 1, $10k+ BUY: 1, Alerts: 1
+2026-01-06 15:36:37.65
+e3ab52c3
+User
+[WS] Trades processed: 1500
+2026-01-06 15:38:58.03
+e3ab52c3
+User
+[WS] Trades processed: 2000
+2026-01-06 15:38:58.03
+e3ab52c3
+User
+[WS Stats] Processed: 2000, $5k+ BUY: 1, $10k+ BUY: 1, Alerts: 1
+2026-01-06 15:39:48.71
+e3ab52c3
+User
+Market cache refreshed: 500 entries
+2026-01-06 15:39:48.98
+e3ab52c3
+User
+Top traders cache refreshed: 25 entries
