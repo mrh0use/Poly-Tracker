@@ -1577,13 +1577,9 @@ async def handle_websocket_trade(trade: dict):
             wallet = polymarket_client.get_wallet_from_trade(trade)
             
             _ws_stats['processed'] += 1
-            if value >= 5000:
-                _ws_stats['above_5k'] += 1
-            if value >= 10000:
-                _ws_stats['above_10k'] += 1
             
             if _ws_stats['processed'] % 500 == 0:
-                print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+: {_ws_stats['above_5k']}, $10k+: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
+                print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+ BUY: {_ws_stats['above_5k']}, $10k+ BUY: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
             
             if not wallet:
                 return
@@ -1606,6 +1602,11 @@ async def handle_websocket_trade(trade: dict):
             
             if side == 'SELL':
                 return
+            
+            if value >= 5000:
+                _ws_stats['above_5k'] += 1
+            if value >= 10000:
+                _ws_stats['above_10k'] += 1
             
             market_title = polymarket_client.get_market_title(trade)
             market_url = polymarket_client.get_market_url(trade)
@@ -1756,11 +1757,12 @@ async def handle_websocket_trade(trade: dict):
                             )
                             try:
                                 await top_channel.send(embed=embed, view=button_view)
+                                _ws_stats['alerts_sent'] += 1
                                 print(f"[WS] Top trader alert: ${value:,.0f}")
                             except Exception as e:
                                 print(f"[WS] Error sending top trader alert: {e}")
                     
-                    if is_bond and value >= 5000.0 and config.bonds_channel_id:
+                    elif is_bond and value >= 5000.0 and config.bonds_channel_id:
                         bonds_channel = bot.get_channel(config.bonds_channel_id)
                         if bonds_channel:
                             wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
