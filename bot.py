@@ -1861,6 +1861,15 @@ async def command_error(interaction: discord.Interaction, error):
 
 
 def main():
+    # Check if we should skip running (to avoid dev/production conflict)
+    if os.environ.get('SKIP_BOT', '').lower() == 'true':
+        print("SKIP_BOT is set - not starting bot (use production deployment instead)")
+        print("Set SKIP_BOT=false or remove it to run the bot here")
+        import time
+        while True:
+            time.sleep(60)
+        return
+    
     token = os.environ.get('DISCORD_BOT_TOKEN')
     if not token:
         print("ERROR: DISCORD_BOT_TOKEN not found in environment variables")

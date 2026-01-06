@@ -33,3 +33,8 @@ outputType = "console"
 run = ["python", "-u", "bot.py"]
 deploymentTarget = "vm"
 ignorePorts = true
+
+[userenv]
+
+[userenv.development]
+SKIP_BOT = "true"
