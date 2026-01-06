@@ -1224,6 +1224,30 @@ async def monitor_loop():
                     
                     top_trader_info = polymarket_client.is_top_trader(wallet)
                     
+                    if wallet in tracked_addresses:
+                        tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
+                        tracked_channel = bot.get_channel(tracked_channel_id) if tracked_channel_id else None
+                        if tracked_channel:
+                            tw = tracked_addresses[wallet]
+                            if not is_trade_after_tracking(trade_time, tw.added_at):
+                                continue
+                            wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                            embed = create_custom_wallet_alert_embed(
+                                trade=trade,
+                                value_usd=value,
+                                market_title=market_title,
+                                wallet_address=wallet,
+                                wallet_label=tw.label,
+                                market_url=market_url,
+                                pnl=wallet_stats.get('pnl'),
+                                volume=wallet_stats.get('volume'),
+                                rank=wallet_stats.get('rank')
+                            )
+                            try:
+                                await tracked_channel.send(embed=embed, view=button_view)
+                            except Exception as e:
+                                print(f"Error sending tracked wallet alert: {e}")
+                    
                     if is_sports:
                         if top_trader_info and config.top_trader_channel_id:
                             top_channel = bot.get_channel(config.top_trader_channel_id)
@@ -1244,25 +1268,7 @@ async def monitor_loop():
                         sports_channel = bot.get_channel(config.sports_channel_id) if config.sports_channel_id else None
                         if sports_channel:
                             if wallet in tracked_addresses:
-                                tw = tracked_addresses[wallet]
-                                if not is_trade_after_tracking(trade_time, tw.added_at):
-                                    continue
-                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
-                                embed = create_custom_wallet_alert_embed(
-                                    trade=trade,
-                                    value_usd=value,
-                                    market_title=market_title,
-                                    wallet_address=wallet,
-                                    wallet_label=tw.label,
-                                    market_url=market_url,
-                                    pnl=wallet_stats.get('pnl'),
-                                    volume=wallet_stats.get('volume'),
-                                    rank=wallet_stats.get('rank')
-                                )
-                                try:
-                                    await sports_channel.send(embed=embed, view=button_view)
-                                except Exception as e:
-                                    print(f"Error sending sports tracked wallet alert: {e}")
+                                pass
                             elif is_fresh and value >= (config.sports_threshold or 5000.0):
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_fresh_wallet_alert_embed(
@@ -1296,30 +1302,6 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"Error sending sports whale alert: {e}")
                     else:
-                        if wallet in tracked_addresses:
-                            tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
-                            tracked_channel = bot.get_channel(tracked_channel_id) if tracked_channel_id else None
-                            if tracked_channel:
-                                tw = tracked_addresses[wallet]
-                                if not is_trade_after_tracking(trade_time, tw.added_at):
-                                    continue
-                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
-                                embed = create_custom_wallet_alert_embed(
-                                    trade=trade,
-                                    value_usd=value,
-                                    market_title=market_title,
-                                    wallet_address=wallet,
-                                    wallet_label=tw.label,
-                                    market_url=market_url,
-                                    pnl=wallet_stats.get('pnl'),
-                                    volume=wallet_stats.get('volume'),
-                                    rank=wallet_stats.get('rank')
-                                )
-                                try:
-                                    await tracked_channel.send(embed=embed, view=button_view)
-                                except Exception as e:
-                                    print(f"Error sending tracked wallet alert: {e}")
-                        
                         if top_trader_info and config.top_trader_channel_id:
                             top_channel = bot.get_channel(config.top_trader_channel_id)
                             if top_channel:
