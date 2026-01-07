@@ -1985,14 +1985,6 @@ async def handle_websocket_trade(trade: dict):
             tracked_addresses = tracked_by_guild.get(config.guild_id, {})
             button_view = create_trade_button_view(event_slug, market_url)
             
-            # Log threshold comparison for trades >= $1k
-            if value >= 1000:
-                whale_threshold = config.whale_threshold or 10000.0
-                if value >= whale_threshold:
-                    print(f"[WS DEBUG] ✓ Guild {config.guild_id}: Trade ${value:,.0f} >= whale ${whale_threshold:,.0f} - QUALIFIES", flush=True)
-                else:
-                    print(f"[WS DEBUG] ✗ Guild {config.guild_id}: Trade ${value:,.0f} < whale ${whale_threshold:,.0f}", flush=True)
-            
             if wallet in tracked_addresses:
                 tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
                 print(f"[WS] ALERT TRIGGERED: Tracked wallet ${value:,.0f}, attempting channel {tracked_channel_id}", flush=True)
@@ -2160,9 +2152,6 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send top trader alert to {config.top_trader_channel_id}", flush=True)
-                
-                if is_bond and value >= 5000:
-                    print(f"[WS DEBUG] Bond candidate: ${value:,.0f}, bonds_channel={config.bonds_channel_id}, top_trader={top_trader_info is not None}", flush=True)
                 
                 if is_bond and value >= 5000.0 and config.bonds_channel_id and not top_trader_info:
                     print(f"[WS] ALERT TRIGGERED: Bonds ${value:,.0f}, attempting channel {config.bonds_channel_id}", flush=True)
