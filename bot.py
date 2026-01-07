@@ -429,8 +429,13 @@ async def list_settings(interaction: discord.Interaction):
         wallet_stats = {}
         for w in tracked[:10]:
             try:
-                stats = await polymarket_client.get_wallet_pnl_stats(w.wallet_address)
+                stats = await asyncio.wait_for(
+                    polymarket_client.get_wallet_pnl_stats(w.wallet_address),
+                    timeout=3.0
+                )
                 wallet_stats[w.wallet_address.lower()] = stats
+            except asyncio.TimeoutError:
+                print(f"[CMD] PNL stats timeout for {w.wallet_address[:10]}...", flush=True)
             except Exception as e:
                 print(f"Error fetching stats for {w.wallet_address}: {e}")
         
@@ -1303,7 +1308,14 @@ async def monitor_loop():
                 if wallet not in processed_wallets_this_batch:
                     wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
                     if wallet_activity is None:
-                        has_history = await polymarket_client.has_prior_activity(wallet)
+                        try:
+                            has_history = await asyncio.wait_for(
+                                polymarket_client.has_prior_activity(wallet),
+                                timeout=2.0
+                            )
+                        except asyncio.TimeoutError:
+                            has_history = True  # Assume not fresh if timeout
+                            print(f"[MONITOR] Activity check timeout for {wallet[:10]}...", flush=True)
                         if has_history is False:
                             is_fresh = True
                         session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
@@ -1339,7 +1351,14 @@ async def monitor_loop():
                             tw = tracked_addresses[wallet]
                             if not is_trade_after_tracking(trade_time, tw.added_at):
                                 continue
-                            wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                            try:
+                                wallet_stats = await asyncio.wait_for(
+                                    polymarket_client.get_wallet_pnl_stats(wallet),
+                                    timeout=3.0
+                                )
+                            except asyncio.TimeoutError:
+                                wallet_stats = {}
+                                print(f"[MONITOR] PNL stats timeout for {wallet[:10]}...", flush=True)
                             embed = create_custom_wallet_alert_embed(
                                 trade=trade,
                                 value_usd=value,
@@ -1400,7 +1419,14 @@ async def monitor_loop():
                                 pass
                             elif is_fresh and value >= (config.sports_threshold or 5000.0):
                                 print(f"[MONITOR] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
-                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                                try:
+                                    wallet_stats = await asyncio.wait_for(
+                                        polymarket_client.get_wallet_pnl_stats(wallet),
+                                        timeout=3.0
+                                    )
+                                except asyncio.TimeoutError:
+                                    wallet_stats = {}
+                                    print(f"[MONITOR] PNL stats timeout for {wallet[:10]}...", flush=True)
                                 embed = create_fresh_wallet_alert_embed(
                                     trade=trade,
                                     value_usd=value,
@@ -1424,7 +1450,14 @@ async def monitor_loop():
                                     print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                             elif value >= (config.sports_threshold or 5000.0):
                                 print(f"[MONITOR] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
-                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                                try:
+                                    wallet_stats = await asyncio.wait_for(
+                                        polymarket_client.get_wallet_pnl_stats(wallet),
+                                        timeout=3.0
+                                    )
+                                except asyncio.TimeoutError:
+                                    wallet_stats = {}
+                                    print(f"[MONITOR] PNL stats timeout for {wallet[:10]}...", flush=True)
                                 embed = create_whale_alert_embed(
                                     trade=trade,
                                     value_usd=value,
@@ -1481,7 +1514,14 @@ async def monitor_loop():
                             bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
                             print(f"[MONITOR] Channel fetch result: {bonds_channel} (type: {type(bonds_channel).__name__ if bonds_channel else 'None'})", flush=True)
                             if bonds_channel:
-                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                                try:
+                                    wallet_stats = await asyncio.wait_for(
+                                        polymarket_client.get_wallet_pnl_stats(wallet),
+                                        timeout=3.0
+                                    )
+                                except asyncio.TimeoutError:
+                                    wallet_stats = {}
+                                    print(f"[MONITOR] PNL stats timeout for {wallet[:10]}...", flush=True)
                                 embed = create_bonds_alert_embed(
                                     trade=trade,
                                     value_usd=value,
@@ -1512,7 +1552,14 @@ async def monitor_loop():
                             fresh_channel = await get_or_fetch_channel(fresh_channel_id)
                             print(f"[MONITOR] Channel fetch result: {fresh_channel} (type: {type(fresh_channel).__name__ if fresh_channel else 'None'})", flush=True)
                             if fresh_channel:
-                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                                try:
+                                    wallet_stats = await asyncio.wait_for(
+                                        polymarket_client.get_wallet_pnl_stats(wallet),
+                                        timeout=3.0
+                                    )
+                                except asyncio.TimeoutError:
+                                    wallet_stats = {}
+                                    print(f"[MONITOR] PNL stats timeout for {wallet[:10]}...", flush=True)
                                 embed = create_fresh_wallet_alert_embed(
                                     trade=trade,
                                     value_usd=value,
@@ -1543,7 +1590,14 @@ async def monitor_loop():
                             whale_channel = await get_or_fetch_channel(whale_channel_id)
                             print(f"[MONITOR] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                             if whale_channel:
-                                wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                                try:
+                                    wallet_stats = await asyncio.wait_for(
+                                        polymarket_client.get_wallet_pnl_stats(wallet),
+                                        timeout=3.0
+                                    )
+                                except asyncio.TimeoutError:
+                                    wallet_stats = {}
+                                    print(f"[MONITOR] PNL stats timeout for {wallet[:10]}...", flush=True)
                                 embed = create_whale_alert_embed(
                                     trade=trade,
                                     value_usd=value,
@@ -1837,7 +1891,14 @@ async def handle_websocket_trade(trade: dict):
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
         if wallet_activity is None:
-            has_history = await polymarket_client.has_prior_activity(wallet)
+            try:
+                has_history = await asyncio.wait_for(
+                    polymarket_client.has_prior_activity(wallet),
+                    timeout=2.0
+                )
+            except asyncio.TimeoutError:
+                has_history = True  # Assume not fresh if timeout
+                print(f"[WS] Activity check timeout for {wallet[:10]}...", flush=True)
             if has_history is False:
                 is_fresh = True
             session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
@@ -1879,7 +1940,14 @@ async def handle_websocket_trade(trade: dict):
                     tw = tracked_addresses[wallet]
                     if not is_trade_after_tracking(trade_time, tw.added_at):
                         continue
-                    wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                    try:
+                        wallet_stats = await asyncio.wait_for(
+                            polymarket_client.get_wallet_pnl_stats(wallet),
+                            timeout=3.0
+                        )
+                    except asyncio.TimeoutError:
+                        wallet_stats = {}
+                        print(f"[WS] PNL stats timeout for {wallet[:10]}...", flush=True)
                     embed = create_custom_wallet_alert_embed(
                         trade=trade,
                         value_usd=value,
@@ -1940,7 +2008,14 @@ async def handle_websocket_trade(trade: dict):
                         pass
                     elif is_fresh and value >= (config.sports_threshold or 5000.0):
                         print(f"[WS] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
-                        wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                        try:
+                            wallet_stats = await asyncio.wait_for(
+                                polymarket_client.get_wallet_pnl_stats(wallet),
+                                timeout=3.0
+                            )
+                        except asyncio.TimeoutError:
+                            wallet_stats = {}
+                            print(f"[WS] PNL stats timeout for {wallet[:10]}...", flush=True)
                         embed = create_fresh_wallet_alert_embed(
                             trade=trade,
                             value_usd=value,
@@ -1965,7 +2040,14 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                     elif value >= (config.sports_threshold or 5000.0):
                         print(f"[WS] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
-                        wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                        try:
+                            wallet_stats = await asyncio.wait_for(
+                                polymarket_client.get_wallet_pnl_stats(wallet),
+                                timeout=3.0
+                            )
+                        except asyncio.TimeoutError:
+                            wallet_stats = {}
+                            print(f"[WS] PNL stats timeout for {wallet[:10]}...", flush=True)
                         embed = create_whale_alert_embed(
                             trade=trade,
                             value_usd=value,
@@ -2022,7 +2104,14 @@ async def handle_websocket_trade(trade: dict):
                     bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
                     print(f"[WS] Channel fetch result: {bonds_channel} (type: {type(bonds_channel).__name__ if bonds_channel else 'None'})", flush=True)
                     if bonds_channel:
-                        wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                        try:
+                            wallet_stats = await asyncio.wait_for(
+                                polymarket_client.get_wallet_pnl_stats(wallet),
+                                timeout=3.0
+                            )
+                        except asyncio.TimeoutError:
+                            wallet_stats = {}
+                            print(f"[WS] PNL stats timeout for {wallet[:10]}...", flush=True)
                         embed = create_bonds_alert_embed(
                             trade=trade,
                             value_usd=value,
@@ -2053,7 +2142,14 @@ async def handle_websocket_trade(trade: dict):
                     fresh_channel = await get_or_fetch_channel(fresh_channel_id)
                     print(f"[WS] Channel fetch result: {fresh_channel} (type: {type(fresh_channel).__name__ if fresh_channel else 'None'})", flush=True)
                     if fresh_channel:
-                        wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                        try:
+                            wallet_stats = await asyncio.wait_for(
+                                polymarket_client.get_wallet_pnl_stats(wallet),
+                                timeout=3.0
+                            )
+                        except asyncio.TimeoutError:
+                            wallet_stats = {}
+                            print(f"[WS] PNL stats timeout for {wallet[:10]}...", flush=True)
                         embed = create_fresh_wallet_alert_embed(
                             trade=trade,
                             value_usd=value,
@@ -2085,7 +2181,14 @@ async def handle_websocket_trade(trade: dict):
                     whale_channel = await get_or_fetch_channel(whale_channel_id)
                     print(f"[WS] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                     if whale_channel:
-                        wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
+                        try:
+                            wallet_stats = await asyncio.wait_for(
+                                polymarket_client.get_wallet_pnl_stats(wallet),
+                                timeout=3.0
+                            )
+                        except asyncio.TimeoutError:
+                            wallet_stats = {}
+                            print(f"[WS] PNL stats timeout for {wallet[:10]}...", flush=True)
                         embed = create_whale_alert_embed(
                             trade=trade,
                             value_usd=value,
