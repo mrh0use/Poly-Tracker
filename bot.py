@@ -25,6 +25,29 @@ from alerts import (
     create_volatility_alert_embed
 )
 
+# Server config cache to reduce database queries
+_server_config_cache = []
+_server_config_cache_time = 0
+_SERVER_CONFIG_CACHE_TTL = 30  # Refresh every 30 seconds
+
+def get_cached_server_configs():
+    """Get server configs from cache, refreshing if stale."""
+    global _server_config_cache, _server_config_cache_time
+    now = time.time()
+    if now - _server_config_cache_time > _SERVER_CONFIG_CACHE_TTL:
+        session = get_session()
+        try:
+            _server_config_cache = session.query(ServerConfig).all()
+            _server_config_cache_time = now
+        finally:
+            session.close()
+    return _server_config_cache
+
+def invalidate_server_config_cache():
+    """Invalidate cache when configs are updated."""
+    global _server_config_cache_time
+    _server_config_cache_time = 0
+
 
 class PolymarketBot(commands.Bot):
     def __init__(self):
@@ -172,6 +195,7 @@ async def setup(
             configured.append(f"Bonds: {bonds.mention}")
         
         session.commit()
+        invalidate_server_config_cache()
         
         await interaction.response.send_message(
             f"**Channels configured:**\n" + "\n".join(configured) +
@@ -194,6 +218,7 @@ async def whale_channel(interaction: discord.Interaction, channel: discord.TextC
             session.add(config)
         config.whale_channel_id = channel.id
         session.commit()
+        invalidate_server_config_cache()
         await interaction.response.send_message(
             f"Whale alerts will now be sent to {channel.mention}",
             ephemeral=True
@@ -214,6 +239,7 @@ async def fresh_wallet_channel(interaction: discord.Interaction, channel: discor
             session.add(config)
         config.fresh_wallet_channel_id = channel.id
         session.commit()
+        invalidate_server_config_cache()
         await interaction.response.send_message(
             f"Fresh wallet alerts will now be sent to {channel.mention}",
             ephemeral=True
@@ -234,6 +260,7 @@ async def tracked_wallet_channel(interaction: discord.Interaction, channel: disc
             session.add(config)
         config.tracked_wallet_channel_id = channel.id
         session.commit()
+        invalidate_server_config_cache()
         await interaction.response.send_message(
             f"Tracked wallet alerts will now be sent to {channel.mention}",
             ephemeral=True
@@ -262,6 +289,7 @@ async def threshold(interaction: discord.Interaction, amount: float):
         
         config.whale_threshold = amount
         session.commit()
+        invalidate_server_config_cache()
         print(f"[CMD] Threshold updated to ${amount:,.0f} for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
@@ -501,6 +529,7 @@ async def pause(interaction: discord.Interaction):
         
         config.is_paused = True
         session.commit()
+        invalidate_server_config_cache()
         
         await interaction.response.send_message(
             "Alerts have been paused. Use `/resume` to start them again.",
@@ -525,6 +554,7 @@ async def resume(interaction: discord.Interaction):
         
         config.is_paused = False
         session.commit()
+        invalidate_server_config_cache()
         
         await interaction.response.send_message(
             "Alerts have been resumed.",
@@ -547,6 +577,7 @@ async def volatility(interaction: discord.Interaction, channel: discord.TextChan
         
         config.volatility_channel_id = channel.id
         session.commit()
+        invalidate_server_config_cache()
         
         await interaction.response.send_message(
             f"Volatility alerts will be sent to {channel.mention}. Markets with 20%+ price swings within 1 hour will trigger alerts.",
@@ -569,6 +600,7 @@ async def sports(interaction: discord.Interaction, channel: discord.TextChannel)
         
         config.sports_channel_id = channel.id
         session.commit()
+        invalidate_server_config_cache()
         
         await interaction.response.send_message(
             f"Sports market alerts will be sent to {channel.mention}. All sports/esports trading activity will be routed here.",
@@ -591,6 +623,7 @@ async def bonds(interaction: discord.Interaction, channel: discord.TextChannel):
         
         config.bonds_channel_id = channel.id
         session.commit()
+        invalidate_server_config_cache()
         
         await interaction.response.send_message(
             f"Bond alerts will be sent to {channel.mention}. Trades on markets with >=95% price ($5k+) will be routed here.",
@@ -620,6 +653,7 @@ async def sports_threshold(interaction: discord.Interaction, amount: float):
         
         config.sports_threshold = amount
         session.commit()
+        invalidate_server_config_cache()
         print(f"[CMD] Sports threshold updated to ${amount:,.0f} for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
@@ -657,6 +691,7 @@ async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: f
         
         config.fresh_wallet_threshold = amount
         session.commit()
+        invalidate_server_config_cache()
         print(f"[CMD] Fresh wallet threshold updated to ${amount:,.0f} for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
@@ -700,6 +735,7 @@ async def volatility_threshold_cmd(interaction: discord.Interaction, percentage:
         
         config.volatility_threshold = percentage
         session.commit()
+        invalidate_server_config_cache()
         print(f"[CMD] Volatility threshold updated to {percentage:.0f}% for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
@@ -730,6 +766,7 @@ async def top_trader_channel(interaction: discord.Interaction, channel: discord.
         
         config.top_trader_channel_id = channel.id
         session.commit()
+        invalidate_server_config_cache()
         
         await interaction.response.send_message(
             f"Top 25 trader alerts will be sent to {channel.mention}. All trades from top 25 all-time profit leaders will be shown here.",
@@ -1239,9 +1276,8 @@ async def monitor_loop():
         
         session = get_session()
         try:
-            configs = session.query(ServerConfig).filter(
-                ServerConfig.is_paused == False
-            ).all()
+            all_configs = get_cached_server_configs()
+            configs = [c for c in all_configs if not c.is_paused]
             
             configs = [c for c in configs if c.alert_channel_id or c.tracked_wallet_channel_id]
             
@@ -1865,9 +1901,8 @@ async def handle_websocket_trade(trade: dict):
         if value >= 1000:
             print(f"[WS DEBUG] Processing BUY: ${value:,.0f}, wallet={wallet[:10]}..., is_sports={is_sports}, is_bond={is_bond}, price={price:.2f}", flush=True)
         
-        configs = session.query(ServerConfig).filter(
-            ServerConfig.is_paused == False
-        ).all()
+        all_configs = get_cached_server_configs()
+        configs = [c for c in all_configs if not c.is_paused]
         
         print(f"[WS DEBUG] Found {len(configs)} total ServerConfig records", flush=True)
         for c in configs:

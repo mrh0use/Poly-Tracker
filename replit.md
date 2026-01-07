@@ -88,6 +88,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-07: **Added server config caching** - ServerConfig queries are now cached for 30 seconds instead of querying the database on every trade. Cache is automatically invalidated when configs are updated via slash commands. Massively reduces database load and prevents event loop blocking.
 - 2026-01-07: **Added API call timeouts** - All `get_wallet_pnl_stats()` calls now have 3-second timeouts and `has_prior_activity()` calls have 2-second timeouts. Prevents slow API responses from blocking the event loop and delaying alerts. Falls back gracefully (empty stats or assume not fresh) on timeout.
 - 2026-01-07: **Fixed critical whale threshold bug** - Threshold comparisons now use `(config.whale_threshold or 10000.0)` fallback to prevent None comparison failures. Fixed in both WebSocket handler and monitor_loop.
 - 2026-01-07: **Added on_guild_join command sync** - Bot now automatically syncs slash commands when joining new servers, so /setup is immediately available.
