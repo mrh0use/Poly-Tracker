@@ -32,17 +32,19 @@ def get_market_link(title: str, url: str) -> str:
 def encode_onsight_param(event_slug: str) -> str:
     """Encode event slug for Onsight Telegram bot deep link.
     
-    Format: {slug_with_underscores}
+    Format: event_{slug_with_underscores}
     - Hyphens replaced with underscores (Telegram requirement)
+    - Prefixed with 'event_'
     - Max 64 chars (Telegram limit)
     """
     if not event_slug:
         return ''
     clean_slug = event_slug.split('?')[0].strip('/')
     underscore_slug = clean_slug.replace('-', '_')
-    if len(underscore_slug) <= 64:
-        return underscore_slug
-    return underscore_slug[:64]
+    start_payload = f"event_{underscore_slug}"
+    if len(start_payload) <= 64:
+        return start_payload
+    return start_payload[:64]
 
 
 def create_trade_button_view(onsight_slug: str, market_url: str) -> View:
