@@ -37,7 +37,6 @@ ignorePorts = true
 [userenv]
 
 [userenv.development]
-DEV_DISCORD_BOT_TOKEN = "MTQ1ODE3OTU3MTI2NTU2OTAwMw.Gk2vOI.fcQ4WThSbIyJ-LyIz8vfd__g0S2ePu-FWlZGtg"
 
 [[ports]]
 localPort = 8080
