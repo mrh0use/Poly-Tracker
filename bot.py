@@ -48,6 +48,38 @@ def invalidate_server_config_cache():
     global _server_config_cache_time
     _server_config_cache_time = 0
 
+# Tracked wallet cache to avoid DB queries on every trade
+_tracked_wallet_cache = {}  # {wallet_address: {guild_id: TrackedWallet}}
+_tracked_wallet_set = set()  # Quick lookup set of all tracked addresses
+_tracked_wallet_cache_time = 0
+_TRACKED_WALLET_CACHE_TTL = 30  # Refresh every 30 seconds
+
+def get_cached_tracked_wallets():
+    """Get tracked wallets from cache, refreshing if stale. Returns (set of addresses, dict by guild)."""
+    global _tracked_wallet_cache, _tracked_wallet_set, _tracked_wallet_cache_time
+    now = time.time()
+    if now - _tracked_wallet_cache_time > _TRACKED_WALLET_CACHE_TTL:
+        session = get_session()
+        try:
+            all_tracked = session.query(TrackedWallet).all()
+            _tracked_wallet_cache = {}
+            _tracked_wallet_set = set()
+            for tw in all_tracked:
+                addr = tw.wallet_address.lower()
+                _tracked_wallet_set.add(addr)
+                if tw.guild_id not in _tracked_wallet_cache:
+                    _tracked_wallet_cache[tw.guild_id] = {}
+                _tracked_wallet_cache[tw.guild_id][addr] = tw
+            _tracked_wallet_cache_time = now
+        finally:
+            session.close()
+    return _tracked_wallet_set, _tracked_wallet_cache
+
+def invalidate_tracked_wallet_cache():
+    """Invalidate cache when tracked wallets are updated."""
+    global _tracked_wallet_cache_time
+    _tracked_wallet_cache_time = 0
+
 
 class PolymarketBot(commands.Bot):
     def __init__(self):
