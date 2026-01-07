@@ -1,0 +1,105 @@
+Starting Container
+[2026-01-07 00:10:53] [INFO    ] discord.client: logging in using static token
+Using PRODUCTION bot token
+Starting Polymarket Discord Bot...
+[2026-01-07 00:10:53] [WARNING ] discord.ext.commands.bot: Privileged message content intent is missing, commands may not work as expected.
+Database initialized
+Stopping Container
+[2026-01-07 00:10:56] [INFO    ] discord.gateway: Shard ID None has connected to Gateway (Session ID: ca32ccd99cc0394a16fb608d37c3016e).
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+[SIGNAL] Received SIGTERM (signal 15)
+[SIGNAL] Stack trace at signal:
+  File "/app/bot.py", line 1907, in <module>
+    main()
+  File "/app/bot.py", line 1897, in main
+    bot.run(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 929, in run
+    asyncio.run(runner())
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 641, in run_until_complete
+    self.run_forever()
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 608, in run_forever
+    self._run_once()
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 1936, in _run_once
+    handle._run()
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+  File "/app/bot.py", line 1838, in start_websocket
+    await polymarket_ws.connect()
+  File "/app/polymarket_client.py", line 1028, in connect
+    await self._handle_message(message)
+  File "/app/polymarket_client.py", line 1096, in _handle_message
+    await self.on_trade_callback(trade)
+  File "/app/bot.py", line 1659, in handle_websocket_trade
+    tracked_addresses = tracked_by_guild.get(config.guild_id, {})
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 569, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1096, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1126, in _fire_loader_callables
+    return state._load_expired(state, passive)
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 828, in _load_expired
+    self.manager.expired_attribute_loader(self, toload, passive)
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 1674, in load_scalar_attributes
+    result = load_on_ident(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 510, in load_on_ident
+    return load_on_pk_identity(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 695, in load_on_pk_identity
+    session.execute(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/app/.venv/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "/mise/installs/python/3.11.14/lib/python3.11/encodings/utf_8.py", line 15, in decode
+    def decode(input, errors='strict'):
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f6b93da7c50>
+Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x7f6b935aec10>, 15151908.251807883)])']
+connector: <aiohttp.connector.TCPConnector object at 0x7f6b93da7250>
+Task exception was never retrieved
+future: <Task finished name='Task-19' coro=<start_websocket() done, defined at /app/bot.py:1835> exception=SystemExit(0)>
+Traceback (most recent call last):
+  File "/app/bot.py", line 1907, in <module>
+    main()
+  File "/app/bot.py", line 1897, in main
+    bot.run(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 929, in run
+    asyncio.run(runner())
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 641, in run_until_complete
+    self.run_forever()
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 608, in run_forever
+    self._run_once()
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 1936, in _run_once
+    handle._run()
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+  File "/app/bot.py", line 1838, in start_websocket
+    await polymarket_ws.connect()
+  File "/app/polymarket_client.py", line 1028, in connect
+    await self._handle_message(message)
+  File "/app/polymarket_client.py", line 1096, in _handle_message
+    await self.on_trade_callback(trade)
