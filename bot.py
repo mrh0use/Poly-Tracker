@@ -71,6 +71,28 @@ class PolymarketBot(commands.Bot):
 bot = PolymarketBot()
 
 
+async def get_or_fetch_channel(channel_id):
+    """Get channel from cache or fetch from API if not cached."""
+    if not channel_id:
+        return None
+    channel = bot.get_channel(channel_id)
+    if channel:
+        return channel
+    try:
+        channel = await bot.fetch_channel(channel_id)
+        print(f"[CHANNEL] Fetched channel {channel_id} from API (was not in cache)", flush=True)
+        return channel
+    except discord.NotFound:
+        print(f"[CHANNEL] Channel {channel_id} not found", flush=True)
+        return None
+    except discord.Forbidden:
+        print(f"[CHANNEL] Bot lacks access to channel {channel_id}", flush=True)
+        return None
+    except Exception as e:
+        print(f"[CHANNEL] Error fetching channel {channel_id}: {e}", flush=True)
+        return None
+
+
 @bot.tree.command(name="setup", description="Configure all alert channels at once")
 @app_commands.describe(
     whale="Channel for whale alerts ($10k+)",
@@ -1260,7 +1282,7 @@ async def monitor_loop():
                     
                     if wallet in tracked_addresses:
                         tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
-                        tracked_channel = bot.get_channel(tracked_channel_id) if tracked_channel_id else None
+                        tracked_channel = await get_or_fetch_channel(tracked_channel_id)
                         if tracked_channel:
                             tw = tracked_addresses[wallet]
                             if not is_trade_after_tracking(trade_time, tw.added_at):
@@ -1284,7 +1306,7 @@ async def monitor_loop():
                     
                     if is_sports:
                         if top_trader_info and config.top_trader_channel_id:
-                            top_channel = bot.get_channel(config.top_trader_channel_id)
+                            top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
                             if top_channel:
                                 embed = create_top_trader_alert_embed(
                                     trade=trade,
@@ -1299,7 +1321,7 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"Error sending sports top trader alert: {e}")
                         
-                        sports_channel = bot.get_channel(config.sports_channel_id) if config.sports_channel_id else None
+                        sports_channel = await get_or_fetch_channel(config.sports_channel_id)
                         if sports_channel:
                             if wallet in tracked_addresses:
                                 pass
@@ -1337,7 +1359,7 @@ async def monitor_loop():
                                     print(f"Error sending sports whale alert: {e}")
                     else:
                         if top_trader_info and config.top_trader_channel_id:
-                            top_channel = bot.get_channel(config.top_trader_channel_id)
+                            top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
                             if top_channel:
                                 embed = create_top_trader_alert_embed(
                                     trade=trade,
@@ -1353,7 +1375,7 @@ async def monitor_loop():
                                     print(f"Error sending top trader alert: {e}")
                         
                         if is_bond and value >= 5000.0 and config.bonds_channel_id:
-                            bonds_channel = bot.get_channel(config.bonds_channel_id)
+                            bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
                             if bonds_channel:
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_bonds_alert_embed(
@@ -1373,7 +1395,7 @@ async def monitor_loop():
                         
                         elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
-                            fresh_channel = bot.get_channel(fresh_channel_id) if fresh_channel_id else None
+                            fresh_channel = await get_or_fetch_channel(fresh_channel_id)
                             if fresh_channel:
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_fresh_wallet_alert_embed(
@@ -1392,7 +1414,7 @@ async def monitor_loop():
                         
                         elif value >= config.whale_threshold and not is_bond:
                             whale_channel_id = config.whale_channel_id or config.alert_channel_id
-                            whale_channel = bot.get_channel(whale_channel_id) if whale_channel_id else None
+                            whale_channel = await get_or_fetch_channel(whale_channel_id)
                             if whale_channel:
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_whale_alert_embed(
@@ -1500,7 +1522,7 @@ async def volatility_loop():
                     if abs(price_change_pct) < threshold:
                         continue
                     
-                    channel = bot.get_channel(config.volatility_channel_id)
+                    channel = await get_or_fetch_channel(config.volatility_channel_id)
                     if not channel:
                         continue
                     
@@ -1691,7 +1713,7 @@ async def handle_websocket_trade(trade: dict):
             
             if wallet in tracked_addresses:
                 tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
-                tracked_channel = bot.get_channel(tracked_channel_id) if tracked_channel_id else None
+                tracked_channel = await get_or_fetch_channel(tracked_channel_id)
                 if tracked_channel:
                     tw = tracked_addresses[wallet]
                     if not is_trade_after_tracking(trade_time, tw.added_at):
@@ -1717,7 +1739,7 @@ async def handle_websocket_trade(trade: dict):
             
             if is_sports:
                 if top_trader_info and config.top_trader_channel_id:
-                    top_channel = bot.get_channel(config.top_trader_channel_id)
+                    top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
                     if top_channel:
                         embed = create_top_trader_alert_embed(
                             trade=trade,
@@ -1733,7 +1755,7 @@ async def handle_websocket_trade(trade: dict):
                         except Exception as e:
                             print(f"[WS] Error sending top trader alert: {e}")
                 
-                sports_channel = bot.get_channel(config.sports_channel_id) if config.sports_channel_id else None
+                sports_channel = await get_or_fetch_channel(config.sports_channel_id)
                 if sports_channel:
                     if wallet in tracked_addresses:
                         pass
@@ -1775,7 +1797,7 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] Error sending sports alert: {e}")
             else:
                 if top_trader_info and config.top_trader_channel_id:
-                    top_channel = bot.get_channel(config.top_trader_channel_id)
+                    top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
                     if top_channel:
                         embed = create_top_trader_alert_embed(
                             trade=trade,
@@ -1793,7 +1815,7 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] Error sending top trader alert: {e}")
                 
                 elif is_bond and value >= 5000.0 and config.bonds_channel_id:
-                    bonds_channel = bot.get_channel(config.bonds_channel_id)
+                    bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
                     if bonds_channel:
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_bonds_alert_embed(
@@ -1814,7 +1836,7 @@ async def handle_websocket_trade(trade: dict):
                 
                 elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                     fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
-                    fresh_channel = bot.get_channel(fresh_channel_id) if fresh_channel_id else None
+                    fresh_channel = await get_or_fetch_channel(fresh_channel_id)
                     if fresh_channel:
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_fresh_wallet_alert_embed(
@@ -1835,8 +1857,9 @@ async def handle_websocket_trade(trade: dict):
                 
                 elif value >= config.whale_threshold and not is_bond:
                     whale_channel_id = config.whale_channel_id or config.alert_channel_id
-                    whale_channel = bot.get_channel(whale_channel_id) if whale_channel_id else None
+                    whale_channel = await get_or_fetch_channel(whale_channel_id)
                     if whale_channel:
+                        print(f"[WS DEBUG] Whale threshold met: ${value:,.0f} >= ${config.whale_threshold:,.0f}, channel={whale_channel_id}", flush=True)
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_whale_alert_embed(
                             trade=trade,

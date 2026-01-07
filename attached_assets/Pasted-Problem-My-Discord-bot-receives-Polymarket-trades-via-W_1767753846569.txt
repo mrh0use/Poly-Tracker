@@ -1,0 +1,49 @@
+Problem: My Discord bot receives Polymarket trades via WebSocket and the trades are being logged, but no alerts are being sent to Discord channels. The bot works in development but not in production on Railway.
+Diagnosis so far:
+
+WebSocket is receiving trades correctly (logs show [WS DEBUG] Trade received: $X,XXX)
+ServerConfig is being found correctly (logs show guild with whale_ch and alert_ch configured)
+But no alerts are ever sent - no "Whale alert" or "Error sending" messages appear
+Slash commands work fine, so the bot is connected to Discord
+
+Root cause is likely: bot.get_channel() is returning None because the channel isn't in the bot's cache. This is common when the bot hasn't fully cached all guilds/channels on startup.
+Please make these changes to bot.py:
+
+Add debug logging in handle_websocket_trade() to trace exactly where the code stops. After the line if not configs: return, add logging before each channel send attempt to show:
+
+When a trade meets the threshold criteria
+What channel ID it's trying to fetch
+Whether bot.get_channel() returns a valid channel or None
+
+
+Replace all bot.get_channel() calls in handle_websocket_trade() with a fallback to bot.fetch_channel(). Create a helper function like:
+
+python   async def get_or_fetch_channel(channel_id):
+       if not channel_id:
+           return None
+       channel = bot.get_channel(channel_id)
+       if channel:
+           return channel
+       try:
+           return await bot.fetch_channel(channel_id)
+       except discord.NotFound:
+           print(f"[WS] Channel {channel_id} not found", flush=True)
+           return None
+       except discord.Forbidden:
+           print(f"[WS] Bot lacks access to channel {channel_id}", flush=True)
+           return None
+       except Exception as e:
+           print(f"[WS] Error fetching channel {channel_id}: {e}", flush=True)
+           return None
+
+Apply the same fix to monitor_loop() since it also uses bot.get_channel() for sending alerts.
+Apply the same fix to volatility_loop() for the same reason.
+Add logging when alerts are successfully sent OR when they fail, so I can see in the logs whether the issue is:
+
+Channel not found
+Permission denied
+Some other error
+
+
+
+The goal is to either fix the channel fetching issue, or get detailed logs showing exactly why alerts aren't being sent.
