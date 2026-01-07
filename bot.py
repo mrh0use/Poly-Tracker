@@ -1620,6 +1620,9 @@ async def handle_websocket_trade(trade: dict):
         price = float(trade.get('price', 0) or 0)
         side = trade.get('side', '').upper()
         
+        if value >= 10000:
+            print(f"[WS DEBUG] Large trade ${value:,.0f} - Side: {side}, Will alert: {side != 'SELL'}", flush=True)
+        
         if side == 'SELL':
             return
         
