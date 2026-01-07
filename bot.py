@@ -1324,7 +1324,9 @@ async def monitor_loop():
                     
                     if wallet in tracked_addresses:
                         tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
+                        print(f"[MONITOR] ALERT TRIGGERED: Tracked wallet ${value:,.0f}, attempting channel {tracked_channel_id}", flush=True)
                         tracked_channel = await get_or_fetch_channel(tracked_channel_id)
+                        print(f"[MONITOR] Channel fetch result: {tracked_channel} (type: {type(tracked_channel).__name__ if tracked_channel else 'None'})", flush=True)
                         if tracked_channel:
                             tw = tracked_addresses[wallet]
                             if not is_trade_after_tracking(trade_time, tw.added_at):
@@ -1342,13 +1344,24 @@ async def monitor_loop():
                                 rank=wallet_stats.get('rank')
                             )
                             try:
-                                await tracked_channel.send(embed=embed, view=button_view)
+                                message = await tracked_channel.send(embed=embed, view=button_view)
+                                print(f"[MONITOR] ✓ ALERT SENT: Tracked wallet ${value:,.0f} to channel {tracked_channel_id}, msg_id={message.id}", flush=True)
+                            except discord.Forbidden as e:
+                                print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {tracked_channel_id} - {e}", flush=True)
+                            except discord.NotFound as e:
+                                print(f"[MONITOR] ✗ NOT FOUND: Channel {tracked_channel_id} doesn't exist - {e}", flush=True)
+                            except discord.HTTPException as e:
+                                print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                             except Exception as e:
-                                print(f"Error sending tracked wallet alert: {e}")
+                                print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                        else:
+                            print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send tracked wallet alert to {tracked_channel_id}", flush=True)
                     
                     if is_sports:
                         if top_trader_info and config.top_trader_channel_id:
+                            print(f"[MONITOR] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                             top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
+                            print(f"[MONITOR] Channel fetch result: {top_channel} (type: {type(top_channel).__name__ if top_channel else 'None'})", flush=True)
                             if top_channel:
                                 embed = create_top_trader_alert_embed(
                                     trade=trade,
@@ -1359,15 +1372,26 @@ async def monitor_loop():
                                     trader_info=top_trader_info
                                 )
                                 try:
-                                    await top_channel.send(embed=embed, view=button_view)
+                                    message = await top_channel.send(embed=embed, view=button_view)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Sports top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                                except discord.Forbidden as e:
+                                    print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
+                                except discord.NotFound as e:
+                                    print(f"[MONITOR] ✗ NOT FOUND: Channel {config.top_trader_channel_id} doesn't exist - {e}", flush=True)
+                                except discord.HTTPException as e:
+                                    print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
-                                    print(f"Error sending sports top trader alert: {e}")
+                                    print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                            else:
+                                print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send sports top trader alert to {config.top_trader_channel_id}", flush=True)
                         
                         sports_channel = await get_or_fetch_channel(config.sports_channel_id)
+                        print(f"[MONITOR] Sports channel fetch result: {sports_channel} (type: {type(sports_channel).__name__ if sports_channel else 'None'})", flush=True)
                         if sports_channel:
                             if wallet in tracked_addresses:
                                 pass
                             elif is_fresh and value >= (config.sports_threshold or 5000.0):
+                                print(f"[MONITOR] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_fresh_wallet_alert_embed(
                                     trade=trade,
@@ -1380,10 +1404,18 @@ async def monitor_loop():
                                     is_sports=True
                                 )
                                 try:
-                                    await sports_channel.send(embed=embed, view=button_view)
+                                    message = await sports_channel.send(embed=embed, view=button_view)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Sports fresh wallet ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                                except discord.Forbidden as e:
+                                    print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
+                                except discord.NotFound as e:
+                                    print(f"[MONITOR] ✗ NOT FOUND: Channel {config.sports_channel_id} doesn't exist - {e}", flush=True)
+                                except discord.HTTPException as e:
+                                    print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
-                                    print(f"Error sending sports fresh wallet alert: {e}")
+                                    print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                             elif value >= (config.sports_threshold or 5000.0):
+                                print(f"[MONITOR] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_whale_alert_embed(
                                     trade=trade,
@@ -1396,12 +1428,23 @@ async def monitor_loop():
                                     is_sports=True
                                 )
                                 try:
-                                    await sports_channel.send(embed=embed, view=button_view)
+                                    message = await sports_channel.send(embed=embed, view=button_view)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Sports whale ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                                except discord.Forbidden as e:
+                                    print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
+                                except discord.NotFound as e:
+                                    print(f"[MONITOR] ✗ NOT FOUND: Channel {config.sports_channel_id} doesn't exist - {e}", flush=True)
+                                except discord.HTTPException as e:
+                                    print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
-                                    print(f"Error sending sports whale alert: {e}")
+                                    print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                        else:
+                            print(f"[MONITOR] ✗ SPORTS CHANNEL IS NONE - cannot send alert to {config.sports_channel_id}", flush=True)
                     else:
                         if top_trader_info and config.top_trader_channel_id:
+                            print(f"[MONITOR] ALERT TRIGGERED: Top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                             top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
+                            print(f"[MONITOR] Channel fetch result: {top_channel} (type: {type(top_channel).__name__ if top_channel else 'None'})", flush=True)
                             if top_channel:
                                 embed = create_top_trader_alert_embed(
                                     trade=trade,
@@ -1412,12 +1455,23 @@ async def monitor_loop():
                                     trader_info=top_trader_info
                                 )
                                 try:
-                                    await top_channel.send(embed=embed, view=button_view)
+                                    message = await top_channel.send(embed=embed, view=button_view)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                                except discord.Forbidden as e:
+                                    print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
+                                except discord.NotFound as e:
+                                    print(f"[MONITOR] ✗ NOT FOUND: Channel {config.top_trader_channel_id} doesn't exist - {e}", flush=True)
+                                except discord.HTTPException as e:
+                                    print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
-                                    print(f"Error sending top trader alert: {e}")
+                                    print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                            else:
+                                print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send top trader alert to {config.top_trader_channel_id}", flush=True)
                         
                         if is_bond and value >= 5000.0 and config.bonds_channel_id:
+                            print(f"[MONITOR] ALERT TRIGGERED: Bonds ${value:,.0f}, attempting channel {config.bonds_channel_id}", flush=True)
                             bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
+                            print(f"[MONITOR] Channel fetch result: {bonds_channel} (type: {type(bonds_channel).__name__ if bonds_channel else 'None'})", flush=True)
                             if bonds_channel:
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_bonds_alert_embed(
@@ -1430,14 +1484,25 @@ async def monitor_loop():
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
-                                    await bonds_channel.send(embed=embed, view=button_view)
+                                    message = await bonds_channel.send(embed=embed, view=button_view)
                                     alerts_sent += 1
+                                    print(f"[MONITOR] ✓ ALERT SENT: Bonds ${value:,.0f} to channel {config.bonds_channel_id}, msg_id={message.id}", flush=True)
+                                except discord.Forbidden as e:
+                                    print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.bonds_channel_id} - {e}", flush=True)
+                                except discord.NotFound as e:
+                                    print(f"[MONITOR] ✗ NOT FOUND: Channel {config.bonds_channel_id} doesn't exist - {e}", flush=True)
+                                except discord.HTTPException as e:
+                                    print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
-                                    print(f"Error sending bonds alert: {e}")
+                                    print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                            else:
+                                print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                         
                         elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
+                            print(f"[MONITOR] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                             fresh_channel = await get_or_fetch_channel(fresh_channel_id)
+                            print(f"[MONITOR] Channel fetch result: {fresh_channel} (type: {type(fresh_channel).__name__ if fresh_channel else 'None'})", flush=True)
                             if fresh_channel:
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_fresh_wallet_alert_embed(
@@ -1450,13 +1515,24 @@ async def monitor_loop():
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
-                                    await fresh_channel.send(embed=embed, view=button_view)
+                                    message = await fresh_channel.send(embed=embed, view=button_view)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Fresh wallet ${value:,.0f} to channel {fresh_channel_id}, msg_id={message.id}", flush=True)
+                                except discord.Forbidden as e:
+                                    print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {fresh_channel_id} - {e}", flush=True)
+                                except discord.NotFound as e:
+                                    print(f"[MONITOR] ✗ NOT FOUND: Channel {fresh_channel_id} doesn't exist - {e}", flush=True)
+                                except discord.HTTPException as e:
+                                    print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
-                                    print(f"Error sending fresh wallet alert: {e}")
+                                    print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                            else:
+                                print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send fresh wallet alert to {fresh_channel_id}", flush=True)
                         
                         elif value >= config.whale_threshold and not is_bond:
                             whale_channel_id = config.whale_channel_id or config.alert_channel_id
+                            print(f"[MONITOR] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${config.whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
                             whale_channel = await get_or_fetch_channel(whale_channel_id)
+                            print(f"[MONITOR] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                             if whale_channel:
                                 wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                                 embed = create_whale_alert_embed(
@@ -1469,11 +1545,19 @@ async def monitor_loop():
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
-                                    await whale_channel.send(embed=embed, view=button_view)
+                                    message = await whale_channel.send(embed=embed, view=button_view)
                                     alerts_sent += 1
-                                    print(f"[Alert] Sent whale alert: ${value:,.0f} to channel {whale_channel_id}")
+                                    print(f"[MONITOR] ✓ ALERT SENT: Whale ${value:,.0f} to channel {whale_channel_id}, msg_id={message.id}", flush=True)
+                                except discord.Forbidden as e:
+                                    print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {whale_channel_id} - {e}", flush=True)
+                                except discord.NotFound as e:
+                                    print(f"[MONITOR] ✗ NOT FOUND: Channel {whale_channel_id} doesn't exist - {e}", flush=True)
+                                except discord.HTTPException as e:
+                                    print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
-                                    print(f"Error sending whale alert: {e}")
+                                    print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                            else:
+                                print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send whale alert to {whale_channel_id}", flush=True)
                         
                         if value >= min_threshold:
                             trades_above_threshold += 1
@@ -1564,8 +1648,11 @@ async def volatility_loop():
                     if abs(price_change_pct) < threshold:
                         continue
                     
+                    print(f"[VOLATILITY] ALERT TRIGGERED: {market['title'][:30]}... swing {price_change_pct:+.1f}% >= {threshold}%, attempting channel {config.volatility_channel_id}", flush=True)
                     channel = await get_or_fetch_channel(config.volatility_channel_id)
+                    print(f"[VOLATILITY] Channel fetch result: {channel} (type: {type(channel).__name__ if channel else 'None'})", flush=True)
                     if not channel:
+                        print(f"[VOLATILITY] ✗ CHANNEL IS NONE - cannot send volatility alert to {config.volatility_channel_id}", flush=True)
                         continue
                     
                     embed, market_url = create_volatility_alert_embed(
@@ -1580,10 +1667,17 @@ async def volatility_loop():
                     button_view = create_trade_button_view(event_slug, market_url)
                     
                     try:
-                        await channel.send(embed=embed, view=button_view)
+                        message = await channel.send(embed=embed, view=button_view)
                         alert_sent = True
+                        print(f"[VOLATILITY] ✓ ALERT SENT: {market['title'][:30]}... to channel {config.volatility_channel_id}, msg_id={message.id}", flush=True)
+                    except discord.Forbidden as e:
+                        print(f"[VOLATILITY] ✗ FORBIDDEN: Cannot send to channel {config.volatility_channel_id} - {e}", flush=True)
+                    except discord.NotFound as e:
+                        print(f"[VOLATILITY] ✗ NOT FOUND: Channel {config.volatility_channel_id} doesn't exist - {e}", flush=True)
+                    except discord.HTTPException as e:
+                        print(f"[VOLATILITY] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                     except Exception as e:
-                        print(f"Error sending volatility alert: {e}")
+                        print(f"[VOLATILITY] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                 
                 if alert_sent:
                     session.add(VolatilityAlert(
@@ -1638,6 +1732,11 @@ _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'l
 async def handle_websocket_trade(trade: dict):
     print(f"[WS DEBUG] Trade received: ${polymarket_client.calculate_trade_value(trade):,.0f}", flush=True)
     global _ws_stats
+    
+    # Check bot ready state before processing
+    if not bot.is_ready():
+        print(f"[WS] ✗ BOT NOT READY - skipping trade processing", flush=True)
+        return
     
     # Retry database connection if it fails
     session = None
@@ -1767,7 +1866,9 @@ async def handle_websocket_trade(trade: dict):
             
             if wallet in tracked_addresses:
                 tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
+                print(f"[WS] ALERT TRIGGERED: Tracked wallet ${value:,.0f}, attempting channel {tracked_channel_id}", flush=True)
                 tracked_channel = await get_or_fetch_channel(tracked_channel_id)
+                print(f"[WS] Channel fetch result: {tracked_channel} (type: {type(tracked_channel).__name__ if tracked_channel else 'None'})", flush=True)
                 if tracked_channel:
                     tw = tracked_addresses[wallet]
                     if not is_trade_after_tracking(trade_time, tw.added_at):
@@ -1785,15 +1886,25 @@ async def handle_websocket_trade(trade: dict):
                         rank=wallet_stats.get('rank')
                     )
                     try:
-                        await tracked_channel.send(embed=embed, view=button_view)
+                        message = await tracked_channel.send(embed=embed, view=button_view)
                         _ws_stats['alerts_sent'] += 1
-                        print(f"[WS] Tracked wallet alert: ${value:,.0f} from {tw.label or wallet[:8]}")
+                        print(f"[WS] ✓ ALERT SENT: Tracked wallet ${value:,.0f} to channel {tracked_channel_id}, msg_id={message.id}", flush=True)
+                    except discord.Forbidden as e:
+                        print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {tracked_channel_id} - {e}", flush=True)
+                    except discord.NotFound as e:
+                        print(f"[WS] ✗ NOT FOUND: Channel {tracked_channel_id} doesn't exist - {e}", flush=True)
+                    except discord.HTTPException as e:
+                        print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                     except Exception as e:
-                        print(f"[WS] Error sending tracked wallet alert: {e}")
+                        print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                else:
+                    print(f"[WS] ✗ CHANNEL IS NONE - cannot send tracked wallet alert to {tracked_channel_id}", flush=True)
             
             if is_sports:
                 if top_trader_info and config.top_trader_channel_id:
+                    print(f"[WS] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                     top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
+                    print(f"[WS] Channel fetch result: {top_channel} (type: {type(top_channel).__name__ if top_channel else 'None'})", flush=True)
                     if top_channel:
                         embed = create_top_trader_alert_embed(
                             trade=trade,
@@ -1804,16 +1915,25 @@ async def handle_websocket_trade(trade: dict):
                             trader_info=top_trader_info
                         )
                         try:
-                            await top_channel.send(embed=embed, view=button_view)
-                            print(f"[WS] Top trader sports alert: ${value:,.0f}")
+                            message = await top_channel.send(embed=embed, view=button_view)
+                            print(f"[WS] ✓ ALERT SENT: Sports top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                        except discord.Forbidden as e:
+                            print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
+                        except discord.NotFound as e:
+                            print(f"[WS] ✗ NOT FOUND: Channel {config.top_trader_channel_id} doesn't exist - {e}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
-                            print(f"[WS] Error sending top trader alert: {e}")
+                            print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                    else:
+                        print(f"[WS] ✗ CHANNEL IS NONE - cannot send sports top trader alert to {config.top_trader_channel_id}", flush=True)
                 
                 sports_channel = await get_or_fetch_channel(config.sports_channel_id)
                 if sports_channel:
                     if wallet in tracked_addresses:
                         pass
                     elif is_fresh and value >= (config.sports_threshold or 5000.0):
+                        print(f"[WS] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_fresh_wallet_alert_embed(
                             trade=trade,
@@ -1826,12 +1946,19 @@ async def handle_websocket_trade(trade: dict):
                             is_sports=True
                         )
                         try:
-                            await sports_channel.send(embed=embed, view=button_view)
+                            message = await sports_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] Sports fresh wallet: ${value:,.0f}")
+                            print(f"[WS] ✓ ALERT SENT: Sports fresh wallet ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                        except discord.Forbidden as e:
+                            print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
+                        except discord.NotFound as e:
+                            print(f"[WS] ✗ NOT FOUND: Channel {config.sports_channel_id} doesn't exist - {e}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
-                            print(f"[WS] Error sending sports alert: {e}")
+                            print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                     elif value >= (config.sports_threshold or 5000.0):
+                        print(f"[WS] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_whale_alert_embed(
                             trade=trade,
@@ -1844,14 +1971,22 @@ async def handle_websocket_trade(trade: dict):
                             is_sports=True
                         )
                         try:
-                            await sports_channel.send(embed=embed, view=button_view)
+                            message = await sports_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] Sports whale: ${value:,.0f}")
+                            print(f"[WS] ✓ ALERT SENT: Sports whale ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                        except discord.Forbidden as e:
+                            print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
+                        except discord.NotFound as e:
+                            print(f"[WS] ✗ NOT FOUND: Channel {config.sports_channel_id} doesn't exist - {e}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
-                            print(f"[WS] Error sending sports alert: {e}")
+                            print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
             else:
                 if top_trader_info and config.top_trader_channel_id:
+                    print(f"[WS] ALERT TRIGGERED: Top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                     top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
+                    print(f"[WS] Channel fetch result: {top_channel} (type: {type(top_channel).__name__ if top_channel else 'None'})", flush=True)
                     if top_channel:
                         embed = create_top_trader_alert_embed(
                             trade=trade,
@@ -1862,14 +1997,24 @@ async def handle_websocket_trade(trade: dict):
                             trader_info=top_trader_info
                         )
                         try:
-                            await top_channel.send(embed=embed, view=button_view)
+                            message = await top_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] Top trader alert: ${value:,.0f}")
+                            print(f"[WS] ✓ ALERT SENT: Top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                        except discord.Forbidden as e:
+                            print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
+                        except discord.NotFound as e:
+                            print(f"[WS] ✗ NOT FOUND: Channel {config.top_trader_channel_id} doesn't exist - {e}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
-                            print(f"[WS] Error sending top trader alert: {e}")
+                            print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                    else:
+                        print(f"[WS] ✗ CHANNEL IS NONE - cannot send top trader alert to {config.top_trader_channel_id}", flush=True)
                 
                 elif is_bond and value >= 5000.0 and config.bonds_channel_id:
+                    print(f"[WS] ALERT TRIGGERED: Bonds ${value:,.0f}, attempting channel {config.bonds_channel_id}", flush=True)
                     bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
+                    print(f"[WS] Channel fetch result: {bonds_channel} (type: {type(bonds_channel).__name__ if bonds_channel else 'None'})", flush=True)
                     if bonds_channel:
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_bonds_alert_embed(
@@ -1882,15 +2027,25 @@ async def handle_websocket_trade(trade: dict):
                             rank=wallet_stats.get('rank')
                         )
                         try:
-                            await bonds_channel.send(embed=embed, view=button_view)
+                            message = await bonds_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] Bonds alert: ${value:,.0f}")
+                            print(f"[WS] ✓ ALERT SENT: Bonds ${value:,.0f} to channel {config.bonds_channel_id}, msg_id={message.id}", flush=True)
+                        except discord.Forbidden as e:
+                            print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.bonds_channel_id} - {e}", flush=True)
+                        except discord.NotFound as e:
+                            print(f"[WS] ✗ NOT FOUND: Channel {config.bonds_channel_id} doesn't exist - {e}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
-                            print(f"[WS] Error sending bonds alert: {e}")
+                            print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                    else:
+                        print(f"[WS] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                 
                 elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                     fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
+                    print(f"[WS] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                     fresh_channel = await get_or_fetch_channel(fresh_channel_id)
+                    print(f"[WS] Channel fetch result: {fresh_channel} (type: {type(fresh_channel).__name__ if fresh_channel else 'None'})", flush=True)
                     if fresh_channel:
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_fresh_wallet_alert_embed(
@@ -1903,17 +2058,26 @@ async def handle_websocket_trade(trade: dict):
                             rank=wallet_stats.get('rank')
                         )
                         try:
-                            await fresh_channel.send(embed=embed, view=button_view)
+                            message = await fresh_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] Fresh wallet: ${value:,.0f}")
+                            print(f"[WS] ✓ ALERT SENT: Fresh wallet ${value:,.0f} to channel {fresh_channel_id}, msg_id={message.id}", flush=True)
+                        except discord.Forbidden as e:
+                            print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {fresh_channel_id} - {e}", flush=True)
+                        except discord.NotFound as e:
+                            print(f"[WS] ✗ NOT FOUND: Channel {fresh_channel_id} doesn't exist - {e}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
-                            print(f"[WS] Error sending fresh wallet alert: {e}")
+                            print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                    else:
+                        print(f"[WS] ✗ CHANNEL IS NONE - cannot send fresh wallet alert to {fresh_channel_id}", flush=True)
                 
                 elif value >= config.whale_threshold and not is_bond:
                     whale_channel_id = config.whale_channel_id or config.alert_channel_id
+                    print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${config.whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
                     whale_channel = await get_or_fetch_channel(whale_channel_id)
+                    print(f"[WS] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                     if whale_channel:
-                        print(f"[WS DEBUG] Whale threshold met: ${value:,.0f} >= ${config.whale_threshold:,.0f}, channel={whale_channel_id}", flush=True)
                         wallet_stats = await polymarket_client.get_wallet_pnl_stats(wallet)
                         embed = create_whale_alert_embed(
                             trade=trade,
@@ -1925,11 +2089,19 @@ async def handle_websocket_trade(trade: dict):
                             rank=wallet_stats.get('rank')
                         )
                         try:
-                            await whale_channel.send(embed=embed, view=button_view)
+                            message = await whale_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] Whale alert: ${value:,.0f}")
+                            print(f"[WS] ✓ ALERT SENT: Whale ${value:,.0f} to channel {whale_channel_id}, msg_id={message.id}", flush=True)
+                        except discord.Forbidden as e:
+                            print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {whale_channel_id} - {e}", flush=True)
+                        except discord.NotFound as e:
+                            print(f"[WS] ✗ NOT FOUND: Channel {whale_channel_id} doesn't exist - {e}", flush=True)
+                        except discord.HTTPException as e:
+                            print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
-                            print(f"[WS] Error sending whale alert: {e}")
+                            print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
+                    else:
+                        print(f"[WS] ✗ CHANNEL IS NONE - cannot send whale alert to {whale_channel_id}", flush=True)
     finally:
         session.close()
 
