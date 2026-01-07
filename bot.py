@@ -28,7 +28,7 @@ from alerts import (
 # Server config cache to reduce database queries
 _server_config_cache = []
 _server_config_cache_time = 0
-_SERVER_CONFIG_CACHE_TTL = 30  # Refresh every 30 seconds
+_SERVER_CONFIG_CACHE_TTL = 300  # Refresh every 5 minutes
 
 def get_cached_server_configs():
     """Get server configs from cache, refreshing if stale."""
@@ -52,7 +52,7 @@ def invalidate_server_config_cache():
 _tracked_wallet_cache = {}  # {wallet_address: {guild_id: TrackedWallet}}
 _tracked_wallet_set = set()  # Quick lookup set of all tracked addresses
 _tracked_wallet_cache_time = 0
-_TRACKED_WALLET_CACHE_TTL = 30  # Refresh every 30 seconds
+_TRACKED_WALLET_CACHE_TTL = 300  # Refresh every 5 minutes
 
 def get_cached_tracked_wallets():
     """Get tracked wallets from cache, refreshing if stale. Returns (set of addresses, dict by guild)."""
@@ -383,6 +383,7 @@ async def track(interaction: discord.Interaction, wallet: str, label: Optional[s
         )
         session.add(tracked)
         session.commit()
+        invalidate_tracked_wallet_cache()
         
         label_text = f" with label '{label}'" if label else ""
         await interaction.response.send_message(
@@ -419,6 +420,7 @@ class UntrackSelect(discord.ui.Select):
                 label = tracked.label or f"{wallet[:6]}...{wallet[-4:]}"
                 session.delete(tracked)
                 session.commit()
+                invalidate_tracked_wallet_cache()
                 await interaction.response.send_message(
                     f"Stopped tracking wallet: {label}",
                     ephemeral=True
@@ -1858,45 +1860,69 @@ async def before_cleanup():
 _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
 
 async def handle_websocket_trade(trade: dict):
-    print(f"[WS DEBUG] Trade received: ${polymarket_client.calculate_trade_value(trade):,.0f}", flush=True)
     global _ws_stats
+    
+    # EARLY EXTRACTION: Get value and wallet BEFORE any DB calls
+    value = polymarket_client.calculate_trade_value(trade)
+    wallet = polymarket_client.get_wallet_from_trade(trade)
+    
+    if not wallet:
+        return
+    
+    wallet = wallet.lower()
+    side = trade.get('side', '').upper()
+    
+    # Skip SELLs early
+    if side == 'SELL':
+        return
+    
+    # Check if wallet is tracked (uses cache, no DB query)
+    tracked_addresses, tracked_by_guild = get_cached_tracked_wallets()
+    is_tracked = wallet in tracked_addresses
+    
+    # EARLY EXIT: Skip trades below $1000 unless it's a tracked wallet
+    # This prevents database overload from tiny trades
+    if value < 1000 and not is_tracked:
+        return
+    
+    # Track stats (minimal overhead)
+    _ws_stats['processed'] += 1
+    if value >= 5000:
+        _ws_stats['above_5k'] += 1
+    if value >= 10000:
+        _ws_stats['above_10k'] += 1
+    
+    # Log stats every 5000 trades
+    if _ws_stats['processed'] % 5000 == 0:
+        print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+ BUY: {_ws_stats['above_5k']}, $10k+ BUY: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
+    
+    # Only log significant trades
+    if value >= 5000:
+        print(f"[WS] Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
+    elif is_tracked:
+        print(f"[WS] Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
     
     # Check bot ready state before processing
     if not bot.is_ready():
-        print(f"[WS] ✗ BOT NOT READY - skipping trade processing", flush=True)
         return
     
-    # Retry database connection if it fails
+    # Now we can do DB operations for significant trades
     session = None
     for attempt in range(3):
         try:
             session = get_session()
-            session.execute(text("SELECT 1"))  # Test connection
+            session.execute(text("SELECT 1"))
             break
         except Exception as e:
             if attempt == 2:
                 print(f"[WS] Database connection failed after 3 attempts: {e}", flush=True)
                 return
-            print(f"[WS] Database connection attempt {attempt + 1} failed, retrying...", flush=True)
             await asyncio.sleep(0.5)
     
     if not session:
         return
     
     try:
-        value = polymarket_client.calculate_trade_value(trade)
-        wallet = polymarket_client.get_wallet_from_trade(trade)
-        
-        _ws_stats['processed'] += 1
-        
-        if _ws_stats['processed'] % 1000 == 0:
-            print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+ BUY: {_ws_stats['above_5k']}, $10k+ BUY: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
-        
-        if not wallet:
-            return
-        
-        wallet = wallet.lower()
-        
         unique_key = polymarket_client.get_unique_trade_id(trade)
         if not unique_key or len(unique_key) < 10:
             return
@@ -1909,18 +1935,6 @@ async def handle_websocket_trade(trade: dict):
         session.commit()
         
         price = float(trade.get('price', 0) or 0)
-        side = trade.get('side', '').upper()
-        
-        if value >= 1000:
-            print(f"[WS DEBUG] Large trade ${value:,.0f} - Side={side}, Wallet={wallet[:10] if wallet else 'None'}...", flush=True)
-        
-        if side == 'SELL':
-            return
-        
-        if value >= 5000:
-            _ws_stats['above_5k'] += 1
-        if value >= 10000:
-            _ws_stats['above_10k'] += 1
         
         market_title = polymarket_client.get_market_title(trade)
         market_url = polymarket_client.get_market_url(trade)
@@ -1929,31 +1943,12 @@ async def handle_websocket_trade(trade: dict):
         is_sports = polymarket_client.is_sports_market(trade)
         is_bond = price >= 0.95
         
-        # Log every BUY trade above $1k for debugging
-        if value >= 1000:
-            print(f"[WS DEBUG] Processing BUY: ${value:,.0f}, wallet={wallet[:10]}..., is_sports={is_sports}, is_bond={is_bond}, price={price:.2f}", flush=True)
-        
         all_configs = get_cached_server_configs()
         configs = [c for c in all_configs if not c.is_paused]
-        
-        print(f"[WS DEBUG] Found {len(configs)} total ServerConfig records", flush=True)
-        for c in configs:
-            print(f"[WS DEBUG] Guild {c.guild_id}: whale_ch={c.whale_channel_id}, alert_ch={c.alert_channel_id}, paused={c.is_paused}", flush=True)
-        
         configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id or c.top_trader_channel_id or c.bonds_channel_id or c.tracked_wallet_channel_id or c.whale_channel_id or c.fresh_wallet_channel_id]
         
-        print(f"[WS DEBUG] After filtering for channels: {len(configs)} configs", flush=True)
-        
         if not configs:
-            print("[WS DEBUG] No configs with channels - returning early", flush=True)
             return
-        
-        all_tracked = session.query(TrackedWallet).all()
-        tracked_by_guild = {}
-        for tw in all_tracked:
-            if tw.guild_id not in tracked_by_guild:
-                tracked_by_guild[tw.guild_id] = {}
-            tracked_by_guild[tw.guild_id][tw.wallet_address] = tw
         
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
