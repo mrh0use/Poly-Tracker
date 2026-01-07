@@ -1571,6 +1571,7 @@ async def before_cleanup():
 _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
 
 async def handle_websocket_trade(trade: dict):
+    print(f"[WS DEBUG] Trade received: ${polymarket_client.calculate_trade_value(trade):,.0f}", flush=True)
     global _ws_stats
     try:
         session = get_session()
