@@ -2099,7 +2099,10 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send top trader alert to {config.top_trader_channel_id}", flush=True)
                 
-                elif is_bond and value >= 5000.0 and config.bonds_channel_id:
+                if is_bond and value >= 5000:
+                    print(f"[WS DEBUG] Bond candidate: ${value:,.0f}, bonds_channel={config.bonds_channel_id}, top_trader={top_trader_info is not None}", flush=True)
+                
+                if is_bond and value >= 5000.0 and config.bonds_channel_id and not top_trader_info:
                     print(f"[WS] ALERT TRIGGERED: Bonds ${value:,.0f}, attempting channel {config.bonds_channel_id}", flush=True)
                     bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
                     print(f"[WS] Channel fetch result: {bonds_channel} (type: {type(bonds_channel).__name__ if bonds_channel else 'None'})", flush=True)
@@ -2136,7 +2139,7 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                 
-                elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
+                if is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                     fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                     print(f"[WS] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                     fresh_channel = await get_or_fetch_channel(fresh_channel_id)
@@ -2174,7 +2177,7 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send fresh wallet alert to {fresh_channel_id}", flush=True)
                 
-                elif value >= (config.whale_threshold or 10000.0) and not is_bond:
+                if value >= (config.whale_threshold or 10000.0) and not is_bond and not is_fresh:
                     whale_channel_id = config.whale_channel_id or config.alert_channel_id
                     whale_threshold = config.whale_threshold or 10000.0
                     print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
