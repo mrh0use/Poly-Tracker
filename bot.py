@@ -2342,16 +2342,21 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     
-    token = os.environ.get('DEV_DISCORD_BOT_TOKEN') or os.environ.get('DISCORD_BOT_TOKEN')
+    is_production = os.environ.get('REPLIT_DEPLOYMENT') == '1'
     
-    if os.environ.get('DEV_DISCORD_BOT_TOKEN'):
-        print("Using DEVELOPMENT bot token", flush=True)
+    if is_production:
+        token = os.environ.get('DISCORD_BOT_TOKEN')
+        print("Running in PRODUCTION - using DISCORD_BOT_TOKEN", flush=True)
     else:
-        print("Using PRODUCTION bot token", flush=True)
+        token = os.environ.get('DEV_DISCORD_BOT_TOKEN') or os.environ.get('DISCORD_BOT_TOKEN')
+        if os.environ.get('DEV_DISCORD_BOT_TOKEN'):
+            print("Running in DEVELOPMENT - using DEV_DISCORD_BOT_TOKEN", flush=True)
+        else:
+            print("Running in DEVELOPMENT - using DISCORD_BOT_TOKEN (no dev token set)", flush=True)
     
     if not token:
         print("ERROR: No Discord bot token found", flush=True)
-        print("Set DEV_DISCORD_BOT_TOKEN (development) or DISCORD_BOT_TOKEN (production)", flush=True)
+        print("Set DISCORD_BOT_TOKEN for production or DEV_DISCORD_BOT_TOKEN for development", flush=True)
         return
     
     port = os.environ.get('PORT', '8080')

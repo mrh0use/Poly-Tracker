@@ -84,7 +84,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 - `DEV_DISCORD_BOT_TOKEN` - Development Discord bot token (used when running locally, separate bot to avoid conflicts)
 - `DATABASE_URL` - PostgreSQL connection string (auto-configured)
 
-**Note**: Development and production use separate Discord bot tokens to allow both to run simultaneously without conflicts. The bot checks for `DEV_DISCORD_BOT_TOKEN` first, then falls back to `DISCORD_BOT_TOKEN`.
+**Note**: Development and production use separate Discord bot tokens to allow both to run simultaneously without conflicts. The bot automatically detects the environment via `REPLIT_DEPLOYMENT` variable - in production it uses `DISCORD_BOT_TOKEN`, in development it uses `DEV_DISCORD_BOT_TOKEN`.
 
 ## Recent Changes
 
