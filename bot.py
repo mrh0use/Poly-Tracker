@@ -76,6 +76,14 @@ class PolymarketBot(commands.Bot):
                 print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 10000:,.0f}, sports=${c.sports_threshold or 5000:,.0f}, paused={c.is_paused}", flush=True)
         finally:
             session.close()
+    
+    async def on_guild_join(self, guild):
+        """Sync slash commands when bot joins a new server."""
+        try:
+            await self.tree.sync(guild=guild)
+            print(f"[SYNC] Synced commands to new guild: {guild.name} ({guild.id})", flush=True)
+        except Exception as e:
+            print(f"[SYNC ERROR] Failed to sync to {guild.name}: {e}", flush=True)
 
 
 bot = PolymarketBot()
@@ -1528,9 +1536,10 @@ async def monitor_loop():
                             else:
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send fresh wallet alert to {fresh_channel_id}", flush=True)
                         
-                        elif value >= config.whale_threshold and not is_bond:
+                        elif value >= (config.whale_threshold or 10000.0) and not is_bond:
                             whale_channel_id = config.whale_channel_id or config.alert_channel_id
-                            print(f"[MONITOR] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${config.whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
+                            whale_threshold = config.whale_threshold or 10000.0
+                            print(f"[MONITOR] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
                             whale_channel = await get_or_fetch_channel(whale_channel_id)
                             print(f"[MONITOR] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                             if whale_channel:
@@ -1558,9 +1567,6 @@ async def monitor_loop():
                                     print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                             else:
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send whale alert to {whale_channel_id}", flush=True)
-                        
-                        if value >= min_threshold:
-                            trades_above_threshold += 1
             
             if new_trades_count > 0 or alerts_sent > 0:
                 print(f"[Monitor] Tracked wallets: {new_trades_count} new trades, {alerts_sent} alerts sent")
@@ -2072,9 +2078,10 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send fresh wallet alert to {fresh_channel_id}", flush=True)
                 
-                elif value >= config.whale_threshold and not is_bond:
+                elif value >= (config.whale_threshold or 10000.0) and not is_bond:
                     whale_channel_id = config.whale_channel_id or config.alert_channel_id
-                    print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${config.whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
+                    whale_threshold = config.whale_threshold or 10000.0
+                    print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
                     whale_channel = await get_or_fetch_channel(whale_channel_id)
                     print(f"[WS] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                     if whale_channel:
