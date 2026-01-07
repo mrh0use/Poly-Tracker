@@ -6,9 +6,8 @@ from discord.ui import View, Button
 import asyncio
 from datetime import datetime
 from typing import Optional
-import threading
+from aiohttp import web
 import time
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
 from polymarket_client import polymarket_client, PolymarketWebSocket
@@ -1863,39 +1862,42 @@ async def command_error(interaction: discord.Interaction, error):
         )
 
 
-class HealthHandler(BaseHTTPRequestHandler):
-    """Simple HTTP handler for Railway health checks."""
-    
-    def log_message(self, format, *args):
-        pass
-    
-    def do_GET(self):
-        if self.path in ('/', '/health'):
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b'OK')
-        elif self.path == '/metrics':
-            uptime = time.time() - health_start_time
-            ready = bot.is_ready() if bot else False
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(f"uptime: {uptime:.0f}s, ready: {ready}".encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
+async def health_handler(request):
+    """Health check endpoint for Railway"""
+    return web.Response(text="OK", status=200)
 
 
-def run_health_server():
-    """Railway health check endpoint - runs in separate thread."""
+async def metrics_handler(request):
+    """Metrics endpoint"""
+    uptime = time.time() - bot_start_time if 'bot_start_time' in globals() else 0
+    return web.Response(
+        text=f"uptime_seconds {uptime}\nbot_ready {bot.is_ready()}\n",
+        status=200
+    )
+
+
+async def run_health_server():
+    """
+    Runs HTTP server for Railway health checks in the background.
+    Uses async pattern so health server runs in same event loop as Discord bot.
+    This MUST work or Railway kills the app with SIGTERM.
+    """
+    app = web.Application()
+    app.router.add_get('/', health_handler)
+    app.router.add_get('/health', health_handler)
+    app.router.add_get('/metrics', metrics_handler)
+    
     port = int(os.environ.get('PORT', 8080))
-    print(f"[HEALTH] Starting health check server on port {port}", flush=True)
-    server = HTTPServer(('0.0.0.0', port), HealthHandler)
-    server.serve_forever()
-
-
-health_start_time = time.time()
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    
+    print(f"[HEALTH] Health server listening on 0.0.0.0:{port}", flush=True)
+    
+    while True:
+        await asyncio.sleep(3600)
 
 
 def main():
@@ -1903,7 +1905,9 @@ def main():
     import traceback
     import sys
     
-    # Signal handler to log when we receive termination signals
+    global bot_start_time
+    bot_start_time = time.time()
+    
     def signal_handler(signum, frame):
         sig_name = signal.Signals(signum).name
         print(f"[SIGNAL] Received {sig_name} (signal {signum})", flush=True)
@@ -1912,33 +1916,40 @@ def main():
         sys.stdout.flush()
         sys.exit(0)
     
-    # Register signal handlers
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     
-    # Start health server in background thread (required for Railway)
-    health_thread = threading.Thread(target=run_health_server, daemon=True)
-    health_thread.start()
-    print("[HEALTH] Health server thread started", flush=True)
-    time.sleep(2)  # Give health server time to start
-    
-    # Try DEV_DISCORD_BOT_TOKEN first (for development), then fall back to DISCORD_BOT_TOKEN (production)
     token = os.environ.get('DEV_DISCORD_BOT_TOKEN') or os.environ.get('DISCORD_BOT_TOKEN')
     
     if os.environ.get('DEV_DISCORD_BOT_TOKEN'):
-        print("Using DEVELOPMENT bot token")
+        print("Using DEVELOPMENT bot token", flush=True)
     else:
-        print("Using PRODUCTION bot token")
+        print("Using PRODUCTION bot token", flush=True)
     
     if not token:
-        print("ERROR: No Discord bot token found")
-        print("Set DEV_DISCORD_BOT_TOKEN (development) or DISCORD_BOT_TOKEN (production)")
+        print("ERROR: No Discord bot token found", flush=True)
+        print("Set DEV_DISCORD_BOT_TOKEN (development) or DISCORD_BOT_TOKEN (production)", flush=True)
         return
     
-    print("Starting Polymarket Discord Bot...")
+    port = os.environ.get('PORT', '8080')
+    print(f"[RAILWAY] PORT environment variable: {port}", flush=True)
+    print(f"[RAILWAY] Starting health server on port {port}", flush=True)
+    
+    print("Starting Polymarket Discord Bot...", flush=True)
+    
+    async def run_all():
+        health_task = asyncio.create_task(run_health_server())
+        print("[HEALTH] Health server task created", flush=True)
+        
+        await asyncio.sleep(2)
+        
+        async with bot:
+            await bot.start(token)
     
     try:
-        bot.run(token)
+        asyncio.run(run_all())
+    except KeyboardInterrupt:
+        print("[MAIN] Received keyboard interrupt", flush=True)
     except Exception as e:
         print(f"[FATAL] Bot crashed with exception: {type(e).__name__}: {e}", flush=True)
         traceback.print_exc()
