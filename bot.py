@@ -254,11 +254,19 @@ async def threshold(interaction: discord.Interaction, amount: float):
         
         config.whale_threshold = amount
         session.commit()
+        print(f"[CMD] Threshold updated to ${amount:,.0f} for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
             f"Whale alert threshold set to ${amount:,.0f}",
             ephemeral=True
         )
+    except Exception as e:
+        print(f"[CMD ERROR] threshold command failed: {e}", flush=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Error saving threshold: {str(e)}",
+                ephemeral=True
+            )
     finally:
         session.close()
 
@@ -599,11 +607,19 @@ async def sports_threshold(interaction: discord.Interaction, amount: float):
         
         config.sports_threshold = amount
         session.commit()
+        print(f"[CMD] Sports threshold updated to ${amount:,.0f} for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
             f"Sports alert threshold set to ${amount:,.0f}",
             ephemeral=True
         )
+    except Exception as e:
+        print(f"[CMD ERROR] sports_threshold command failed: {e}", flush=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Error saving threshold: {str(e)}",
+                ephemeral=True
+            )
     finally:
         session.close()
 
@@ -628,11 +644,19 @@ async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: f
         
         config.fresh_wallet_threshold = amount
         session.commit()
+        print(f"[CMD] Fresh wallet threshold updated to ${amount:,.0f} for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
             f"Fresh wallet alert threshold set to ${amount:,.0f}",
             ephemeral=True
         )
+    except Exception as e:
+        print(f"[CMD ERROR] fresh_wallet_threshold command failed: {e}", flush=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Error saving threshold: {str(e)}",
+                ephemeral=True
+            )
     finally:
         session.close()
 
@@ -663,11 +687,19 @@ async def volatility_threshold_cmd(interaction: discord.Interaction, percentage:
         
         config.volatility_threshold = percentage
         session.commit()
+        print(f"[CMD] Volatility threshold updated to {percentage:.0f}% for guild {interaction.guild_id}", flush=True)
         
         await interaction.response.send_message(
             f"Volatility alert threshold set to {percentage:.0f}% price swing",
             ephemeral=True
         )
+    except Exception as e:
+        print(f"[CMD ERROR] volatility_threshold command failed: {e}", flush=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Error saving threshold: {str(e)}",
+                ephemeral=True
+            )
     finally:
         session.close()
 
