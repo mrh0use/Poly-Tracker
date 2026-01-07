@@ -1,0 +1,214 @@
+2026-01-07 13:20:48.82
+03ab300e
+User
+[HEALTH] Health server listening on 0.0.0.0:3000
+2026-01-07 13:20:48.82
+03ab300e
+User
+[HEALTH] Health server task created
+2026-01-07 13:20:50.99
+03ab300e
+User
+[FATAL] Bot crashed with exception: LoginFailure: Improper token has been passed.
+2026-01-07 13:20:51.00
+03ab300e
+User
+The above exception was the direct cause of the following exception:
+2026-01-07 13:20:51.00
+03ab300e
+User
+data = await self.request(Route('GET', '/users/@me'))
+2026-01-07 13:20:51.00
+03ab300e
+User
+Traceback (most recent call last):
+2026-01-07 13:20:51.00
+03ab300e
+User
+Traceback (most recent call last):
+2026-01-07 13:20:51.00
+03ab300e
+User
+discord.errors.HTTPException: 401 Unauthorized (error code: 0): 401: Unauthorized
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/http.py", line 839, in static_login
+2026-01-07 13:20:51.00
+03ab300e
+User
+raise HTTPException(response, data)
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/http.py", line 773, in request
+2026-01-07 13:20:51.00
+03ab300e
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-07 13:20:51.00
+03ab300e
+User
+return future.result()
+2026-01-07 13:20:51.00
+03ab300e
+User
+asyncio.run(run_all())
+2026-01-07 13:20:51.00
+03ab300e
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+2026-01-07 13:20:51.00
+03ab300e
+User
+return self._loop.run_until_complete(task)
+2026-01-07 13:20:51.00
+03ab300e
+User
+[FATAL] Unhandled exception in main: LoginFailure: Improper token has been passed.
+2026-01-07 13:20:51.00
+03ab300e
+User
+raise LoginFailure('Improper token has been passed.') from exc
+2026-01-07 13:20:51.00
+03ab300e
+User
+^^^^^^^^^^^^^^^^
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/http.py", line 843, in static_login
+2026-01-07 13:20:51.00
+03ab300e
+User
+^^^^^^^^^^^^^^^
+2026-01-07 13:20:51.00
+03ab300e
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-07 13:20:51.00
+03ab300e
+User
+data = await self.http.static_login(token)
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/client.py", line 675, in login
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/asyncio/runners.py", line 190, in run
+2026-01-07 13:20:51.00
+03ab300e
+User
+discord.errors.LoginFailure: Improper token has been passed.
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/bot.py", line 2375, in run_all
+2026-01-07 13:20:51.00
+03ab300e
+User
+await bot.start(token)
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/client.py", line 846, in start
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/bot.py", line 2378, in main
+2026-01-07 13:20:51.00
+03ab300e
+User
+await self.login(token)
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/asyncio/runners.py", line 118, in run
+2026-01-07 13:20:51.00
+03ab300e
+User
+return runner.run(main)
+2026-01-07 13:20:51.00
+03ab300e
+User
+return runner.run(main)
+2026-01-07 13:20:51.00
+03ab300e
+User
+Traceback (most recent call last):
+2026-01-07 13:20:51.00
+03ab300e
+User
+raise HTTPException(response, data)
+2026-01-07 13:20:51.00
+03ab300e
+User
+The above exception was the direct cause of the following exception:
+2026-01-07 13:20:51.00
+03ab300e
+User
+asyncio.run(run_all())
+2026-01-07 13:20:51.00
+03ab300e
+User
+main()
+2026-01-07 13:20:51.00
+03ab300e
+User
+return self._loop.run_until_complete(task)
+2026-01-07 13:20:51.00
+03ab300e
+User
+data = await self.request(Route('GET', '/users/@me'))
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/client.py", line 846, in start
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/asyncio/runners.py", line 118, in run
+2026-01-07 13:20:51.00
+03ab300e
+User
+Traceback (most recent call last):
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/discord/client.py", line 675, in login
+2026-01-07 13:20:51.00
+03ab300e
+User
+discord.errors.HTTPException: 401 Unauthorized (error code: 0): 401: Unauthorized
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+2026-01-07 13:20:51.00
+03ab300e
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-07 13:20:51.00
+03ab300e
+User
+await bot.start(token)
+2026-01-07 13:20:51.00
+03ab300e
+User
+return future.result()
+2026-01-07 13:20:51.00
+03ab300e
+User
+File "/home/runner/workspace/bot.py", line 2378, in main
+2026-01-07 13:20:51.00
+03ab300e
+User
+^^^^^^^^^^^^^^^
+Wrap
+Colors
