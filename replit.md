@@ -88,6 +88,7 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-07: **Added Railway health check server** - Bot now starts an HTTP server on port 8080 (or $PORT) that responds to health checks. This prevents Railway from killing the bot after startup. Endpoints: `/` and `/health` return "OK", `/metrics` returns uptime and ready status.
 - 2026-01-06: **Removed WebSocket ping/pong logic** - Railway/cloud proxies don't forward ping frames properly, causing reconnection storms. Now uses data activity timeout only (2 minutes). Backup WebSocket and 15-minute proactive reconnect remain for resilience.
 - 2026-01-06: **Major WebSocket resilience overhaul** - Based on Polymarket community best practices (GitHub issue #26): backup WebSocket ready for instant failover, 2-minute data timeout detection, proactive 15-minute reconnection to avoid known 20-minute data stream freeze bug.
 - 2026-01-06: **Added CPU-friendly optimizations** - Added asyncio.sleep(0) yields after each trade to prevent CPU monopolization, reduced logging frequency from 500 to 1000 trades. Recommended by Replit support for Reserved VM stability.

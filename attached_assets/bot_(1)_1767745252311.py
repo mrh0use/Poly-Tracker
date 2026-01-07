@@ -6,9 +6,8 @@ from discord.ui import View, Button
 import asyncio
 from datetime import datetime
 from typing import Optional
+from aiohttp import web
 import threading
-import time
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
 from polymarket_client import polymarket_client, PolymarketWebSocket
@@ -1863,45 +1862,43 @@ async def command_error(interaction: discord.Interaction, error):
         )
 
 
-class HealthHandler(BaseHTTPRequestHandler):
-    """Simple HTTP handler for Railway health checks."""
-    
-    def log_message(self, format, *args):
-        pass
-    
-    def do_GET(self):
-        if self.path in ('/', '/health'):
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b'OK')
-        elif self.path == '/metrics':
-            uptime = time.time() - health_start_time
-            ready = bot.is_ready() if bot else False
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(f"uptime: {uptime:.0f}s, ready: {ready}".encode())
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-
+# Health check server for Railway
 def run_health_server():
-    """Railway health check endpoint - runs in separate thread."""
+    """
+    Runs a simple HTTP server for Railway health checks.
+    Railway needs this to know the app is alive, otherwise it sends SIGTERM.
+    """
+    async def health_handler(request):
+        return web.Response(text="OK", status=200)
+    
+    async def metrics_handler(request):
+        uptime = time.time() - bot_start_time if 'bot_start_time' in globals() else 0
+        return web.Response(
+            text=f"uptime_seconds {uptime}\nbot_ready {bot.is_ready()}\n",
+            status=200
+        )
+    
+    app = web.Application()
+    app.router.add_get('/', health_handler)
+    app.router.add_get('/health', health_handler)
+    app.router.add_get('/metrics', metrics_handler)
+    
+    # Railway sets PORT environment variable
     port = int(os.environ.get('PORT', 8080))
-    print(f"[HEALTH] Starting health check server on port {port}", flush=True)
-    server = HTTPServer(('0.0.0.0', port), HealthHandler)
-    server.serve_forever()
-
-
-health_start_time = time.time()
+    print(f"[HEALTH] Starting health check server on port {port}")
+    
+    web.run_app(app, host='0.0.0.0', port=port, print=None)
 
 
 def main():
     import signal
     import traceback
     import sys
+    import time
+    
+    # Global start time for metrics
+    global bot_start_time
+    bot_start_time = time.time()
     
     # Signal handler to log when we receive termination signals
     def signal_handler(signum, frame):
@@ -1915,12 +1912,6 @@ def main():
     # Register signal handlers
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    
-    # Start health server in background thread (required for Railway)
-    health_thread = threading.Thread(target=run_health_server, daemon=True)
-    health_thread.start()
-    print("[HEALTH] Health server thread started", flush=True)
-    time.sleep(2)  # Give health server time to start
     
     # Try DEV_DISCORD_BOT_TOKEN first (for development), then fall back to DISCORD_BOT_TOKEN (production)
     token = os.environ.get('DEV_DISCORD_BOT_TOKEN') or os.environ.get('DISCORD_BOT_TOKEN')
@@ -1936,6 +1927,15 @@ def main():
         return
     
     print("Starting Polymarket Discord Bot...")
+    
+    # Start health check server in a separate thread (Railway needs this!)
+    # This MUST start before bot.run() so Railway knows the app is alive
+    health_thread = threading.Thread(target=run_health_server, daemon=True)
+    health_thread.start()
+    print("[HEALTH] Health server thread started")
+    
+    # Give health server a moment to start
+    time.sleep(2)
     
     try:
         bot.run(token)
