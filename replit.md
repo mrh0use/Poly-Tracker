@@ -88,6 +88,9 @@ Note: Only BUY transactions are tracked (sells are excluded). Sports markets and
 
 ## Recent Changes
 
+- 2026-01-07: **Fixed critical whale threshold bug** - Threshold comparisons now use `(config.whale_threshold or 10000.0)` fallback to prevent None comparison failures. Fixed in both WebSocket handler and monitor_loop.
+- 2026-01-07: **Added on_guild_join command sync** - Bot now automatically syncs slash commands when joining new servers, so /setup is immediately available.
+- 2026-01-07: **Added comprehensive alert logging** - All channel.send() calls now log: ALERT TRIGGERED, channel fetch result, specific Discord errors (Forbidden, NotFound, HTTPException), and success with message ID.
 - 2026-01-07: **Added Railway health check server (async v2)** - Bot now starts an async HTTP server on port 8080 (or $PORT) in the same event loop as Discord. Uses asyncio.create_task() for guaranteed startup order - health server binds before Discord bot starts. Endpoints: `/` and `/health` return "OK", `/metrics` returns uptime and ready status.
 - 2026-01-06: **Removed WebSocket ping/pong logic** - Railway/cloud proxies don't forward ping frames properly, causing reconnection storms. Now uses data activity timeout only (2 minutes). Backup WebSocket and 15-minute proactive reconnect remain for resilience.
 - 2026-01-06: **Major WebSocket resilience overhaul** - Based on Polymarket community best practices (GitHub issue #26): backup WebSocket ready for instant failover, 2-minute data timeout detection, proactive 15-minute reconnection to avoid known 20-minute data stream freeze bug.
