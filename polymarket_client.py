@@ -836,13 +836,22 @@ class PolymarketClient:
 
 
 class PolymarketWebSocket:
+    """
+    Production-ready WebSocket client for Polymarket RTDS feed.
+    
+    KEY CHANGE: Does NOT rely on ping/pong for health monitoring.
+    Instead uses data activity timeout which works reliably across all platforms.
+    """
+    
     RTDS_URL = "wss://ws-live-data.polymarket.com"
+    
     DATA_TIMEOUT = 120
     MAX_CONNECTION_AGE = 900
-    DEBUG_MODE = True
-    DEBUG_LOG_FIRST_N = 10
     
-    def __init__(self, on_trade_callback: Callable[[Dict[str, Any]], None] = None):
+    DEBUG_MODE = False
+    DEBUG_LOG_FIRST_N = 20
+    
+    def __init__(self, on_trade_callback: Optional[Callable] = None):
         self.on_trade_callback = on_trade_callback
         self._running = False
         self._reconnect_delay = 2
@@ -850,7 +859,6 @@ class PolymarketWebSocket:
         
         self._primary_ws = None
         self._backup_ws = None
-        self._active_connection = "primary"
         
         self._last_data_time = time.time()
         self._connection_start_time = time.time()
@@ -869,7 +877,7 @@ class PolymarketWebSocket:
         self._monitor_task = None
     
     def _is_ws_open(self, ws) -> bool:
-        """Check if a WebSocket connection is open (works with websockets 15.x)."""
+        """Check if a WebSocket connection is open."""
         if ws is None:
             return False
         try:
@@ -925,7 +933,10 @@ class PolymarketWebSocket:
                 print(f"[WS BACKUP] Error maintaining backup: {e}", flush=True)
     
     async def _monitor_health(self):
-        """Monitor connection health and trigger reconnection if needed."""
+        """
+        Monitor connection health using ONLY data activity timeout.
+        This is reliable across all platforms unlike ping/pong.
+        """
         while self._running:
             try:
                 await asyncio.sleep(10)
@@ -935,7 +946,7 @@ class PolymarketWebSocket:
                 connection_age = now - self._connection_start_time
                 
                 if data_age > self.DATA_TIMEOUT:
-                    print(f"[WS MONITOR] No data for {data_age:.0f}s - switching to backup", flush=True)
+                    print(f"[WS MONITOR] No data for {data_age:.0f}s (>{self.DATA_TIMEOUT}s) - switching to backup", flush=True)
                     await self._switch_to_backup()
                 
                 elif connection_age > self.MAX_CONNECTION_AGE:
@@ -1008,8 +1019,11 @@ class PolymarketWebSocket:
                 self._backup_task = asyncio.create_task(self._maintain_backup())
                 self._monitor_task = asyncio.create_task(self._monitor_health())
                 
+                print("[WebSocket] Connected - NO PING mode (data activity timeout only)", flush=True)
+                
                 if self.DEBUG_MODE:
-                    print(f"[WS DEBUG] Started: data timeout {self.DATA_TIMEOUT}s, max age {self.MAX_CONNECTION_AGE}s (NO PING - data activity only)", flush=True)
+                    print(f"[WS DEBUG] Started: data timeout {self.DATA_TIMEOUT}s, max age {self.MAX_CONNECTION_AGE}s", flush=True)
+                    print(f"[WS DEBUG] NO PING/PONG - using data activity only for health", flush=True)
                 
                 while self._running:
                     try:
