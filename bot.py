@@ -1642,9 +1642,16 @@ async def handle_websocket_trade(trade: dict):
             ServerConfig.is_paused == False
         ).all()
         
+        print(f"[WS DEBUG] Found {len(configs)} total ServerConfig records", flush=True)
+        for c in configs:
+            print(f"[WS DEBUG] Guild {c.guild_id}: whale_ch={c.whale_channel_id}, alert_ch={c.alert_channel_id}, paused={c.is_paused}", flush=True)
+        
         configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id or c.top_trader_channel_id or c.bonds_channel_id or c.tracked_wallet_channel_id or c.whale_channel_id or c.fresh_wallet_channel_id]
         
+        print(f"[WS DEBUG] After filtering for channels: {len(configs)} configs", flush=True)
+        
         if not configs:
+            print("[WS DEBUG] No configs with channels - returning early", flush=True)
             return
         
         all_tracked = session.query(TrackedWallet).all()
