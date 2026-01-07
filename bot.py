@@ -66,6 +66,16 @@ class PolymarketBot(commands.Bot):
             self.websocket_started = True
             asyncio.create_task(start_websocket())
             print("WebSocket task scheduled")
+        
+        # Log all server configs at startup
+        session = get_session()
+        try:
+            all_configs = session.query(ServerConfig).all()
+            print(f"[STARTUP] Found {len(all_configs)} server configs:", flush=True)
+            for c in all_configs:
+                print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 10000:,.0f}, sports=${c.sports_threshold or 5000:,.0f}, paused={c.is_paused}", flush=True)
+        finally:
+            session.close()
 
 
 bot = PolymarketBot()
@@ -1660,6 +1670,10 @@ async def handle_websocket_trade(trade: dict):
         is_sports = polymarket_client.is_sports_market(trade)
         is_bond = price >= 0.95
         
+        # Log every BUY trade above $1k for debugging
+        if value >= 1000:
+            print(f"[WS DEBUG] Processing BUY: ${value:,.0f}, wallet={wallet[:10]}..., is_sports={is_sports}, is_bond={is_bond}, price={price:.2f}", flush=True)
+        
         configs = session.query(ServerConfig).filter(
             ServerConfig.is_paused == False
         ).all()
@@ -1710,6 +1724,14 @@ async def handle_websocket_trade(trade: dict):
         for config in configs:
             tracked_addresses = tracked_by_guild.get(config.guild_id, {})
             button_view = create_trade_button_view(event_slug, market_url)
+            
+            # Log threshold comparison for trades >= $1k
+            if value >= 1000:
+                whale_threshold = config.whale_threshold or 10000.0
+                if value >= whale_threshold:
+                    print(f"[WS DEBUG] ✓ Guild {config.guild_id}: Trade ${value:,.0f} >= whale ${whale_threshold:,.0f} - QUALIFIES", flush=True)
+                else:
+                    print(f"[WS DEBUG] ✗ Guild {config.guild_id}: Trade ${value:,.0f} < whale ${whale_threshold:,.0f}", flush=True)
             
             if wallet in tracked_addresses:
                 tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
