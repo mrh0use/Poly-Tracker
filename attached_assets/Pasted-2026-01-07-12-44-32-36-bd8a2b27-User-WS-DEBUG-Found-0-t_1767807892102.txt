@@ -1,0 +1,212 @@
+2026-01-07 12:44:32.36
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:32.36
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:32.36
+bd8a2b27
+User
+[WS DEBUG] Trade received: $1
+2026-01-07 12:44:32.36
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:32.56
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:32.56
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:32.56
+bd8a2b27
+User
+[WS DEBUG] Trade received: $1
+2026-01-07 12:44:32.56
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:32.72
+bd8a2b27
+User
+[WS DEBUG] Trade received: $5
+2026-01-07 12:44:32.92
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:32.92
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:32.92
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:32.92
+bd8a2b27
+User
+[WS DEBUG] Trade received: $5
+2026-01-07 12:44:33.12
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:33.12
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:33.12
+bd8a2b27
+User
+[WS DEBUG] Trade received: $5
+2026-01-07 12:44:33.12
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:33.28
+bd8a2b27
+User
+[WS DEBUG] Trade received: $4
+2026-01-07 12:44:33.48
+bd8a2b27
+User
+[WS DEBUG] Trade received: $6
+2026-01-07 12:44:33.64
+bd8a2b27
+User
+[WS DEBUG] Trade received: $13
+2026-01-07 12:44:33.84
+bd8a2b27
+User
+[WS DEBUG] Trade received: $49
+2026-01-07 12:44:34.04
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:34.04
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:34.04
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:34.04
+bd8a2b27
+User
+[WS DEBUG] Trade received: $1
+2026-01-07 12:44:34.21
+bd8a2b27
+User
+[WS DEBUG] Trade received: $13
+2026-01-07 12:44:34.41
+bd8a2b27
+User
+[WS DEBUG] Trade received: $48
+2026-01-07 12:44:34.57
+bd8a2b27
+User
+[WS DEBUG] Trade received: $11
+2026-01-07 12:44:34.74
+bd8a2b27
+User
+[WS DEBUG] Trade received: $6
+2026-01-07 12:44:34.90
+bd8a2b27
+User
+[WS DEBUG] Trade received: $9
+2026-01-07 12:44:35.11
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:35.11
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:35.11
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:35.11
+bd8a2b27
+User
+[WS DEBUG] Trade received: $12
+2026-01-07 12:44:35.27
+bd8a2b27
+User
+[WS DEBUG] Trade received: $53
+2026-01-07 12:44:35.44
+bd8a2b27
+User
+[WS DEBUG] Trade received: $9
+2026-01-07 12:44:35.60
+bd8a2b27
+User
+[WS DEBUG] Trade received: $12
+2026-01-07 12:44:35.77
+bd8a2b27
+User
+[WS DEBUG] Trade received: $12
+2026-01-07 12:44:35.93
+bd8a2b27
+User
+[WS DEBUG] Trade received: $5
+2026-01-07 12:44:36.14
+bd8a2b27
+User
+[WS DEBUG] Trade received: $6
+2026-01-07 12:44:36.34
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:36.34
+bd8a2b27
+User
+[WS DEBUG] Trade received: $12
+2026-01-07 12:44:36.34
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:36.34
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:36.50
+bd8a2b27
+User
+[WS DEBUG] Trade received: $5
+2026-01-07 12:44:36.66
+bd8a2b27
+User
+[WS DEBUG] Trade received: $6
+2026-01-07 12:44:36.83
+bd8a2b27
+User
+[WS DEBUG] Trade received: $12
+2026-01-07 12:44:37.02
+bd8a2b27
+User
+[WS DEBUG] Trade received: $2
+2026-01-07 12:44:37.22
+bd8a2b27
+User
+[WS DEBUG] Found 0 total ServerConfig records
+2026-01-07 12:44:37.22
+bd8a2b27
+User
+[WS DEBUG] No configs with channels - returning early
+2026-01-07 12:44:37.22
+bd8a2b27
+User
+[WS DEBUG] After filtering for channels: 0 configs
+2026-01-07 12:44:37.22
+bd8a2b27
+User
+[WS DEBUG] Trade received: $9
+2026-01-07 12:44:37.39
+bd8a2b27
+User
+[WS DEBUG] Trade received
