@@ -2248,6 +2248,7 @@ async def handle_websocket_trade(trade: dict):
             
             if is_sports:
                 top_trader_threshold = config.top_trader_threshold or 5000.0
+                sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                     top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
@@ -2263,7 +2264,9 @@ async def handle_websocket_trade(trade: dict):
                         )
                         try:
                             message = await top_channel.send(embed=embed, view=button_view)
+                            sent_top_trader_alert = True
                             print(f"[WS] ✓ ALERT SENT: Sports top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] Top trader takes priority - skipping sports whale routing", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
                         except discord.NotFound as e:
@@ -2274,6 +2277,9 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send sports top trader alert to {config.top_trader_channel_id}", flush=True)
+                
+                if sent_top_trader_alert:
+                    continue
                 
                 sports_channel = await get_or_fetch_channel(config.sports_channel_id)
                 if sports_channel:
@@ -2345,6 +2351,7 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
             else:
                 top_trader_threshold = config.top_trader_threshold or 5000.0
+                sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                     top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
@@ -2361,7 +2368,9 @@ async def handle_websocket_trade(trade: dict):
                         try:
                             message = await top_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
+                            sent_top_trader_alert = True
                             print(f"[WS] ✓ ALERT SENT: Top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] Top trader takes priority - skipping whale/fresh routing", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
                         except discord.NotFound as e:
@@ -2373,7 +2382,10 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send top trader alert to {config.top_trader_channel_id}", flush=True)
                 
-                if is_bond and value >= 5000.0 and config.bonds_channel_id and not top_trader_info:
+                if sent_top_trader_alert:
+                    continue
+                
+                if is_bond and value >= 5000.0 and config.bonds_channel_id:
                     print(f"[WS] ALERT TRIGGERED: Bonds ${value:,.0f}, attempting channel {config.bonds_channel_id}", flush=True)
                     bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
                     print(f"[WS] Channel fetch result: {bonds_channel} (type: {type(bonds_channel).__name__ if bonds_channel else 'None'})", flush=True)
