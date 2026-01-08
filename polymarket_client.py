@@ -501,13 +501,17 @@ class PolymarketClient:
                     data = await resp.json()
                     if isinstance(data, list):
                         for trader in data[:limit]:
+                            proxy_wallet = trader.get('proxyWallet', '').lower()
                             traders.append({
-                                'address': trader.get('userAddress', '').lower(),
+                                'address': proxy_wallet,
                                 'username': trader.get('userName'),
                                 'pnl': float(trader.get('pnl', 0) or 0),
                                 'volume': float(trader.get('vol', 0) or 0),
                                 'rank': trader.get('rank'),
-                                'proxy_wallet': None
+                                'proxy_wallet': proxy_wallet,
+                                'profile_image': trader.get('profileImage'),
+                                'x_username': trader.get('xUsername'),
+                                'verified': trader.get('verifiedBadge', False)
                             })
                         self._top_traders_cache = traders
                         self._top_traders_updated = now
@@ -515,19 +519,8 @@ class PolymarketClient:
                         for t in traders[:5]:
                             print(f"  Top #{t.get('rank', '?')}: {t['address'][:10]}... ({t.get('username', 'Unknown')}) - ${t.get('pnl', 0):,.0f} PnL")
                         
-                        print(f"[TOP TRADERS] Fetching proxy wallets for {len(traders)} traders...", flush=True)
-                        proxy_map = {}
-                        for trader in traders:
-                            try:
-                                proxy = await self.get_user_proxy_wallet(trader['address'])
-                                if proxy:
-                                    trader['proxy_wallet'] = proxy
-                                    proxy_map[proxy] = trader
-                                    print(f"  Mapped proxy {proxy[:10]}... -> {trader.get('username', 'Unknown')}", flush=True)
-                            except Exception as e:
-                                pass
-                        self._proxy_to_trader_map = proxy_map
-                        print(f"[TOP TRADERS] Mapped {len(proxy_map)} proxy wallets", flush=True)
+                        self._proxy_to_trader_map = {t['proxy_wallet']: t for t in traders if t['proxy_wallet']}
+                        print(f"[TOP TRADERS] Loaded {len(traders)} top traders", flush=True)
         except Exception as e:
             print(f"Error fetching top traders: {e}")
         
@@ -577,12 +570,15 @@ class PolymarketClient:
                         username = user_data.get('userName')
                         print(f"[LOOKUP] {wallet_address[:10]}... -> Rank #{rank}, {username}", flush=True)
                         if rank is not None and rank <= 25:
+                            proxy_wallet = user_data.get('proxyWallet', '').lower()
                             return {
-                                'address': wallet_address.lower(),
+                                'address': proxy_wallet,
+                                'proxy_wallet': proxy_wallet,
                                 'username': username,
                                 'pnl': float(user_data.get('pnl', 0) or 0),
                                 'volume': float(user_data.get('vol', 0) or 0),
-                                'rank': rank
+                                'rank': rank,
+                                'verified': user_data.get('verifiedBadge', False)
                             }
                         else:
                             # Cache negative result (not top 25) for 24 hours
