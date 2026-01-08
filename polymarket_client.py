@@ -472,6 +472,9 @@ class PolymarketClient:
                         self._top_traders_cache = traders
                         self._top_traders_updated = now
                         print(f"Top traders cache refreshed: {len(traders)} entries")
+                        # Log top 5 for debugging
+                        for t in traders[:5]:
+                            print(f"  Top #{t.get('rank', '?')}: {t['address'][:10]}... ({t.get('username', 'Unknown')}) - ${t.get('pnl', 0):,.0f} PnL")
         except Exception as e:
             print(f"Error fetching top traders: {e}")
         

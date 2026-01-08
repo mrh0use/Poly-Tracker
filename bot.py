@@ -1745,6 +1745,12 @@ async def volatility_loop():
             one_hour_ago = now - timedelta(minutes=60)
             cooldown_time = now - timedelta(minutes=120)
             
+            # Debug: Check how many old snapshots exist for volatility comparison
+            old_snapshot_count = session.query(PriceSnapshot).filter(
+                PriceSnapshot.captured_at <= one_hour_ago
+            ).count()
+            print(f"[VOLATILITY] Status: {len(markets)} markets fetched, {old_snapshot_count} snapshots older than 1 hour available for comparison", flush=True)
+            
             for market in markets:
                 condition_id = market['condition_id']
                 current_price = market['yes_price']
@@ -1970,6 +1976,10 @@ async def handle_websocket_trade(trade: dict):
             session.commit()
         
         top_trader_info = polymarket_client.is_top_trader(wallet)
+        
+        # Debug: Log top trader checks for significant trades
+        if value >= 5000 and top_trader_info:
+            print(f"[WS] TOP TRADER DETECTED: {wallet[:10]}... ${value:,.0f} - Rank #{top_trader_info.get('rank')} ({top_trader_info.get('username', 'Unknown')})", flush=True)
         
         trade_timestamp = trade.get('timestamp', 0)
         trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
