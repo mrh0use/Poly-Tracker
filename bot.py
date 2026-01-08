@@ -1981,22 +1981,32 @@ async def handle_websocket_trade(trade: dict):
     side = trade.get('side', '').upper()
     
     # Record price for SELLs (they move markets too!) but don't process further
+    # Use asset (token ID) not conditionId to avoid mixing different outcomes
+    # Only track Yes outcomes to avoid redundant Yes/No alerts (they're inverses)
     if side == 'SELL':
         price = float(trade.get('price', 0) or 0)
-        condition_id = trade.get('conditionId') or trade.get('condition_id') or trade.get('asset_id', '')
-        if condition_id and price > 0:
+        asset_id = trade.get('asset', '')
+        outcome = trade.get('outcome', 'Yes')
+        outcome_index = trade.get('outcomeIndex', 0)
+        if asset_id and price > 0 and (outcome == 'Yes' or outcome_index == 0):
             market_title = trade.get('title', '') or polymarket_client.get_market_title(trade)
             slug = trade.get('slug', '') or polymarket_client.get_market_slug(trade)
-            volatility_manager.record_price(condition_id, price, market_title, slug)
+            volatility_manager.record_price(asset_id, price, market_title, slug)
         return
     
     # VOLATILITY TRACKING: Record price for ALL trades (before any filtering)
+    # Use asset (token ID) not conditionId to avoid mixing different outcomes
+    # Only track Yes outcomes (outcomeIndex 0) to avoid duplicate alerts
+    # No price is just (1 - Yes price), so tracking both is redundant
     price = float(trade.get('price', 0) or 0)
-    condition_id = trade.get('conditionId') or trade.get('condition_id') or trade.get('asset_id', '')
-    if condition_id and price > 0:
+    asset_id = trade.get('asset', '')
+    outcome = trade.get('outcome', 'Yes')
+    outcome_index = trade.get('outcomeIndex', 0)
+    
+    if asset_id and price > 0 and (outcome == 'Yes' or outcome_index == 0):
         market_title = trade.get('title', '') or polymarket_client.get_market_title(trade)
         slug = trade.get('slug', '') or polymarket_client.get_market_slug(trade)
-        volatility_manager.record_price(condition_id, price, market_title, slug)
+        volatility_manager.record_price(asset_id, price, market_title, slug)
         
         # Check for volatility alerts
         if bot.is_ready():
@@ -2005,19 +2015,19 @@ async def handle_websocket_trade(trade: dict):
             
             for config in volatility_configs:
                 threshold = config.volatility_threshold or 5.0
-                alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold)
+                alert = volatility_manager.check_volatility(asset_id, config.guild_id, threshold)
                 
                 if alert:
                     try:
                         vol_session = get_session()
-                        cooldown_time = datetime.utcnow() - timedelta(minutes=30)
+                        cooldown_time = datetime.utcnow() - timedelta(minutes=15)
                         recent_db_alert = vol_session.query(VolatilityAlert).filter(
-                            VolatilityAlert.condition_id == condition_id,
+                            VolatilityAlert.condition_id == asset_id,
                             VolatilityAlert.alerted_at >= cooldown_time
                         ).first()
                         
                         if not recent_db_alert:
-                            print(f"[VOLATILITY] ALERT: {alert['title'][:30]}... swing {alert['price_change_pct']:+.1f} pts", flush=True)
+                            print(f"[VOLATILITY] {alert['time_window_minutes']}min alert: {alert['title'][:40]}... {alert['price_change_pct']:+.1f} pts ({alert['old_price']*100:.0f}%→{alert['new_price']*100:.0f}%)", flush=True)
                             channel = await get_or_fetch_channel(config.volatility_channel_id)
                             if channel:
                                 embed, vol_market_url = create_volatility_alert_embed(
@@ -2028,12 +2038,12 @@ async def handle_websocket_trade(trade: dict):
                                     price_change=alert['price_change_pct'],
                                     time_window_minutes=alert['time_window_minutes']
                                 )
-                                vol_event_slug = polymarket_client.get_event_slug_by_condition(condition_id, alert['slug'])
+                                vol_event_slug = polymarket_client.get_event_slug_by_condition(asset_id, alert['slug'])
                                 button_view = create_trade_button_view(vol_event_slug, vol_market_url)
                                 
                                 try:
                                     message = await channel.send(embed=embed, view=button_view)
-                                    vol_session.add(VolatilityAlert(condition_id=condition_id, price_change=alert['price_change_pct']))
+                                    vol_session.add(VolatilityAlert(condition_id=asset_id, price_change=alert['price_change_pct']))
                                     vol_session.commit()
                                     _ws_stats['alerts_sent'] += 1
                                     print(f"[VOLATILITY] ✓ ALERT SENT to channel {config.volatility_channel_id}", flush=True)
