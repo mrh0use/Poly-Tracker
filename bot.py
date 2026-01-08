@@ -4,8 +4,9 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import asyncio
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Deque
+from collections import deque
 from aiohttp import web
 import time
 
@@ -79,6 +80,114 @@ def invalidate_tracked_wallet_cache():
     """Invalidate cache when tracked wallets are updated."""
     global _tracked_wallet_cache_time
     _tracked_wallet_cache_time = 0
+
+
+class VolatilityWindowManager:
+    """In-memory manager for real-time volatility detection using rolling price windows."""
+    
+    def __init__(self, window_minutes: int = 10, max_entries_per_market: int = 1500):
+        self.window_minutes = window_minutes
+        self.max_entries = max_entries_per_market
+        self._price_windows: Dict[str, Deque] = {}
+        self._market_metadata: Dict[str, dict] = {}
+        self._alert_cooldowns: Dict[str, datetime] = {}
+        self._cooldown_minutes = 30
+    
+    def record_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
+        """Record a price point for a market. Called on every trade."""
+        if condition_id not in self._price_windows:
+            self._price_windows[condition_id] = deque(maxlen=self.max_entries)
+            self._market_metadata[condition_id] = {}
+        
+        now = datetime.utcnow()
+        self._price_windows[condition_id].append((now, price))
+        
+        if title:
+            self._market_metadata[condition_id]['title'] = title
+        if slug:
+            self._market_metadata[condition_id]['slug'] = slug
+        
+        self._prune_old_entries(condition_id)
+    
+    def seed_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
+        """Seed initial price for a market (called on startup)."""
+        self.record_price(condition_id, price, title, slug)
+    
+    def _prune_old_entries(self, condition_id: str):
+        """Remove entries older than the window."""
+        if condition_id not in self._price_windows:
+            return
+        
+        cutoff = datetime.utcnow() - timedelta(minutes=self.window_minutes + 5)
+        window = self._price_windows[condition_id]
+        
+        while window and window[0][0] < cutoff:
+            window.popleft()
+    
+    def check_volatility(self, condition_id: str, threshold_pct: float = 20.0) -> Optional[dict]:
+        """
+        Check if market has a price swing exceeding threshold.
+        Returns alert info dict or None if no alert needed.
+        """
+        if condition_id not in self._price_windows:
+            return None
+        
+        window = self._price_windows[condition_id]
+        if len(window) < 2:
+            return None
+        
+        now = datetime.utcnow()
+        min_age = now - timedelta(minutes=self.window_minutes)
+        
+        oldest_valid = None
+        for timestamp, price in window:
+            if timestamp <= min_age:
+                oldest_valid = (timestamp, price)
+                break
+        
+        if oldest_valid is None:
+            return None
+        
+        old_time, old_price = oldest_valid
+        _, current_price = window[-1]
+        
+        if old_price <= 0.01 or old_price >= 0.99:
+            return None
+        
+        price_change_pct = ((current_price - old_price) / old_price) * 100
+        
+        if abs(price_change_pct) < threshold_pct:
+            return None
+        
+        if condition_id in self._alert_cooldowns:
+            cooldown_until = self._alert_cooldowns[condition_id]
+            if now < cooldown_until:
+                return None
+        
+        self._alert_cooldowns[condition_id] = now + timedelta(minutes=self._cooldown_minutes)
+        
+        metadata = self._market_metadata.get(condition_id, {})
+        return {
+            'condition_id': condition_id,
+            'title': metadata.get('title', 'Unknown Market'),
+            'slug': metadata.get('slug', ''),
+            'old_price': old_price,
+            'new_price': current_price,
+            'price_change_pct': price_change_pct,
+            'time_window_minutes': self.window_minutes
+        }
+    
+    def get_stats(self) -> dict:
+        """Get stats for debugging."""
+        total_entries = sum(len(w) for w in self._price_windows.values())
+        return {
+            'markets_tracked': len(self._price_windows),
+            'total_price_entries': total_entries,
+            'active_cooldowns': len([c for c, t in self._alert_cooldowns.items() if t > datetime.utcnow()])
+        }
+
+
+volatility_manager = VolatilityWindowManager(window_minutes=10)
 
 
 class PolymarketBot(commands.Bot):
