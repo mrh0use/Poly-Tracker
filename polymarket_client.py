@@ -81,6 +81,36 @@ class PolymarketClient:
         'sean strickland', 'ufc fight', 'boxing match',
     ]
     
+    CRYPTO_KEYWORDS = [
+        'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'crypto', 'cryptocurrency',
+        'dogecoin', 'doge', 'cardano', 'ada', 'ripple', 'xrp', 'polkadot', 'dot', 'chainlink',
+        'avalanche', 'avax', 'polygon', 'matic', 'cosmos', 'atom', 'uniswap', 'litecoin', 'ltc',
+        'defi', 'nft', 'blockchain', 'coinbase', 'binance', 'kraken', 'ftx',
+        'bitcoin price', 'eth price', 'crypto market', 'altcoin', 'memecoin',
+        'satoshi', 'halving', 'staking', 'mining', 'web3', 'dao',
+    ]
+    
+    POLITICS_KEYWORDS = [
+        'trump', 'biden', 'harris', 'election', 'president', 'congress', 'senate', 'governor',
+        'republican', 'democrat', 'gop', 'dnc', 'rnc', 'primary', 'electoral', 'vote', 'ballot',
+        'impeachment', 'legislation', 'bill', 'law', 'policy', 'administration',
+        'white house', 'capitol', 'scotus', 'supreme court', 'federal reserve', 'fed rate',
+        'desantis', 'newsom', 'ocasio-cortez', 'pelosi', 'mcconnell', 'schumer',
+        'midterm', 'swing state', 'polling', 'approval rating',
+        'russia', 'ukraine', 'china', 'taiwan', 'north korea', 'iran', 'israel', 'palestine', 'gaza',
+        'nato', 'un', 'g7', 'g20', 'tariff', 'sanction', 'treaty', 'diplomacy',
+    ]
+    
+    ENTERTAINMENT_KEYWORDS = [
+        'oscars', 'emmy', 'grammy', 'golden globe', 'academy award', 'netflix', 'disney',
+        'marvel', 'dc', 'box office', 'movie', 'film', 'actor', 'actress', 'celebrity',
+        'taylor swift', 'beyonce', 'drake', 'kanye', 'kardashian', 'elon musk', 'twitter',
+        'tiktok', 'youtube', 'spotify', 'streaming', 'album', 'concert', 'tour',
+        'reality tv', 'bachelor', 'survivor', 'american idol', 'the voice',
+        'met gala', 'super bowl halftime', 'coachella', 'burning man',
+        'video game', 'playstation', 'xbox', 'nintendo', 'steam', 'twitch',
+    ]
+    
     def __init__(self):
         self.session: Optional[aiohttp.ClientSession] = None
         self._known_wallets: set = set()
@@ -289,6 +319,42 @@ class PolymarketClient:
                 return True
         
         return False
+    
+    def detect_market_category(self, trade_or_event: Dict[str, Any]) -> str:
+        """
+        Detect the category of a market.
+        Returns: 'sports', 'crypto', 'politics', 'entertainment', or 'other'
+        """
+        if self.is_sports_market(trade_or_event):
+            return 'sports'
+        
+        market_info = self.get_market_info(trade_or_event)
+        title = ''
+        slug = ''
+        
+        if market_info:
+            title = market_info.get('title', '').lower()
+            slug = market_info.get('slug', '').lower()
+        
+        title = title or trade_or_event.get('title', '').lower()
+        slug = slug or trade_or_event.get('slug', '').lower()
+        outcome = trade_or_event.get('outcome', '').lower()
+        
+        all_text = f"{slug} {title} {outcome}"
+        
+        for term in self.CRYPTO_KEYWORDS:
+            if term in all_text:
+                return 'crypto'
+        
+        for term in self.POLITICS_KEYWORDS:
+            if term in all_text:
+                return 'politics'
+        
+        for term in self.ENTERTAINMENT_KEYWORDS:
+            if term in all_text:
+                return 'entertainment'
+        
+        return 'other'
     
     def calculate_trade_value(self, trade: Dict[str, Any]) -> float:
         try:

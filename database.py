@@ -36,6 +36,7 @@ class ServerConfig(Base):
     top_trader_threshold = Column(Float, default=2500.0)
     volatility_threshold = Column(Float, default=20.0)
     volatility_window_minutes = Column(BigInteger, default=60)
+    volatility_category = Column(String(50), default='all')  # all, sports, crypto, politics, entertainment
     is_paused = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

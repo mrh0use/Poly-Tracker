@@ -85,7 +85,7 @@ def invalidate_tracked_wallet_cache():
 class VolatilityWindowManager:
     """In-memory manager for real-time volatility detection using rolling price windows."""
     
-    def __init__(self, window_minutes: int = 15, max_entries_per_market: int = 2000):
+    def __init__(self, window_minutes: int = 15, max_entries_per_market: int = 2000, warmup_minutes: int = 15):
         self.window_minutes = window_minutes
         self.max_entries = max_entries_per_market
         self._price_windows: Dict[str, Deque] = {}
@@ -93,6 +93,8 @@ class VolatilityWindowManager:
         self._alert_cooldowns: Dict[str, datetime] = {}
         self._cooldown_minutes = 30
         self._use_absolute_change = True  # Use percentage points instead of relative %
+        self._startup_time = datetime.utcnow()
+        self._warmup_minutes = warmup_minutes  # Ignore alerts during warm-up period
     
     def record_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
         """Record a price point for a market. Called on every trade."""
@@ -131,14 +133,17 @@ class VolatilityWindowManager:
         Cooldowns are per guild to support multi-tenant alerting.
         Returns alert info dict or None if no alert needed.
         """
+        now = datetime.utcnow()
+        
+        if now < self._startup_time + timedelta(minutes=self._warmup_minutes):
+            return None
+        
         if condition_id not in self._price_windows:
             return None
         
         window = self._price_windows[condition_id]
         if len(window) < 2:
             return None
-        
-        now = datetime.utcnow()
         effective_window = window_minutes if window_minutes else self.window_minutes
         min_age = now - timedelta(minutes=effective_window)
         
@@ -959,6 +964,44 @@ async def volatility_window_cmd(interaction: discord.Interaction, minutes: app_c
         if not interaction.response.is_done():
             await interaction.response.send_message(
                 f"Error saving window: {str(e)}",
+                ephemeral=True
+            )
+    finally:
+        session.close()
+
+
+@bot.tree.command(name="volatility_category", description="Filter volatility alerts by market category")
+@app_commands.describe(category="Category to filter by")
+@app_commands.choices(category=[
+    app_commands.Choice(name="All Markets", value="all"),
+    app_commands.Choice(name="Sports/Esports", value="sports"),
+    app_commands.Choice(name="Crypto", value="crypto"),
+    app_commands.Choice(name="Politics", value="politics"),
+    app_commands.Choice(name="Entertainment", value="entertainment"),
+])
+@app_commands.checks.has_permissions(administrator=True)
+async def volatility_category_cmd(interaction: discord.Interaction, category: app_commands.Choice[str]):
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.volatility_category = category.value
+        session.commit()
+        invalidate_server_config_cache()
+        print(f"[CMD] Volatility category updated to {category.value} for guild {interaction.guild_id}", flush=True)
+        
+        await interaction.response.send_message(
+            f"Volatility alerts will only show **{category.name}** markets",
+            ephemeral=True
+        )
+    except Exception as e:
+        print(f"[CMD ERROR] volatility_category command failed: {e}", flush=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Error saving category filter: {str(e)}",
                 ephemeral=True
             )
     finally:
@@ -1960,6 +2003,13 @@ async def handle_websocket_trade(trade: dict):
             for config in volatility_configs:
                 threshold = config.volatility_threshold or 5.0
                 window_mins = config.volatility_window_minutes or 15
+                category_filter = getattr(config, 'volatility_category', 'all') or 'all'
+                
+                if category_filter != 'all':
+                    market_category = polymarket_client.detect_market_category(trade)
+                    if market_category != category_filter:
+                        continue
+                
                 alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold, window_mins)
                 
                 if alert:
