@@ -1822,7 +1822,7 @@ async def before_monitor():
 
 async def seed_initial_prices():
     """Seed initial prices into in-memory volatility manager on startup."""
-    markets = await polymarket_client.get_active_markets_prices(limit=200)
+    markets = await polymarket_client.get_active_markets_prices(limit=500, include_sports=True)
     
     for market in markets:
         condition_id = market['condition_id']
@@ -1840,7 +1840,7 @@ async def seed_initial_prices():
 async def volatility_loop():
     """Periodic price refresh to keep in-memory volatility tracker current for markets with no recent trades."""
     try:
-        markets = await polymarket_client.get_active_markets_prices(limit=200)
+        markets = await polymarket_client.get_active_markets_prices(limit=500, include_sports=True)
         
         for market in markets:
             condition_id = market['condition_id']
@@ -2053,8 +2053,19 @@ async def handle_websocket_trade(trade: dict):
         
         top_trader_info = polymarket_client.is_top_trader(wallet)
         
-        # Debug: Log top trader checks for significant trades
-        if value >= 5000 and top_trader_info:
+        if not top_trader_info and value >= 10000:
+            try:
+                top_trader_info = await asyncio.wait_for(
+                    polymarket_client.lookup_trader_rank(wallet),
+                    timeout=3.0
+                )
+                if top_trader_info:
+                    polymarket_client._proxy_to_trader_map[wallet.lower()] = top_trader_info
+                    print(f"[WS] DISCOVERED TOP TRADER: {wallet[:10]}... is Rank #{top_trader_info.get('rank')} ({top_trader_info.get('username', 'Unknown')})", flush=True)
+            except asyncio.TimeoutError:
+                pass
+        
+        if top_trader_info:
             print(f"[WS] TOP TRADER DETECTED: {wallet[:10]}... ${value:,.0f} - Rank #{top_trader_info.get('rank')} ({top_trader_info.get('username', 'Unknown')})", flush=True)
         
         trade_timestamp = trade.get('timestamp', 0)

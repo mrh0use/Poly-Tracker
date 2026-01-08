@@ -29,6 +29,7 @@ class PolymarketClient:
         self._wallet_history_updated: Dict[str, datetime] = {}
         self._top_traders_cache: List[Dict[str, Any]] = []
         self._top_traders_updated: Optional[datetime] = None
+        self._proxy_to_trader_map: Dict[str, Dict[str, Any]] = {}
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -443,6 +444,43 @@ class PolymarketClient:
         self._wallet_stats_updated[wallet_lower] = now
         return stats
     
+    async def get_user_proxy_wallet(self, user_address: str) -> Optional[str]:
+        """Fetch a user's proxy wallet from gamma API profile."""
+        await self.ensure_session()
+        
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/profiles/{user_address}",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    proxy = data.get('proxyWallet', '').lower()
+                    if proxy and proxy != user_address.lower():
+                        return proxy
+                    funder = data.get('funder', '').lower()
+                    if funder and funder != user_address.lower():
+                        return funder
+        except Exception:
+            pass
+        
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/positions",
+                params={"user": user_address},
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        proxy = data[0].get('proxyWallet', '').lower()
+                        if proxy and proxy != user_address.lower():
+                            return proxy
+        except Exception:
+            pass
+        
+        return None
+    
     async def get_top_traders(self, limit: int = 25, force_refresh: bool = False) -> List[Dict[str, Any]]:
         now = datetime.utcnow()
         
@@ -467,14 +505,28 @@ class PolymarketClient:
                                 'username': trader.get('userName'),
                                 'pnl': float(trader.get('pnl', 0) or 0),
                                 'volume': float(trader.get('vol', 0) or 0),
-                                'rank': trader.get('rank')
+                                'rank': trader.get('rank'),
+                                'proxy_wallet': None
                             })
                         self._top_traders_cache = traders
                         self._top_traders_updated = now
                         print(f"Top traders cache refreshed: {len(traders)} entries")
-                        # Log top 5 for debugging
                         for t in traders[:5]:
                             print(f"  Top #{t.get('rank', '?')}: {t['address'][:10]}... ({t.get('username', 'Unknown')}) - ${t.get('pnl', 0):,.0f} PnL")
+                        
+                        print(f"[TOP TRADERS] Fetching proxy wallets for {len(traders)} traders...", flush=True)
+                        proxy_map = {}
+                        for trader in traders:
+                            try:
+                                proxy = await self.get_user_proxy_wallet(trader['address'])
+                                if proxy:
+                                    trader['proxy_wallet'] = proxy
+                                    proxy_map[proxy] = trader
+                                    print(f"  Mapped proxy {proxy[:10]}... -> {trader.get('username', 'Unknown')}", flush=True)
+                            except Exception as e:
+                                pass
+                        self._proxy_to_trader_map = proxy_map
+                        print(f"[TOP TRADERS] Mapped {len(proxy_map)} proxy wallets", flush=True)
         except Exception as e:
             print(f"Error fetching top traders: {e}")
         
@@ -482,9 +534,47 @@ class PolymarketClient:
     
     def is_top_trader(self, wallet_address: str) -> Optional[Dict[str, Any]]:
         wallet_lower = wallet_address.lower()
+        
+        if wallet_lower in self._proxy_to_trader_map:
+            return self._proxy_to_trader_map[wallet_lower]
+        
         for trader in self._top_traders_cache:
             if trader['address'] == wallet_lower:
                 return trader
+            if trader.get('proxy_wallet') and trader['proxy_wallet'] == wallet_lower:
+                return trader
+        return None
+    
+    async def lookup_trader_rank(self, wallet_address: str) -> Optional[Dict[str, Any]]:
+        """Look up a wallet's leaderboard info - checks if they're in top 25."""
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/v1/leaderboard",
+                params={"user": wallet_address, "timePeriod": "ALL"},
+                timeout=aiohttp.ClientTimeout(total=3)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        user_data = data[0]
+                        rank_raw = user_data.get('rank')
+                        try:
+                            rank = int(rank_raw) if rank_raw is not None else None
+                        except (ValueError, TypeError):
+                            rank = None
+                        username = user_data.get('userName')
+                        print(f"[LOOKUP] {wallet_address[:10]}... -> Rank #{rank}, {username}", flush=True)
+                        if rank is not None and rank <= 25:
+                            return {
+                                'address': wallet_address.lower(),
+                                'username': username,
+                                'pnl': float(user_data.get('pnl', 0) or 0),
+                                'volume': float(user_data.get('vol', 0) or 0),
+                                'rank': rank
+                            }
+        except Exception as e:
+            print(f"[LOOKUP] Error for {wallet_address[:10]}...: {e}", flush=True)
         return None
     
     def get_market_slug(self, trade_or_activity: Dict[str, Any]) -> Optional[str]:
@@ -546,7 +636,7 @@ class PolymarketClient:
         hashed = hashlib.sha256(raw_key.encode()).hexdigest()[:64]
         return f"A_{hashed}"
     
-    async def get_active_markets_prices(self, limit: int = 200) -> List[Dict[str, Any]]:
+    async def get_active_markets_prices(self, limit: int = 500, include_sports: bool = True) -> List[Dict[str, Any]]:
         await self.ensure_session()
         try:
             async with self.session.get(
@@ -557,7 +647,7 @@ class PolymarketClient:
                     markets = await resp.json()
                     result = []
                     for m in markets:
-                        if self.is_sports_market(m):
+                        if not include_sports and self.is_sports_market(m):
                             continue
                         condition_id = m.get('conditionId')
                         if not condition_id:
