@@ -652,6 +652,16 @@ async def list_settings(interaction: discord.Interaction):
             tracked_ch = interaction.guild.get_channel(config.tracked_wallet_channel_id)
             tracked_wallet_channel_name = tracked_ch.name if tracked_ch else None
         
+        top_trader_channel_name = None
+        if config.top_trader_channel_id:
+            top_ch = interaction.guild.get_channel(config.top_trader_channel_id)
+            top_trader_channel_name = top_ch.name if top_ch else None
+        
+        bonds_channel_name = None
+        if config.bonds_channel_id:
+            bonds_ch = interaction.guild.get_channel(config.bonds_channel_id)
+            bonds_channel_name = bonds_ch.name if bonds_ch else None
+        
         embed = create_settings_embed(
             guild_name=interaction.guild.name,
             channel_name=channel_name,
@@ -660,13 +670,17 @@ async def list_settings(interaction: discord.Interaction):
             is_paused=config.is_paused,
             tracked_wallets=tracked,
             volatility_channel_name=volatility_channel_name,
-            volatility_threshold=config.volatility_threshold or 20.0,
+            volatility_threshold=config.volatility_threshold or 5.0,
             sports_channel_name=sports_channel_name,
             sports_threshold=config.sports_threshold or 5000.0,
             wallet_stats=wallet_stats,
             whale_channel_name=whale_channel_name,
             fresh_wallet_channel_name=fresh_wallet_channel_name,
-            tracked_wallet_channel_name=tracked_wallet_channel_name
+            tracked_wallet_channel_name=tracked_wallet_channel_name,
+            top_trader_channel_name=top_trader_channel_name,
+            top_trader_threshold=config.top_trader_threshold or 2500.0,
+            bonds_channel_name=bonds_channel_name,
+            volatility_window_minutes=config.volatility_window_minutes or 15
         )
         
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -1299,7 +1313,7 @@ async def help_command(interaction: discord.Interaction):
     )
     embed.add_field(
         name="/volatility #channel",
-        value="Set the channel for volatility alerts (20%+ swings)",
+        value="Set the channel for volatility alerts (price swings)",
         inline=False
     )
     embed.add_field(
@@ -1348,8 +1362,18 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     embed.add_field(
-        name="/volatility_threshold <percentage>",
-        value="Set the minimum % swing for volatility alerts (default: 20%)",
+        name="/volatility_threshold <points>",
+        value="Set the minimum percentage point swing for volatility alerts (default: 5 points)",
+        inline=False
+    )
+    embed.add_field(
+        name="/volatility_window",
+        value="Set the time window for volatility detection (5/10/15/30/60 minutes, default: 15)",
+        inline=False
+    )
+    embed.add_field(
+        name="/top_trader_threshold <amount>",
+        value="Set minimum USD value for top trader alerts (default: $2,500)",
         inline=False
     )
     embed.add_field(

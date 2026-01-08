@@ -17,6 +17,56 @@ class PolymarketClient:
                    'formula-1', 'cricket', 'esports', 'league-of-legends', 'dota', 'csgo',
                    'valorant', 'nba-games', 'nfl-games', 'epl', 'premier-league', 'champions-league'}
     
+    SPORTS_KEYWORDS = [
+        'nba', 'nfl', 'mlb', 'nhl', 'ufc', 'boxing', 'soccer', 'basketball', 'baseball',
+        'hockey', 'tennis', 'golf', 'f1', 'epl', 'premier-league', 'super-bowl', 'world-series',
+        'stanley-cup', 'esports', 'league-of-legends', 'dota', 'csgo', 'valorant',
+        'champions-league', 'mma', 'cricket', 'fifa', 'world-cup', 'olympics', 'ncaa',
+        'college-football', 'college-basketball', 'la liga', 'serie a', 'bundesliga', 'ligue 1',
+        'nba trade', 'nfl trade', 'mlb trade', 'nhl trade', 'trade deadline',
+        'nba playoffs', 'nfl playoffs', 'mlb playoffs', 'nhl playoffs',
+        'warriors', 'lakers', 'celtics', 'nets', 'bulls', 'knicks', 'heat', 'bucks',
+        'sixers', '76ers', 'suns', 'nuggets', 'clippers', 'mavericks', 'mavs',
+        'rockets', 'timberwolves', 'grizzlies', 'pelicans', 'thunder', 'blazers',
+        'hawks', 'hornets', 'cavaliers', 'cavs', 'pistons', 'pacers', 'magic', 'wizards', 'raptors',
+        'patriots', 'chiefs', 'cowboys', 'eagles', 'packers', '49ers', 'niners', 'ravens',
+        'bills', 'dolphins', 'jets', 'steelers', 'bengals', 'browns', 'titans', 'colts',
+        'jaguars', 'texans', 'broncos', 'raiders', 'chargers', 'seahawks',
+        'rams', 'vikings', 'bears', 'lions', 'commanders', 'saints', 'falcons',
+        'buccaneers', 'bucs', 'panthers',
+        'yankees', 'dodgers', 'red sox', 'cubs', 'mets', 'braves', 'astros', 'phillies',
+        'padres', 'rangers', 'orioles', 'twins', 'guardians', 'mariners', 'rays', 'blue jays',
+        'brewers', 'diamondbacks', 'd-backs', 'rockies', 'reds',
+        'pirates', 'nationals', 'marlins', 'royals', 'tigers', 'white sox', 'angels', 'athletics',
+        'real madrid', 'barcelona', 'atletico madrid', 'atletico', 'manchester united',
+        'man united', 'manchester city', 'man city', 'liverpool', 'chelsea', 'arsenal',
+        'tottenham', 'bayern munich', 'bayern', 'borussia dortmund', 'dortmund',
+        'juventus', 'inter milan', 'ac milan', 'napoli', 'roma', 'psg', 'paris saint-germain',
+        'marseille', 'lyon', 'ajax', 'benfica', 'porto', 'sevilla', 'valencia',
+        'villarreal', 'athletic bilbao', 'real sociedad', 'getafe', 'celta vigo', 'betis',
+        'west ham', 'newcastle', 'aston villa', 'everton', 'wolves', 'brighton', 'crystal palace',
+        'brentford', 'fulham', 'bournemouth', 'nottingham forest', 'leicester', 'ipswich',
+        'lebron james', 'stephen curry', 'kevin durant', 'giannis antetokounmpo', 'nikola jokic',
+        'joel embiid', 'jayson tatum', 'luka doncic', 'ja morant', 'anthony edwards',
+        'devin booker', 'damian lillard', 'james harden',
+        'patrick mahomes', 'joe burrow', 'josh allen', 'lamar jackson', 'jalen hurts',
+        'justin herbert', 'dak prescott', 'aaron rodgers', 'tom brady', 'travis kelce',
+        'tyreek hill', 'jamarr chase', 'justin jefferson', 'stefon diggs', 'derrick henry',
+        'aaron judge', 'shohei ohtani', 'mike trout', 'mookie betts', 'juan soto',
+        'ronald acuna', 'fernando tatis', 'vladimir guerrero',
+        'cristiano ronaldo', 'lionel messi', 'kylian mbappe', 'erling haaland', 'vinicius jr',
+        'jude bellingham', 'mohamed salah', 'kevin de bruyne', 'harry kane', 'heung-min son',
+        'bukayo saka', 'martin odegaard', 'phil foden', 'cole palmer', 'declan rice',
+        'eredivisie', 'primeira liga', 'super lig',
+        'copa america', 'euro 2024', 'euros', 'copa libertadores', 'concacaf',
+        'nba finals', 'super bowl', 'stanley cup',
+        'grand slam', 'wimbledon', 'us open tennis', 'french open', 'australian open',
+        'pga tour', 'ryder cup', 'formula 1', 'grand prix', 'f1 race',
+        'jake paul', 'mike tyson', 'canelo alvarez', 'tyson fury', 'oleksandr usyk',
+        'anthony joshua', 'conor mcgregor', 'jon jones', 'israel adesanya', 'alex pereira',
+        'sean strickland', 'ufc fight', 'boxing match',
+    ]
+    
     def __init__(self):
         self.session: Optional[aiohttp.ClientSession] = None
         self._known_wallets: set = set()
@@ -198,14 +248,7 @@ class PolymarketClient:
             slug = market_info.get('slug', '').lower()
             title = market_info.get('title', '').lower()
             
-            sports_terms = ['nba', 'nfl', 'mlb', 'nhl', 'ufc', 'boxing', 'soccer', 
-                           'basketball', 'baseball', 'hockey', 'tennis', 'golf', 
-                           'f1', 'epl', 'premier-league', 'super-bowl', 'world-series', 
-                           'stanley-cup', 'esports', 'league-of-legends', 'dota', 'csgo',
-                           'valorant', 'champions-league', 'mma', 'cricket', 'fifa',
-                           'world-cup', 'olympics', 'ncaa', 'college-football', 'college-basketball']
-            
-            for term in sports_terms:
+            for term in self.SPORTS_KEYWORDS:
                 if term in slug or term in title:
                     return True
         
@@ -227,18 +270,7 @@ class PolymarketClient:
         
         all_text = f"{slug} {title} {outcome}"
         
-        sports_terms = ['nba', 'nfl', 'mlb', 'nhl', 'ufc', 'boxing', 'soccer', 
-                       'basketball', 'baseball', 'hockey', 'tennis', 'golf', 
-                       'f1', 'epl', 'premier-league', 'super-bowl', 'world-series', 
-                       'stanley-cup', 'esports', 'league-of-legends', 'dota', 'csgo',
-                       'valorant', 'champions-league', 'mma', 'cricket', 'fifa',
-                       'world-cup', 'olympics', 'ncaa', 'college-football', 'college-basketball',
-                       'warriors', 'lakers', 'celtics', 'nets', 'bulls', 'knicks',
-                       'patriots', 'chiefs', 'cowboys', 'eagles', 'packers', '49ers',
-                       'yankees', 'dodgers', 'red sox', 'cubs', 'mets', 'braves',
-                       'lebron', 'curry', 'durant', 'mahomes', 'brady', 'ronaldo', 'messi']
-        
-        for term in sports_terms:
+        for term in self.SPORTS_KEYWORDS:
             if term in all_text:
                 return True
         

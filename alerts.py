@@ -699,7 +699,11 @@ def create_settings_embed(
     wallet_stats: Optional[Dict[str, Any]] = None,
     whale_channel_name: Optional[str] = None,
     fresh_wallet_channel_name: Optional[str] = None,
-    tracked_wallet_channel_name: Optional[str] = None
+    tracked_wallet_channel_name: Optional[str] = None,
+    top_trader_channel_name: Optional[str] = None,
+    top_trader_threshold: float = 2500.0,
+    bonds_channel_name: Optional[str] = None,
+    volatility_window_minutes: int = 15
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -752,7 +756,7 @@ def create_settings_embed(
     
     embed.add_field(
         name="Volatility Alerts",
-        value=f"#{volatility_channel_name} ({volatility_threshold:.0f}%+)" if volatility_channel_name else "Not configured",
+        value=f"#{volatility_channel_name} ({volatility_threshold:.0f} pts, {volatility_window_minutes}min)" if volatility_channel_name else "Not configured",
         inline=True
     )
     
@@ -763,8 +767,14 @@ def create_settings_embed(
     )
     
     embed.add_field(
-        name="\u200b",
-        value="\u200b",
+        name="Top Trader Alerts",
+        value=f"#{top_trader_channel_name} (${top_trader_threshold:,.0f}+)" if top_trader_channel_name else "Not configured",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Bonds Alerts",
+        value=f"#{bonds_channel_name} ($5,000+, 95%+)" if bonds_channel_name else "Not configured",
         inline=True
     )
     
