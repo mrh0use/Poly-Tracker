@@ -633,25 +633,34 @@ def create_volatility_alert_embed(
     price_change: float,
     time_window_minutes: int = 60
 ) -> Embed:
-    direction = "up" if price_change > 0 else "down"
     arrow = "+" if price_change > 0 else ""
     color = 0x27AE60 if price_change > 0 else 0xE74C3C
     
-    # Dynamic emoji based on magnitude
     abs_change = abs(price_change)
-    if abs_change >= 20:
+    if time_window_minutes <= 5:
         emoji = "🚨"
-    elif abs_change >= 10:
-        emoji = "📈" if price_change > 0 else "📉"
-    else:
+        urgency = "RAPID"
+    elif time_window_minutes <= 15:
         emoji = "⚡"
+        urgency = "Fast"
+    else:
+        emoji = "📊"
+        urgency = "Swing"
+    
+    if abs_change >= 25:
+        emoji = "🔥"
+    
+    if time_window_minutes >= 60:
+        time_str = f"{time_window_minutes // 60}hr"
+    else:
+        time_str = f"{time_window_minutes}min"
     
     market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
     market_display = get_market_link(market_title, market_url)
     
     embed = Embed(
-        title=f"{emoji} Volatility Alert",
-        description=f"Price moved **{arrow}{price_change:.1f} points** in {time_window_minutes} minutes.",
+        title=f"{emoji} {urgency} Alert ({time_str})",
+        description=f"**{arrow}{price_change:.1f} points** in {time_str}\n{old_price*100:.0f}% → {new_price*100:.0f}%",
         color=color,
         timestamp=datetime.utcnow()
     )
@@ -663,24 +672,24 @@ def create_volatility_alert_embed(
     )
     
     embed.add_field(
-        name="Previous Price",
+        name="Before",
         value=f"{old_price*100:.1f}%",
         inline=True
     )
     
     embed.add_field(
-        name="Current Price",
+        name="Now",
         value=f"{new_price*100:.1f}%",
         inline=True
     )
     
     embed.add_field(
-        name="Change",
+        name="Δ",
         value=f"{arrow}{price_change:.1f} pts",
         inline=True
     )
     
-    embed.set_footer(text=f"Polymarket Volatility Monitor • {time_window_minutes}min window")
+    embed.set_footer(text=f"Volatility • {time_str} window")
     
     return embed, market_url
 

@@ -83,18 +83,18 @@ def invalidate_tracked_wallet_cache():
 
 
 class VolatilityWindowManager:
-    """In-memory manager for real-time volatility detection using rolling price windows."""
+    """In-memory manager for real-time volatility detection using multiple rolling time windows."""
     
-    def __init__(self, window_minutes: int = 15, max_entries_per_market: int = 2000, warmup_minutes: int = 15):
-        self.window_minutes = window_minutes
+    def __init__(self, windows_minutes: list = None, max_entries_per_market: int = 5000, warmup_minutes: int = 5):
+        self.windows_minutes = windows_minutes or [5, 15, 60]
         self.max_entries = max_entries_per_market
         self._price_windows: Dict[str, Deque] = {}
         self._market_metadata: Dict[str, dict] = {}
         self._alert_cooldowns: Dict[str, datetime] = {}
-        self._cooldown_minutes = 30
-        self._use_absolute_change = True  # Use percentage points instead of relative %
+        self._cooldown_minutes = 15
+        self._use_absolute_change = True
         self._startup_time = datetime.utcnow()
-        self._warmup_minutes = warmup_minutes  # Ignore alerts during warm-up period
+        self._warmup_minutes = warmup_minutes
     
     def reset_warmup(self):
         """Reset the warm-up timer (call on WebSocket reconnection to prevent false alerts)."""
@@ -114,29 +114,43 @@ class VolatilityWindowManager:
             self._market_metadata[condition_id]['title'] = title
         if slug:
             self._market_metadata[condition_id]['slug'] = slug
-        
-        self._prune_old_entries(condition_id)
     
     def seed_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
         """Seed initial price for a market (called on startup)."""
         self.record_price(condition_id, price, title, slug)
     
-    def _prune_old_entries(self, condition_id: str):
-        """Remove entries older than the window + buffer. Keep enough data for comparison."""
-        if condition_id not in self._price_windows:
-            return
+    def _get_oldest_in_window(self, window: Deque, window_start: datetime) -> Optional[tuple]:
+        """Get the oldest price entry within the time window (>= window_start)."""
+        if not window:
+            return None
         
-        cutoff = datetime.utcnow() - timedelta(minutes=self.window_minutes + 10)
-        window = self._price_windows[condition_id]
-        
-        while len(window) > 2 and window[0][0] < cutoff:
-            window.popleft()
+        for timestamp, price in window:
+            if timestamp >= window_start:
+                return (timestamp, price)
+        return None
     
-    def check_volatility(self, condition_id: str, guild_id: int, threshold_pct: float = 20.0, window_minutes: int = None) -> Optional[dict]:
+    def _get_price_before_time(self, window: Deque, target_time: datetime) -> Optional[tuple]:
+        """Get the newest price entry before target_time (<= target_time)."""
+        if not window:
+            return None
+        
+        best = None
+        for timestamp, price in window:
+            if timestamp <= target_time:
+                best = (timestamp, price)
+            else:
+                break
+        return best
+    
+    def check_volatility(self, condition_id: str, guild_id: int, threshold_pct: float = 5.0) -> Optional[dict]:
         """
-        Check if market has a price swing exceeding threshold.
-        Cooldowns are per guild to support multi-tenant alerting.
-        Returns alert info dict or None if no alert needed.
+        Check if market has a price swing exceeding threshold across ANY timeframe.
+        Returns the shortest timeframe that triggers (most urgent).
+        Uses ABSOLUTE percentage point change.
+        
+        For each window, compares current price against:
+        1. First: any price from before the window start (traditional swing detection)
+        2. Fallback: oldest price within the window (for rapid swings)
         """
         now = datetime.utcnow()
         
@@ -149,65 +163,79 @@ class VolatilityWindowManager:
         window = self._price_windows[condition_id]
         if len(window) < 2:
             return None
-        effective_window = window_minutes if window_minutes else self.window_minutes
-        min_age = now - timedelta(minutes=effective_window)
         
-        # Find oldest price within the configured window
-        oldest_in_window = None
-        for timestamp, price in window:
-            if timestamp <= min_age:
-                oldest_in_window = (timestamp, price)
-            else:
-                break
+        current_time, current_price = window[-1]
         
-        if oldest_in_window is None:
+        if current_price <= 0.02 or current_price >= 0.98:
             return None
         
-        oldest_time, oldest_price = oldest_in_window
-        _, current_price = window[-1]
+        for window_minutes in sorted(self.windows_minutes):
+            window_start = now - timedelta(minutes=window_minutes)
+            
+            old_entry = self._get_price_before_time(window, window_start)
+            if old_entry is None:
+                old_entry = self._get_oldest_in_window(window, window_start)
+            
+            if old_entry is None:
+                continue
+            
+            old_time, old_price = old_entry
+            
+            if old_price <= 0.02 or old_price >= 0.98:
+                continue
+            
+            price_change_pct = (current_price - old_price) * 100
+            
+            if abs(price_change_pct) < threshold_pct:
+                continue
+            
+            cooldown_key = f"{condition_id}:{guild_id}:{window_minutes}"
+            if cooldown_key in self._alert_cooldowns:
+                if now < self._alert_cooldowns[cooldown_key]:
+                    continue
+            
+            self._alert_cooldowns[cooldown_key] = now + timedelta(minutes=self._cooldown_minutes)
+            
+            metadata = self._market_metadata.get(condition_id, {})
+            return {
+                'condition_id': condition_id,
+                'title': metadata.get('title', 'Unknown Market'),
+                'slug': metadata.get('slug', ''),
+                'old_price': old_price,
+                'new_price': current_price,
+                'price_change_pct': price_change_pct,
+                'time_window_minutes': window_minutes
+            }
         
-        if oldest_price <= 0.01 or oldest_price >= 0.99:
-            return None
+        return None
+    
+    def cleanup_old_data(self):
+        """Remove price data older than largest window + buffer."""
+        max_window = max(self.windows_minutes)
+        cutoff = datetime.utcnow() - timedelta(minutes=max_window + 15)
         
-        # ABSOLUTE change: difference in percentage points (e.g., 0.50 -> 0.55 = 5 points)
-        if self._use_absolute_change:
-            price_change_pct = (current_price - oldest_price) * 100
-        else:
-            price_change_pct = ((current_price - oldest_price) / oldest_price) * 100
+        for condition_id, window in list(self._price_windows.items()):
+            while len(window) > 2 and window[0][0] < cutoff:
+                window.popleft()
         
-        if abs(price_change_pct) < threshold_pct:
-            return None
-        
-        cooldown_key = f"{condition_id}:{guild_id}"
-        if cooldown_key in self._alert_cooldowns:
-            cooldown_until = self._alert_cooldowns[cooldown_key]
-            if now < cooldown_until:
-                return None
-        
-        self._alert_cooldowns[cooldown_key] = now + timedelta(minutes=self._cooldown_minutes)
-        
-        metadata = self._market_metadata.get(condition_id, {})
-        return {
-            'condition_id': condition_id,
-            'title': metadata.get('title', 'Unknown Market'),
-            'slug': metadata.get('slug', ''),
-            'old_price': oldest_price,
-            'new_price': current_price,
-            'price_change_pct': price_change_pct,
-            'time_window_minutes': effective_window
-        }
+        now = datetime.utcnow()
+        expired = [k for k, v in self._alert_cooldowns.items() if v < now]
+        for k in expired:
+            del self._alert_cooldowns[k]
     
     def get_stats(self) -> dict:
         """Get stats for debugging."""
         total_entries = sum(len(w) for w in self._price_windows.values())
+        active_cooldowns = len([k for k, v in self._alert_cooldowns.items() if v > datetime.utcnow()])
         return {
             'markets_tracked': len(self._price_windows),
             'total_price_entries': total_entries,
-            'active_cooldowns': len([c for c, t in self._alert_cooldowns.items() if t > datetime.utcnow()])
+            'active_cooldowns': active_cooldowns,
+            'timeframes': self.windows_minutes
         }
 
 
-volatility_manager = VolatilityWindowManager(window_minutes=15)
+volatility_manager = VolatilityWindowManager(windows_minutes=[5, 15, 60])
 
 
 class PolymarketBot(commands.Bot):
@@ -1932,8 +1960,10 @@ async def volatility_loop():
             
             volatility_manager.record_price(condition_id, current_price, title, slug)
         
+        volatility_manager.cleanup_old_data()
+        
         stats = volatility_manager.get_stats()
-        print(f"[VOLATILITY] In-memory stats: {stats['markets_tracked']} markets, {stats['total_price_entries']} price points, {stats['active_cooldowns']} active cooldowns", flush=True)
+        print(f"[VOLATILITY] Stats: {stats['markets_tracked']} markets, {stats['total_price_entries']} prices, {stats['active_cooldowns']} cooldowns, windows={stats['timeframes']}", flush=True)
     except Exception as e:
         print(f"Error in volatility refresh: {e}")
 
@@ -1988,8 +2018,14 @@ async def handle_websocket_trade(trade: dict):
     wallet = wallet.lower()
     side = trade.get('side', '').upper()
     
-    # Skip SELLs early
+    # Record price for SELLs (they move markets too!) but don't process further
     if side == 'SELL':
+        price = float(trade.get('price', 0) or 0)
+        condition_id = trade.get('conditionId') or trade.get('condition_id') or trade.get('asset_id', '')
+        if condition_id and price > 0:
+            market_title = trade.get('title', '') or polymarket_client.get_market_title(trade)
+            slug = trade.get('slug', '') or polymarket_client.get_market_slug(trade)
+            volatility_manager.record_price(condition_id, price, market_title, slug)
         return
     
     # VOLATILITY TRACKING: Record price for ALL trades (before any filtering)
@@ -2007,7 +2043,6 @@ async def handle_websocket_trade(trade: dict):
             
             for config in volatility_configs:
                 threshold = config.volatility_threshold or 5.0
-                window_mins = config.volatility_window_minutes or 15
                 category_filter = getattr(config, 'volatility_category', 'all') or 'all'
                 
                 if category_filter != 'all':
@@ -2015,7 +2050,7 @@ async def handle_websocket_trade(trade: dict):
                     if market_category != category_filter:
                         continue
                 
-                alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold, window_mins)
+                alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold)
                 
                 if alert:
                     try:

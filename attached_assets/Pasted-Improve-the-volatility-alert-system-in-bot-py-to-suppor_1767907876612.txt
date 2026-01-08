@@ -1,0 +1,262 @@
+Improve the volatility alert system in bot.py to support multi-timeframe detection and catch rapid swings:
+Changes to bot.py:
+1. Replace the entire VolatilityWindowManager class (around lines 85-207) with this multi-timeframe version:
+pythonclass VolatilityWindowManager:
+    """In-memory manager for real-time volatility detection using multiple rolling time windows."""
+    
+    def __init__(self, windows_minutes: list = None, max_entries_per_market: int = 5000, warmup_minutes: int = 5):
+        self.windows_minutes = windows_minutes or [5, 15, 60]
+        self.max_entries = max_entries_per_market
+        self._price_windows: Dict[str, Deque] = {}
+        self._market_metadata: Dict[str, dict] = {}
+        self._alert_cooldowns: Dict[str, datetime] = {}
+        self._cooldown_minutes = 15  # Reduced from 30 to catch ongoing swings
+        self._use_absolute_change = True
+        self._startup_time = datetime.utcnow()
+        self._warmup_minutes = warmup_minutes
+    
+    def reset_warmup(self):
+        """Reset the warm-up timer (call on WebSocket reconnection to prevent false alerts)."""
+        self._startup_time = datetime.utcnow()
+        print(f"[VOLATILITY] Warm-up timer reset - suppressing alerts for {self._warmup_minutes} minutes", flush=True)
+    
+    def record_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
+        """Record a price point for a market. Called on every trade."""
+        if condition_id not in self._price_windows:
+            self._price_windows[condition_id] = deque(maxlen=self.max_entries)
+            self._market_metadata[condition_id] = {}
+        
+        now = datetime.utcnow()
+        self._price_windows[condition_id].append((now, price))
+        
+        if title:
+            self._market_metadata[condition_id]['title'] = title
+        if slug:
+            self._market_metadata[condition_id]['slug'] = slug
+    
+    def seed_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
+        """Seed initial price for a market (called on startup)."""
+        self.record_price(condition_id, price, title, slug)
+    
+    def _get_price_near_time(self, window: Deque, target_time: datetime) -> Optional[tuple]:
+        """Get the price entry closest to target time (but not after)."""
+        if not window:
+            return None
+        
+        best = None
+        for timestamp, price in window:
+            if timestamp <= target_time:
+                best = (timestamp, price)
+            else:
+                break
+        return best
+    
+    def check_volatility(self, condition_id: str, guild_id: int, threshold_pct: float = 5.0) -> Optional[dict]:
+        """
+        Check if market has a price swing exceeding threshold across ANY timeframe.
+        Returns the shortest timeframe that triggers (most urgent).
+        Uses ABSOLUTE percentage point change.
+        """
+        now = datetime.utcnow()
+        
+        # Skip during warmup period
+        if now < self._startup_time + timedelta(minutes=self._warmup_minutes):
+            return None
+        
+        if condition_id not in self._price_windows:
+            return None
+        
+        window = self._price_windows[condition_id]
+        if len(window) < 2:
+            return None
+        
+        current_time, current_price = window[-1]
+        
+        # Skip extreme prices (already resolved or nearly resolved)
+        if current_price <= 0.02 or current_price >= 0.98:
+            return None
+        
+        # Check each timeframe, shortest first (so we alert on most urgent)
+        for window_minutes in sorted(self.windows_minutes):
+            target_time = now - timedelta(minutes=window_minutes)
+            
+            old_entry = self._get_price_near_time(window, target_time)
+            if old_entry is None:
+                continue
+            
+            old_time, old_price = old_entry
+            
+            # Make sure we have data old enough for this window
+            if old_time > target_time:
+                continue
+            
+            # Skip if old price was extreme
+            if old_price <= 0.02 or old_price >= 0.98:
+                continue
+            
+            # ABSOLUTE change: percentage points (0.50 -> 0.60 = 10 points)
+            price_change_pct = (current_price - old_price) * 100
+            
+            if abs(price_change_pct) < threshold_pct:
+                continue
+            
+            # Check cooldown for this market+guild+timeframe combo
+            cooldown_key = f"{condition_id}:{guild_id}:{window_minutes}"
+            if cooldown_key in self._alert_cooldowns:
+                if now < self._alert_cooldowns[cooldown_key]:
+                    continue
+            
+            # Set cooldown
+            self._alert_cooldowns[cooldown_key] = now + timedelta(minutes=self._cooldown_minutes)
+            
+            metadata = self._market_metadata.get(condition_id, {})
+            return {
+                'condition_id': condition_id,
+                'title': metadata.get('title', 'Unknown Market'),
+                'slug': metadata.get('slug', ''),
+                'old_price': old_price,
+                'new_price': current_price,
+                'price_change_pct': price_change_pct,
+                'time_window_minutes': window_minutes
+            }
+        
+        return None
+    
+    def cleanup_old_data(self):
+        """Remove price data older than largest window + buffer."""
+        max_window = max(self.windows_minutes)
+        cutoff = datetime.utcnow() - timedelta(minutes=max_window + 15)
+        
+        for condition_id, window in list(self._price_windows.items()):
+            while len(window) > 2 and window[0][0] < cutoff:
+                window.popleft()
+        
+        # Cleanup expired cooldowns
+        now = datetime.utcnow()
+        expired = [k for k, v in self._alert_cooldowns.items() if v < now]
+        for k in expired:
+            del self._alert_cooldowns[k]
+    
+    def get_stats(self) -> dict:
+        """Get stats for debugging."""
+        total_entries = sum(len(w) for w in self._price_windows.values())
+        active_cooldowns = len([k for k, v in self._alert_cooldowns.items() if v > datetime.utcnow()])
+        return {
+            'markets_tracked': len(self._price_windows),
+            'total_price_entries': total_entries,
+            'active_cooldowns': active_cooldowns,
+            'timeframes': self.windows_minutes
+        }
+2. Update the volatility_manager instantiation (around line 210):
+Change from:
+pythonvolatility_manager = VolatilityWindowManager(window_minutes=15)
+To:
+pythonvolatility_manager = VolatilityWindowManager(windows_minutes=[5, 15, 60])
+3. Track SELL prices before filtering them out
+Find the section around lines 1991-1993 that says:
+python    # Skip SELLs early
+    if side == 'SELL':
+        return
+Change it to:
+python    # Record price for SELLs (they move markets too!) but don't process further
+    if side == 'SELL':
+        price = float(trade.get('price', 0) or 0)
+        condition_id = trade.get('conditionId') or trade.get('condition_id') or trade.get('asset_id', '')
+        if condition_id and price > 0:
+            market_title = trade.get('title', '') or polymarket_client.get_market_title(trade)
+            slug = trade.get('slug', '') or polymarket_client.get_market_slug(trade)
+            volatility_manager.record_price(condition_id, price, market_title, slug)
+        return
+4. Simplify the volatility check call (around line 2018)
+Since the manager now handles multiple timeframes internally, simplify the check. Find:
+python                window_mins = config.volatility_window_minutes or 15
+and
+python                alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold, window_mins)
+Change to:
+python                alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold)
+(Remove the window_mins variable and parameter since multi-timeframe is now handled internally)
+5. Update the volatility_loop to call cleanup (find the volatility_loop function, around line 1920):
+Add volatility_manager.cleanup_old_data() at the end of the loop. Find the stats print line and add cleanup before it:
+python        # Cleanup old data periodically
+        volatility_manager.cleanup_old_data()
+        
+        stats = volatility_manager.get_stats()
+        print(f"[VOLATILITY] Stats: {stats['markets_tracked']} markets, {stats['total_price_entries']} prices, {stats['active_cooldowns']} cooldowns, windows={stats['timeframes']}", flush=True)
+
+Changes to alerts.py:
+Update create_volatility_alert_embed to show urgency based on timeframe:
+Find the function (around line 628) and replace it with:
+pythondef create_volatility_alert_embed(
+    market_title: str,
+    slug: str,
+    old_price: float,
+    new_price: float,
+    price_change: float,
+    time_window_minutes: int = 60
+) -> Embed:
+    arrow = "+" if price_change > 0 else ""
+    color = 0x27AE60 if price_change > 0 else 0xE74C3C
+    
+    # Urgency based on timeframe AND magnitude
+    abs_change = abs(price_change)
+    if time_window_minutes <= 5:
+        emoji = "🚨"
+        urgency = "RAPID"
+    elif time_window_minutes <= 15:
+        emoji = "⚡"
+        urgency = "Fast"
+    else:
+        emoji = "📊"
+        urgency = "Swing"
+    
+    # Override emoji for massive moves
+    if abs_change >= 25:
+        emoji = "🔥"
+    
+    # Format time display
+    if time_window_minutes >= 60:
+        time_str = f"{time_window_minutes // 60}hr"
+    else:
+        time_str = f"{time_window_minutes}min"
+    
+    market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
+    market_display = get_market_link(market_title, market_url)
+    
+    embed = Embed(
+        title=f"{emoji} {urgency} Alert ({time_str})",
+        description=f"**{arrow}{price_change:.1f} points** in {time_str}\n{old_price*100:.0f}% → {new_price*100:.0f}%",
+        color=color,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Market",
+        value=market_display,
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Before",
+        value=f"{old_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Now",
+        value=f"{new_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Δ",
+        value=f"{arrow}{price_change:.1f} pts",
+        inline=True
+    )
+    
+    embed.set_footer(text=f"Volatility • {time_str} window")
+    
+    return embed, market_url
+
+Summary of improvements:
+BeforeAfterSingle 15min window5min, 15min, 60min simultaneouslySELLs ignored completelySELLs update price tracker30min cooldown15min cooldownNo cleanup of old dataPeriodic cleanup in volatility_loopSame alert style for all🚨 RAPID (5min), ⚡ Fast (15min), 📊 Swing (60min)15min warmup5min warmup (faster startup)
+That 60%→99% swing in a few minutes will now trigger a 🚨 RAPID alert almost immediately!
