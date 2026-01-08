@@ -1391,4 +1391,240 @@ class PolymarketWebSocket:
         print("[WebSocket] Disconnected")
 
 
+class PolymarketPriceWebSocket:
+    """
+    WebSocket client for real-time price updates from Polymarket CLOB.
+    Subscribes to the market channel to receive price_change events with best_bid/best_ask.
+    """
+    
+    CLOB_WS_URL = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
+    
+    def __init__(self, on_price_callback: Optional[Callable] = None):
+        self.on_price_callback = on_price_callback
+        self._ws = None
+        self._running = False
+        self._subscribed_assets: set = set()
+        self._asset_metadata: Dict[str, dict] = {}
+        self._reconnect_delay = 5
+        self._max_reconnect_delay = 60
+        self._last_ping_time = 0
+        self._ping_interval = 30
+    
+    async def subscribe_to_markets(self, markets: List[Dict[str, Any]]):
+        """
+        Subscribe to price updates for a list of markets.
+        Each market should have: condition_id, tokens (with token_id, outcome), title, slug
+        """
+        asset_ids = []
+        
+        for market in markets:
+            tokens = market.get('tokens', [])
+            title = market.get('question', market.get('title', 'Unknown'))
+            slug = market.get('slug', '')
+            
+            for token in tokens:
+                token_id = token.get('token_id', '')
+                outcome = token.get('outcome', 'Yes')
+                outcome_index = 0 if outcome == 'Yes' else 1
+                
+                if outcome_index == 0 and token_id:
+                    asset_ids.append(token_id)
+                    self._asset_metadata[token_id] = {
+                        'title': title,
+                        'slug': slug,
+                        'outcome': outcome,
+                        'outcome_index': outcome_index
+                    }
+        
+        self._subscribed_assets = set(asset_ids)
+        print(f"[PriceWS] Prepared {len(asset_ids)} assets for subscription", flush=True)
+        
+        if self._ws and self._running:
+            await self._send_subscription()
+    
+    async def _send_subscription(self):
+        """Send subscription message for all tracked assets."""
+        if not self._ws or not self._subscribed_assets:
+            return
+        
+        subscription = {
+            "assets_ids": list(self._subscribed_assets),
+            "type": "market"
+        }
+        
+        try:
+            await self._ws.send(json.dumps(subscription))
+            print(f"[PriceWS] Subscribed to {len(self._subscribed_assets)} assets", flush=True)
+        except Exception as e:
+            print(f"[PriceWS] Subscription error: {e}", flush=True)
+    
+    async def connect(self):
+        """Main connection loop with automatic reconnection."""
+        self._running = True
+        reconnect_delay = self._reconnect_delay
+        
+        while self._running:
+            try:
+                print(f"[PriceWS] Connecting to {self.CLOB_WS_URL}...", flush=True)
+                
+                async with websockets.connect(
+                    self.CLOB_WS_URL,
+                    ping_interval=30,
+                    ping_timeout=10,
+                    close_timeout=5
+                ) as ws:
+                    self._ws = ws
+                    reconnect_delay = self._reconnect_delay
+                    print("[PriceWS] Connected!", flush=True)
+                    
+                    await self._send_subscription()
+                    
+                    ping_task = asyncio.create_task(self._ping_loop())
+                    
+                    try:
+                        async for message in ws:
+                            await self._handle_message(message)
+                    finally:
+                        ping_task.cancel()
+                        try:
+                            await ping_task
+                        except asyncio.CancelledError:
+                            pass
+                        
+            except websockets.exceptions.ConnectionClosed as e:
+                print(f"[PriceWS] Connection closed: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
+            except Exception as e:
+                print(f"[PriceWS] Error: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
+            
+            self._ws = None
+            
+            if self._running:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 1.5, self._max_reconnect_delay)
+    
+    async def _ping_loop(self):
+        """Send periodic pings to keep connection alive."""
+        while self._running and self._ws:
+            try:
+                await asyncio.sleep(self._ping_interval)
+                if self._ws:
+                    pong = await self._ws.ping()
+                    await asyncio.wait_for(pong, timeout=10)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[PriceWS] Ping failed: {e}", flush=True)
+                break
+    
+    async def _handle_message(self, raw_message: str):
+        """Process incoming WebSocket messages."""
+        try:
+            data = json.loads(raw_message)
+            event_type = data.get('event_type', '')
+            
+            if event_type == 'price_change':
+                await self._handle_price_change(data)
+            elif event_type == 'book':
+                await self._handle_book(data)
+                
+        except json.JSONDecodeError:
+            pass
+        except Exception as e:
+            print(f"[PriceWS] Message handling error: {e}", flush=True)
+    
+    async def _handle_price_change(self, data: dict):
+        """Handle price_change events - these contain best_bid and best_ask."""
+        price_changes = data.get('price_changes', [])
+        timestamp = data.get('timestamp', '')
+        
+        for change in price_changes:
+            asset_id = change.get('asset_id', '')
+            best_bid = change.get('best_bid', '0')
+            best_ask = change.get('best_ask', '0')
+            
+            if not asset_id:
+                continue
+            
+            try:
+                bid = float(best_bid) if best_bid else 0
+                ask = float(best_ask) if best_ask else 0
+                
+                if bid > 0 and ask > 0:
+                    midpoint = (bid + ask) / 2
+                elif bid > 0:
+                    midpoint = bid
+                elif ask > 0:
+                    midpoint = ask
+                else:
+                    continue
+                
+                metadata = self._asset_metadata.get(asset_id, {})
+                
+                if self.on_price_callback:
+                    await self.on_price_callback({
+                        'asset_id': asset_id,
+                        'price': midpoint,
+                        'best_bid': bid,
+                        'best_ask': ask,
+                        'title': metadata.get('title', 'Unknown'),
+                        'slug': metadata.get('slug', ''),
+                        'timestamp': timestamp
+                    })
+                    
+            except (ValueError, TypeError) as e:
+                continue
+    
+    async def _handle_book(self, data: dict):
+        """Handle full book updates - use best bid/ask from order book."""
+        asset_id = data.get('asset_id', '')
+        bids = data.get('bids', [])
+        asks = data.get('asks', [])
+        
+        if not asset_id:
+            return
+        
+        try:
+            best_bid = float(bids[0].get('price', 0)) if bids else 0
+            best_ask = float(asks[0].get('price', 0)) if asks else 0
+            
+            if best_bid > 0 and best_ask > 0:
+                midpoint = (best_bid + best_ask) / 2
+            elif best_bid > 0:
+                midpoint = best_bid
+            elif best_ask > 0:
+                midpoint = best_ask
+            else:
+                return
+            
+            metadata = self._asset_metadata.get(asset_id, {})
+            
+            if self.on_price_callback:
+                await self.on_price_callback({
+                    'asset_id': asset_id,
+                    'price': midpoint,
+                    'best_bid': best_bid,
+                    'best_ask': best_ask,
+                    'title': metadata.get('title', 'Unknown'),
+                    'slug': metadata.get('slug', ''),
+                    'timestamp': data.get('timestamp', '')
+                })
+                
+        except (ValueError, TypeError, IndexError):
+            pass
+    
+    async def disconnect(self):
+        """Disconnect from the WebSocket."""
+        self._running = False
+        if self._ws:
+            try:
+                await self._ws.close()
+            except:
+                pass
+        self._ws = None
+        print("[PriceWS] Disconnected", flush=True)
+    
+    def is_connected(self) -> bool:
+        return self._ws is not None and self._running
+
+
 polymarket_client = PolymarketClient()
