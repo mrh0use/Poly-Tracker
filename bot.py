@@ -217,8 +217,8 @@ class PolymarketBot(commands.Bot):
         
         # Seed initial price snapshots immediately so volatility can work faster
         try:
-            await seed_initial_price_snapshots()
-            print("Initial price snapshots seeded")
+            await seed_initial_prices()
+            print("In-memory volatility tracker seeded")
         except Exception as e:
             print(f"Error seeding initial snapshots: {e}")
         
@@ -1824,9 +1824,25 @@ async def before_monitor():
     await bot.wait_until_ready()
 
 
-async def seed_initial_price_snapshots():
-    """Seed initial price snapshots on startup so volatility comparison can work faster."""
-    session = get_session()
+async def seed_initial_prices():
+    """Seed initial prices into in-memory volatility manager on startup."""
+    markets = await polymarket_client.get_active_markets_prices(limit=200)
+    
+    for market in markets:
+        condition_id = market['condition_id']
+        current_price = market['yes_price']
+        title = market['title']
+        slug = market['slug']
+        
+        volatility_manager.seed_price(condition_id, current_price, title, slug)
+    
+    stats = volatility_manager.get_stats()
+    print(f"[STARTUP] Seeded {stats['markets_tracked']} markets into in-memory volatility tracker")
+
+
+@tasks.loop(minutes=5)
+async def volatility_loop():
+    """Periodic price refresh to keep in-memory volatility tracker current for markets with no recent trades."""
     try:
         markets = await polymarket_client.get_active_markets_prices(limit=200)
         
@@ -1835,142 +1851,13 @@ async def seed_initial_price_snapshots():
             current_price = market['yes_price']
             title = market['title']
             slug = market['slug']
-            volume = market['volume']
             
-            session.add(PriceSnapshot(
-                condition_id=condition_id,
-                title=title,
-                slug=slug,
-                yes_price=current_price,
-                volume=volume
-            ))
+            volatility_manager.record_price(condition_id, current_price, title, slug)
         
-        session.commit()
-        print(f"[STARTUP] Seeded {len(markets)} initial price snapshots for volatility tracking")
-    finally:
-        session.close()
-
-
-@tasks.loop(minutes=5)
-async def volatility_loop():
-    try:
-        from datetime import timedelta
-        session = get_session()
-        try:
-            configs = session.query(ServerConfig).filter(
-                ServerConfig.volatility_channel_id.isnot(None),
-                ServerConfig.is_paused == False
-            ).all()
-            
-            if not configs:
-                return
-            
-            markets = await polymarket_client.get_active_markets_prices(limit=200)
-            now = datetime.utcnow()
-            
-            for market in markets:
-                condition_id = market['condition_id']
-                current_price = market['yes_price']
-                title = market['title']
-                slug = market['slug']
-                volume = market['volume']
-                
-                session.add(PriceSnapshot(
-                    condition_id=condition_id,
-                    title=title,
-                    slug=slug,
-                    yes_price=current_price,
-                    volume=volume
-                ))
-            
-            session.commit()
-            
-            # Use 10 minutes minimum window (faster startup) instead of requiring 1 hour
-            min_comparison_time = now - timedelta(minutes=10)
-            cooldown_time = now - timedelta(minutes=30)  # 30 min cooldown between alerts for same market
-            
-            # Debug: Check how many old snapshots exist for volatility comparison
-            old_snapshot_count = session.query(PriceSnapshot).filter(
-                PriceSnapshot.captured_at <= min_comparison_time
-            ).count()
-            print(f"[VOLATILITY] Status: {len(markets)} markets fetched, {old_snapshot_count} snapshots older than 10 min available for comparison", flush=True)
-            
-            for market in markets:
-                condition_id = market['condition_id']
-                current_price = market['yes_price']
-                
-                # Get oldest available snapshot (at least 10 min old) for this market
-                old_snapshot = session.query(PriceSnapshot).filter(
-                    PriceSnapshot.condition_id == condition_id,
-                    PriceSnapshot.captured_at <= min_comparison_time
-                ).order_by(PriceSnapshot.captured_at.asc()).first()  # Get oldest snapshot
-                
-                if not old_snapshot:
-                    continue
-                
-                old_price = old_snapshot.yes_price
-                if old_price <= 0.01 or old_price >= 0.99:
-                    continue
-                
-                price_change_pct = ((current_price - old_price) / old_price) * 100
-                
-                recent_alert = session.query(VolatilityAlert).filter(
-                    VolatilityAlert.condition_id == condition_id,
-                    VolatilityAlert.alerted_at >= cooldown_time
-                ).first()
-                
-                if recent_alert:
-                    continue
-                
-                alert_sent = False
-                for config in configs:
-                    threshold = config.volatility_threshold or 20.0
-                    
-                    if abs(price_change_pct) < threshold:
-                        continue
-                    
-                    print(f"[VOLATILITY] ALERT TRIGGERED: {market['title'][:30]}... swing {price_change_pct:+.1f}% >= {threshold}%, attempting channel {config.volatility_channel_id}", flush=True)
-                    channel = await get_or_fetch_channel(config.volatility_channel_id)
-                    print(f"[VOLATILITY] Channel fetch result: {channel} (type: {type(channel).__name__ if channel else 'None'})", flush=True)
-                    if not channel:
-                        print(f"[VOLATILITY] ✗ CHANNEL IS NONE - cannot send volatility alert to {config.volatility_channel_id}", flush=True)
-                        continue
-                    
-                    embed, market_url = create_volatility_alert_embed(
-                        market_title=market['title'],
-                        slug=market['slug'],
-                        old_price=old_price,
-                        new_price=current_price,
-                        price_change=price_change_pct,
-                        time_window_minutes=60
-                    )
-                    event_slug = polymarket_client.get_event_slug_by_condition(condition_id, market['slug'])
-                    button_view = create_trade_button_view(event_slug, market_url)
-                    
-                    try:
-                        message = await channel.send(embed=embed, view=button_view)
-                        alert_sent = True
-                        print(f"[VOLATILITY] ✓ ALERT SENT: {market['title'][:30]}... to channel {config.volatility_channel_id}, msg_id={message.id}", flush=True)
-                    except discord.Forbidden as e:
-                        print(f"[VOLATILITY] ✗ FORBIDDEN: Cannot send to channel {config.volatility_channel_id} - {e}", flush=True)
-                    except discord.NotFound as e:
-                        print(f"[VOLATILITY] ✗ NOT FOUND: Channel {config.volatility_channel_id} doesn't exist - {e}", flush=True)
-                    except discord.HTTPException as e:
-                        print(f"[VOLATILITY] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
-                    except Exception as e:
-                        print(f"[VOLATILITY] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
-                
-                if alert_sent:
-                    session.add(VolatilityAlert(
-                        condition_id=condition_id,
-                        price_change=price_change_pct
-                    ))
-            
-            session.commit()
-        finally:
-            session.close()
+        stats = volatility_manager.get_stats()
+        print(f"[VOLATILITY] In-memory stats: {stats['markets_tracked']} markets, {stats['total_price_entries']} price points, {stats['active_cooldowns']} active cooldowns", flush=True)
     except Exception as e:
-        print(f"Error in volatility loop: {e}")
+        print(f"Error in volatility refresh: {e}")
 
 
 @volatility_loop.before_loop
@@ -1980,23 +1867,23 @@ async def before_volatility():
 
 @tasks.loop(hours=1)
 async def cleanup_loop():
+    """Cleanup old database records. PriceSnapshots no longer used (in-memory now)."""
     try:
-        from datetime import timedelta
         session = get_session()
         try:
-            cutoff = datetime.utcnow() - timedelta(hours=1, minutes=30)  # Keep 1.5 hours of snapshots
-            deleted = session.query(PriceSnapshot).filter(
-                PriceSnapshot.captured_at < cutoff
-            ).delete()
-            
             alert_cutoff = datetime.utcnow() - timedelta(hours=24)
-            session.query(VolatilityAlert).filter(
+            deleted_alerts = session.query(VolatilityAlert).filter(
                 VolatilityAlert.alerted_at < alert_cutoff
             ).delete()
             
+            old_cutoff = datetime.utcnow() - timedelta(days=7)
+            deleted_seen = session.query(SeenTransaction).filter(
+                SeenTransaction.seen_at < old_cutoff
+            ).delete()
+            
             session.commit()
-            if deleted > 0:
-                print(f"Cleaned up {deleted} old price snapshots")
+            if deleted_alerts > 0 or deleted_seen > 0:
+                print(f"Cleanup: {deleted_alerts} old volatility alerts, {deleted_seen} old seen transactions")
         finally:
             session.close()
     except Exception as e:
@@ -2090,6 +1977,44 @@ async def handle_websocket_trade(trade: dict):
         market_title = polymarket_client.get_market_title(trade)
         market_url = polymarket_client.get_market_url(trade)
         event_slug = polymarket_client.get_event_slug(trade)
+        condition_id = trade.get('condition_id') or trade.get('asset_id', '')
+        slug = polymarket_client.get_market_slug(trade)
+        
+        if condition_id and price > 0:
+            volatility_manager.record_price(condition_id, price, market_title, slug)
+            
+            all_configs = get_cached_server_configs()
+            volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
+            
+            if volatility_configs:
+                for config in volatility_configs:
+                    threshold = config.volatility_threshold or 20.0
+                    alert = volatility_manager.check_volatility(condition_id, threshold)
+                    
+                    if alert:
+                        print(f"[VOLATILITY] ALERT: {alert['title'][:30]}... swing {alert['price_change_pct']:+.1f}%", flush=True)
+                        channel = await get_or_fetch_channel(config.volatility_channel_id)
+                        if channel:
+                            embed, vol_market_url = create_volatility_alert_embed(
+                                market_title=alert['title'],
+                                slug=alert['slug'],
+                                old_price=alert['old_price'],
+                                new_price=alert['new_price'],
+                                price_change=alert['price_change_pct'],
+                                time_window_minutes=alert['time_window_minutes']
+                            )
+                            vol_event_slug = polymarket_client.get_event_slug_by_condition(condition_id, alert['slug'])
+                            button_view = create_trade_button_view(vol_event_slug, vol_market_url)
+                            
+                            try:
+                                message = await channel.send(embed=embed, view=button_view)
+                                print(f"[VOLATILITY] ✓ ALERT SENT: {alert['title'][:30]}... to channel {config.volatility_channel_id}, msg_id={message.id}", flush=True)
+                            except discord.Forbidden as e:
+                                print(f"[VOLATILITY] ✗ FORBIDDEN: {e}", flush=True)
+                            except discord.HTTPException as e:
+                                print(f"[VOLATILITY] ✗ HTTP ERROR: {e.status} {e.code}", flush=True)
+                            except Exception as e:
+                                print(f"[VOLATILITY] ✗ ERROR: {type(e).__name__}: {e}", flush=True)
         
         is_sports = polymarket_client.is_sports_market(trade)
         is_bond = price >= 0.95
