@@ -1,0 +1,66 @@
+Fix the top trader alert system in polymarket_client.py - the API response fields are being read incorrectly:
+Problem
+The Polymarket leaderboard API returns proxyWallet directly in the response, but the code is looking for userAddress (which doesn't exist). Then it makes 25 unnecessary extra API calls trying to fetch proxy wallets that are already in the response.
+Changes to polymarket_client.py:
+1. Fix get_top_traders method (around line 485-534):
+Replace this section where traders are appended to the list:
+pythonfor trader in data[:limit]:
+    traders.append({
+        'address': trader.get('userAddress', '').lower(),
+        'username': trader.get('userName'),
+        'pnl': float(trader.get('pnl', 0) or 0),
+        'volume': float(trader.get('vol', 0) or 0),
+        'rank': trader.get('rank'),
+        'proxy_wallet': None
+    })
+With:
+pythonfor trader in data[:limit]:
+    proxy_wallet = trader.get('proxyWallet', '').lower()
+    traders.append({
+        'address': proxy_wallet,
+        'username': trader.get('userName'),
+        'pnl': float(trader.get('pnl', 0) or 0),
+        'volume': float(trader.get('vol', 0) or 0),
+        'rank': trader.get('rank'),
+        'proxy_wallet': proxy_wallet,
+        'profile_image': trader.get('profileImage'),
+        'x_username': trader.get('xUsername'),
+        'verified': trader.get('verifiedBadge', False)
+    })
+Then delete the entire proxy wallet fetching loop (around lines 518-530) that starts with:
+pythonprint(f"[TOP TRADERS] Fetching proxy wallets for {len(traders)} traders...", flush=True)
+proxy_map = {}
+for trader in traders:
+    try:
+        proxy = await self.get_user_proxy_wallet(trader['address'])
+        ...
+Replace it with just:
+pythonself._proxy_to_trader_map = {t['proxy_wallet']: t for t in traders if t['proxy_wallet']}
+print(f"[TOP TRADERS] Loaded {len(traders)} top traders", flush=True)
+2. Fix lookup_trader_rank method (around line 549-592):
+Same issue - it uses proxyWallet not userAddress. Update the return statement inside the if rank is not None and rank <= 25: block:
+From:
+pythonreturn {
+    'address': wallet_address.lower(),
+    'username': username,
+    'pnl': float(user_data.get('pnl', 0) or 0),
+    'volume': float(user_data.get('vol', 0) or 0),
+    'rank': rank
+}
+To:
+pythonproxy_wallet = user_data.get('proxyWallet', '').lower()
+return {
+    'address': proxy_wallet,
+    'proxy_wallet': proxy_wallet,
+    'username': username,
+    'pnl': float(user_data.get('pnl', 0) or 0),
+    'volume': float(user_data.get('vol', 0) or 0),
+    'rank': rank,
+    'verified': user_data.get('verifiedBadge', False)
+}
+
+Summary
+
+The API returns proxyWallet, not userAddress - this was causing top traders to never be detected
+Remove the 25 extra API calls to fetch proxy wallets (they're already in the response)
+This should make top trader detection actually work
