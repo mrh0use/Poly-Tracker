@@ -146,6 +146,17 @@ class VolatilityTracker:
         
         return best_price
     
+    def get_last_price(self, asset_id: str) -> Optional[float]:
+        """Get the most recent recorded price for an asset."""
+        if asset_id not in self._prices:
+            return None
+        
+        window = self._prices[asset_id]
+        if not window:
+            return None
+        
+        return window[-1][1]
+    
     def check_volatility(self, asset_id: str, guild_id: int, threshold_pct: float = 5.0) -> Optional[dict]:
         """
         Check if an asset has moved beyond threshold in any tracked timeframe.
@@ -327,11 +338,19 @@ async def handle_price_update(price_data: dict):
     """
     asset_id = price_data.get('asset_id', '')
     price = price_data.get('price', 0)
+    spread = price_data.get('spread', 1)
     title = price_data.get('title', '')
     slug = price_data.get('slug', '')
     
     if not asset_id or price <= 0:
         return
+    
+    last_price = volatility_tracker.get_last_price(asset_id)
+    if last_price is not None:
+        price_jump = abs(price - last_price)
+        if price_jump > 0.25:
+            print(f"[VOLATILITY] Rejected suspicious price jump: {asset_id[:20]}... {last_price*100:.1f}%→{price*100:.1f}% (spread: {spread*100:.1f}%)", flush=True)
+            return
     
     volatility_tracker.record_price(asset_id, price, title, slug)
     

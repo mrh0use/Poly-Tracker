@@ -1,0 +1,207 @@
+Fix false volatility alerts caused by resting limit orders - validate spread before recording prices:
+Changes to polymarket_client.py:
+1. Update _handle_price_change method in PolymarketPriceWebSocket class:
+Find the _handle_price_change method and replace it with:
+python    async def _handle_price_change(self, data: dict):
+        """Handle price_change events - validate spread before recording."""
+        price_changes = data.get('price_changes', [])
+        timestamp = data.get('timestamp', '')
+        
+        for change in price_changes:
+            asset_id = change.get('asset_id', '')
+            best_bid = change.get('best_bid', '0')
+            best_ask = change.get('best_ask', '0')
+            
+            if not asset_id:
+                continue
+            
+            try:
+                bid = float(best_bid) if best_bid else 0
+                ask = float(best_ask) if best_ask else 0
+                
+                # Skip if missing bid or ask
+                if bid <= 0 or ask <= 0:
+                    continue
+                
+                # Skip if ask <= bid (invalid state)
+                if ask <= bid:
+                    continue
+                
+                # Calculate spread - reject if too wide
+                spread = ask - bid
+                if spread > 0.10:  # More than 10 cents spread = likely resting orders
+                    continue
+                
+                # Calculate midpoint
+                midpoint = (bid + ask) / 2
+                
+                # Sanity check: reject extreme prices
+                if midpoint <= 0.01 or midpoint >= 0.99:
+                    continue
+                
+                # Get metadata
+                metadata = self._asset_metadata.get(asset_id, {})
+                
+                # Call the callback with price update
+                if self.on_price_callback:
+                    await self.on_price_callback({
+                        'asset_id': asset_id,
+                        'price': midpoint,
+                        'best_bid': bid,
+                        'best_ask': ask,
+                        'spread': spread,
+                        'title': metadata.get('title', 'Unknown'),
+                        'slug': metadata.get('slug', ''),
+                        'timestamp': timestamp
+                    })
+                    
+            except (ValueError, TypeError):
+                continue
+2. Update _handle_book method with the same spread validation:
+Find the _handle_book method and replace it with:
+python    async def _handle_book(self, data: dict):
+        """Handle full book updates - validate spread before recording."""
+        asset_id = data.get('asset_id', '')
+        bids = data.get('bids', [])
+        asks = data.get('asks', [])
+        
+        if not asset_id:
+            return
+        
+        try:
+            # Get best bid (highest) and best ask (lowest)
+            if not bids or not asks:
+                return
+                
+            best_bid = float(bids[0].get('price', 0))
+            best_ask = float(asks[0].get('price', 0))
+            
+            # Skip invalid
+            if best_bid <= 0 or best_ask <= 0:
+                return
+            
+            if best_ask <= best_bid:
+                return
+            
+            # Check spread
+            spread = best_ask - best_bid
+            if spread > 0.10:  # Too wide
+                return
+            
+            midpoint = (best_bid + best_ask) / 2
+            
+            if midpoint <= 0.01 or midpoint >= 0.99:
+                return
+            
+            metadata = self._asset_metadata.get(asset_id, {})
+            
+            if self.on_price_callback:
+                await self.on_price_callback({
+                    'asset_id': asset_id,
+                    'price': midpoint,
+                    'best_bid': best_bid,
+                    'best_ask': best_ask,
+                    'spread': spread,
+                    'title': metadata.get('title', 'Unknown'),
+                    'slug': metadata.get('slug', ''),
+                    'timestamp': data.get('timestamp', '')
+                })
+                
+        except (ValueError, TypeError, IndexError):
+            pass
+
+Changes to bot.py:
+1. Add a helper method to VolatilityTracker class to get last price:
+Find the VolatilityTracker class and add this method after _get_price_at_time:
+python    def get_last_price(self, asset_id: str) -> Optional[float]:
+        """Get the most recent recorded price for an asset."""
+        if asset_id not in self._prices:
+            return None
+        
+        window = self._prices[asset_id]
+        if not window:
+            return None
+        
+        return window[-1][1]  # Return the price from the last (timestamp, price) tuple
+2. Update handle_price_update function to reject suspicious price jumps:
+Find the handle_price_update function and replace it with:
+pythonasync def handle_price_update(price_data: dict):
+    """
+    Handle real-time price updates from the Price WebSocket.
+    Records price and checks for volatility alerts.
+    """
+    asset_id = price_data.get('asset_id', '')
+    price = price_data.get('price', 0)
+    spread = price_data.get('spread', 1)
+    title = price_data.get('title', '')
+    slug = price_data.get('slug', '')
+    
+    if not asset_id or price <= 0:
+        return
+    
+    # Additional sanity check: if we have a previous price, reject wild jumps
+    # This catches cases where spread looks OK but price is still wrong
+    last_price = volatility_tracker.get_last_price(asset_id)
+    if last_price is not None:
+        price_jump = abs(price - last_price)
+        # Reject single-update jumps of more than 25 points (0.25)
+        # Real moves happen gradually over multiple updates
+        if price_jump > 0.25:
+            print(f"[VOLATILITY] Rejected suspicious price jump: {asset_id[:20]}... {last_price*100:.1f}%→{price*100:.1f}% (spread: {spread*100:.1f}%)", flush=True)
+            return
+    
+    # Record the price
+    volatility_tracker.record_price(asset_id, price, title, slug)
+    
+    # Check for alerts across all configured servers
+    if not bot.is_ready():
+        return
+    
+    all_configs = get_cached_server_configs()
+    volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
+    
+    for config in volatility_configs:
+        threshold = config.volatility_threshold or 5.0
+        alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
+        
+        if alert:
+            try:
+                session = get_session()
+                cooldown_time = datetime.utcnow() - timedelta(minutes=15)
+                recent_db_alert = session.query(VolatilityAlert).filter(
+                    VolatilityAlert.condition_id == asset_id,
+                    VolatilityAlert.alerted_at >= cooldown_time
+                ).first()
+                
+                if not recent_db_alert:
+                    window_str = f"{alert['time_window_minutes']}min"
+                    print(f"[VOLATILITY] 🚨 {window_str}: {alert['title'][:40]}... {alert['price_change_pct']:+.1f} pts ({alert['old_price']*100:.0f}%→{alert['new_price']*100:.0f}%)", flush=True)
+                    
+                    channel = await get_or_fetch_channel(config.volatility_channel_id)
+                    if channel:
+                        embed, market_url = create_volatility_alert_embed(
+                            market_title=alert['title'],
+                            slug=alert['slug'],
+                            old_price=alert['old_price'],
+                            new_price=alert['new_price'],
+                            price_change=alert['price_change_pct'],
+                            time_window_minutes=alert['time_window_minutes']
+                        )
+                        
+                        event_slug = polymarket_client.get_event_slug_by_condition(asset_id, alert['slug'])
+                        button_view = create_trade_button_view(event_slug, market_url)
+                        
+                        try:
+                            await channel.send(embed=embed, view=button_view)
+                            session.add(VolatilityAlert(condition_id=asset_id, price_change=alert['price_change_pct']))
+                            session.commit()
+                            print(f"[VOLATILITY] ✓ Alert sent to channel {config.volatility_channel_id}", flush=True)
+                        except Exception as e:
+                            print(f"[VOLATILITY] ✗ Send error: {e}", flush=True)
+                
+                session.close()
+            except Exception as e:
+                print(f"[VOLATILITY] Error: {e}", flush=True)
+
+Summary of filters added:
+FilterWhat it catchesspread > 0.10Resting limit orders far from marketask <= bidInvalid order book statesbid <= 0 or ask <= 0Missing side of order bookprice_jump > 0.25Single suspicious price spikesmidpoint <= 0.01 or >= 0.99Nearly resolved markets

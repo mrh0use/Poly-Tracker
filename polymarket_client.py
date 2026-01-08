@@ -1558,7 +1558,7 @@ class PolymarketPriceWebSocket:
             print(f"[PriceWS] Message handling error: {e}", flush=True)
     
     async def _handle_price_change(self, data: dict):
-        """Handle price_change events - these contain best_bid and best_ask."""
+        """Handle price_change events - validate spread before recording."""
         price_changes = data.get('price_changes', [])
         timestamp = data.get('timestamp', '')
         
@@ -1574,13 +1574,19 @@ class PolymarketPriceWebSocket:
                 bid = float(best_bid) if best_bid else 0
                 ask = float(best_ask) if best_ask else 0
                 
-                if bid > 0 and ask > 0:
-                    midpoint = (bid + ask) / 2
-                elif bid > 0:
-                    midpoint = bid
-                elif ask > 0:
-                    midpoint = ask
-                else:
+                if bid <= 0 or ask <= 0:
+                    continue
+                
+                if ask <= bid:
+                    continue
+                
+                spread = ask - bid
+                if spread > 0.10:
+                    continue
+                
+                midpoint = (bid + ask) / 2
+                
+                if midpoint <= 0.01 or midpoint >= 0.99:
                     continue
                 
                 metadata = self._asset_metadata.get(asset_id, {})
@@ -1591,16 +1597,17 @@ class PolymarketPriceWebSocket:
                         'price': midpoint,
                         'best_bid': bid,
                         'best_ask': ask,
+                        'spread': spread,
                         'title': metadata.get('title', 'Unknown'),
                         'slug': metadata.get('slug', ''),
                         'timestamp': timestamp
                     })
                     
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 continue
     
     async def _handle_book(self, data: dict):
-        """Handle full book updates - use best bid/ask from order book."""
+        """Handle full book updates - validate spread before recording."""
         asset_id = data.get('asset_id', '')
         bids = data.get('bids', [])
         asks = data.get('asks', [])
@@ -1609,16 +1616,25 @@ class PolymarketPriceWebSocket:
             return
         
         try:
-            best_bid = float(bids[0].get('price', 0)) if bids else 0
-            best_ask = float(asks[0].get('price', 0)) if asks else 0
+            if not bids or not asks:
+                return
+                
+            best_bid = float(bids[0].get('price', 0))
+            best_ask = float(asks[0].get('price', 0))
             
-            if best_bid > 0 and best_ask > 0:
-                midpoint = (best_bid + best_ask) / 2
-            elif best_bid > 0:
-                midpoint = best_bid
-            elif best_ask > 0:
-                midpoint = best_ask
-            else:
+            if best_bid <= 0 or best_ask <= 0:
+                return
+            
+            if best_ask <= best_bid:
+                return
+            
+            spread = best_ask - best_bid
+            if spread > 0.10:
+                return
+            
+            midpoint = (best_bid + best_ask) / 2
+            
+            if midpoint <= 0.01 or midpoint >= 0.99:
                 return
             
             metadata = self._asset_metadata.get(asset_id, {})
@@ -1629,6 +1645,7 @@ class PolymarketPriceWebSocket:
                     'price': midpoint,
                     'best_bid': best_bid,
                     'best_ask': best_ask,
+                    'spread': spread,
                     'title': metadata.get('title', 'Unknown'),
                     'slug': metadata.get('slug', ''),
                     'timestamp': data.get('timestamp', '')
