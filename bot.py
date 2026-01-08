@@ -125,7 +125,7 @@ class VolatilityWindowManager:
         while len(window) > 2 and window[0][0] < cutoff:
             window.popleft()
     
-    def check_volatility(self, condition_id: str, guild_id: int, threshold_pct: float = 20.0) -> Optional[dict]:
+    def check_volatility(self, condition_id: str, guild_id: int, threshold_pct: float = 20.0, window_minutes: int = None) -> Optional[dict]:
         """
         Check if market has a price swing exceeding threshold.
         Cooldowns are per guild to support multi-tenant alerting.
@@ -139,12 +139,21 @@ class VolatilityWindowManager:
             return None
         
         now = datetime.utcnow()
-        min_age = now - timedelta(minutes=self.window_minutes)
+        effective_window = window_minutes if window_minutes else self.window_minutes
+        min_age = now - timedelta(minutes=effective_window)
         
-        oldest_time, oldest_price = window[0]
-        if oldest_time > min_age:
+        # Find oldest price within the configured window
+        oldest_in_window = None
+        for timestamp, price in window:
+            if timestamp <= min_age:
+                oldest_in_window = (timestamp, price)
+            else:
+                break
+        
+        if oldest_in_window is None:
             return None
         
+        oldest_time, oldest_price = oldest_in_window
         _, current_price = window[-1]
         
         if oldest_price <= 0.01 or oldest_price >= 0.99:
@@ -175,7 +184,7 @@ class VolatilityWindowManager:
             'old_price': oldest_price,
             'new_price': current_price,
             'price_change_pct': price_change_pct,
-            'time_window_minutes': self.window_minutes
+            'time_window_minutes': effective_window
         }
     
     def get_stats(self) -> dict:
@@ -898,6 +907,44 @@ async def volatility_threshold_cmd(interaction: discord.Interaction, percentage:
         if not interaction.response.is_done():
             await interaction.response.send_message(
                 f"Error saving threshold: {str(e)}",
+                ephemeral=True
+            )
+    finally:
+        session.close()
+
+
+@bot.tree.command(name="volatility_window", description="Set the time window for detecting volatility")
+@app_commands.describe(minutes="Time window in minutes")
+@app_commands.choices(minutes=[
+    app_commands.Choice(name="5 minutes", value=5),
+    app_commands.Choice(name="10 minutes", value=10),
+    app_commands.Choice(name="15 minutes", value=15),
+    app_commands.Choice(name="30 minutes", value=30),
+    app_commands.Choice(name="60 minutes", value=60),
+])
+@app_commands.checks.has_permissions(administrator=True)
+async def volatility_window_cmd(interaction: discord.Interaction, minutes: app_commands.Choice[int]):
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.volatility_window_minutes = minutes.value
+        session.commit()
+        invalidate_server_config_cache()
+        print(f"[CMD] Volatility window updated to {minutes.value} minutes for guild {interaction.guild_id}", flush=True)
+        
+        await interaction.response.send_message(
+            f"Volatility detection window set to {minutes.value} minutes",
+            ephemeral=True
+        )
+    except Exception as e:
+        print(f"[CMD ERROR] volatility_window command failed: {e}", flush=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Error saving window: {str(e)}",
                 ephemeral=True
             )
     finally:
@@ -1965,7 +2012,8 @@ async def handle_websocket_trade(trade: dict):
             
             for config in volatility_configs:
                 threshold = config.volatility_threshold or 5.0
-                alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold)
+                window_mins = config.volatility_window_minutes or 15
+                alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold, window_mins)
                 
                 if alert:
                     try:
