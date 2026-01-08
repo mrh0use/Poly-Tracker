@@ -1413,28 +1413,48 @@ class PolymarketPriceWebSocket:
     async def subscribe_to_markets(self, markets: List[Dict[str, Any]]):
         """
         Subscribe to price updates for a list of markets.
-        Each market should have: condition_id, tokens (with token_id, outcome), title, slug
+        Handles both API formats: clobTokenIds (array of strings) or tokens (array of objects)
         """
         asset_ids = []
         
         for market in markets:
-            tokens = market.get('tokens', [])
             title = market.get('question', market.get('title', 'Unknown'))
             slug = market.get('slug', '')
             
-            for token in tokens:
-                token_id = token.get('token_id', '')
-                outcome = token.get('outcome', 'Yes')
-                outcome_index = 0 if outcome == 'Yes' else 1
-                
-                if outcome_index == 0 and token_id:
-                    asset_ids.append(token_id)
-                    self._asset_metadata[token_id] = {
+            clob_token_ids_raw = market.get('clobTokenIds', [])
+            if isinstance(clob_token_ids_raw, str):
+                try:
+                    clob_token_ids = json.loads(clob_token_ids_raw)
+                except:
+                    clob_token_ids = []
+            else:
+                clob_token_ids = clob_token_ids_raw if isinstance(clob_token_ids_raw, list) else []
+            
+            if clob_token_ids and len(clob_token_ids) > 0:
+                yes_token_id = clob_token_ids[0]
+                if yes_token_id:
+                    asset_ids.append(yes_token_id)
+                    self._asset_metadata[yes_token_id] = {
                         'title': title,
                         'slug': slug,
-                        'outcome': outcome,
-                        'outcome_index': outcome_index
+                        'outcome': 'Yes',
+                        'outcome_index': 0
                     }
+            else:
+                tokens = market.get('tokens', [])
+                for token in tokens:
+                    token_id = token.get('token_id', '')
+                    outcome = token.get('outcome', 'Yes')
+                    outcome_index = 0 if outcome == 'Yes' else 1
+                    
+                    if outcome_index == 0 and token_id:
+                        asset_ids.append(token_id)
+                        self._asset_metadata[token_id] = {
+                            'title': title,
+                            'slug': slug,
+                            'outcome': outcome,
+                            'outcome_index': outcome_index
+                        }
         
         self._subscribed_assets = set(asset_ids)
         print(f"[PriceWS] Prepared {len(asset_ids)} assets for subscription", flush=True)
@@ -1520,12 +1540,17 @@ class PolymarketPriceWebSocket:
         """Process incoming WebSocket messages."""
         try:
             data = json.loads(raw_message)
-            event_type = data.get('event_type', '')
             
-            if event_type == 'price_change':
-                await self._handle_price_change(data)
-            elif event_type == 'book':
-                await self._handle_book(data)
+            if isinstance(data, list):
+                for item in data:
+                    await self._handle_book(item)
+            elif isinstance(data, dict):
+                event_type = data.get('event_type', '')
+                
+                if event_type == 'price_change':
+                    await self._handle_price_change(data)
+                elif event_type == 'book' or 'bids' in data or 'asks' in data:
+                    await self._handle_book(data)
                 
         except json.JSONDecodeError:
             pass

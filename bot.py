@@ -2003,7 +2003,7 @@ async def seed_initial_prices():
         volatility_tracker.record_price(condition_id, current_price, title, slug)
     
     stats = volatility_tracker.get_stats()
-    print(f"[STARTUP] Seeded {stats['markets_tracked']} markets into in-memory volatility tracker")
+    print(f"[STARTUP] Seeded {stats['assets_tracked']} markets into in-memory volatility tracker")
 
 
 @tasks.loop(minutes=5)
@@ -2023,7 +2023,7 @@ async def volatility_loop():
         volatility_tracker.cleanup()
         
         stats = volatility_tracker.get_stats()
-        print(f"[VOLATILITY] Stats: {stats['markets_tracked']} markets, {stats['total_price_entries']} prices, {stats['active_cooldowns']} cooldowns, windows={stats['timeframes']}", flush=True)
+        print(f"[VOLATILITY] Stats: {stats['assets_tracked']} assets, {stats['total_price_entries']} prices, {stats['active_cooldowns']} cooldowns, windows={stats['timeframes']}", flush=True)
     except Exception as e:
         print(f"Error in volatility refresh: {e}")
 
