@@ -1003,44 +1003,6 @@ async def volatility_window_cmd(interaction: discord.Interaction, minutes: app_c
         session.close()
 
 
-@bot.tree.command(name="volatility_category", description="Filter volatility alerts by market category")
-@app_commands.describe(category="Category to filter by")
-@app_commands.choices(category=[
-    app_commands.Choice(name="All Markets", value="all"),
-    app_commands.Choice(name="Sports/Esports", value="sports"),
-    app_commands.Choice(name="Crypto", value="crypto"),
-    app_commands.Choice(name="Politics", value="politics"),
-    app_commands.Choice(name="Entertainment", value="entertainment"),
-])
-@app_commands.checks.has_permissions(administrator=True)
-async def volatility_category_cmd(interaction: discord.Interaction, category: app_commands.Choice[str]):
-    session = get_session()
-    try:
-        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
-        if not config:
-            config = ServerConfig(guild_id=interaction.guild_id)
-            session.add(config)
-        
-        config.volatility_category = category.value
-        session.commit()
-        invalidate_server_config_cache()
-        print(f"[CMD] Volatility category updated to {category.value} for guild {interaction.guild_id}", flush=True)
-        
-        await interaction.response.send_message(
-            f"Volatility alerts will only show **{category.name}** markets",
-            ephemeral=True
-        )
-    except Exception as e:
-        print(f"[CMD ERROR] volatility_category command failed: {e}", flush=True)
-        if not interaction.response.is_done():
-            await interaction.response.send_message(
-                f"Error saving category filter: {str(e)}",
-                ephemeral=True
-            )
-    finally:
-        session.close()
-
-
 @bot.tree.command(name="top_trader_channel", description="Set the channel for top 25 trader alerts")
 @app_commands.describe(channel="The channel to send top trader alerts to")
 @app_commands.checks.has_permissions(administrator=True)
@@ -2043,13 +2005,6 @@ async def handle_websocket_trade(trade: dict):
             
             for config in volatility_configs:
                 threshold = config.volatility_threshold or 5.0
-                category_filter = getattr(config, 'volatility_category', 'all') or 'all'
-                
-                if category_filter != 'all':
-                    market_category = polymarket_client.detect_market_category(trade)
-                    if market_category != category_filter:
-                        continue
-                
                 alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold)
                 
                 if alert:
