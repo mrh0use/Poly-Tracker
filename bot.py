@@ -106,6 +106,13 @@ class PolymarketBot(commands.Bot):
             monitor_loop.start()
             print("Monitor loop started (backup for tracked wallets)")
         
+        # Seed initial price snapshots immediately so volatility can work faster
+        try:
+            await seed_initial_price_snapshots()
+            print("Initial price snapshots seeded")
+        except Exception as e:
+            print(f"Error seeding initial snapshots: {e}")
+        
         if not volatility_loop.is_running():
             volatility_loop.start()
             print("Volatility loop started")
@@ -1708,6 +1715,33 @@ async def before_monitor():
     await bot.wait_until_ready()
 
 
+async def seed_initial_price_snapshots():
+    """Seed initial price snapshots on startup so volatility comparison can work faster."""
+    session = get_session()
+    try:
+        markets = await polymarket_client.get_active_markets_prices(limit=200)
+        
+        for market in markets:
+            condition_id = market['condition_id']
+            current_price = market['yes_price']
+            title = market['title']
+            slug = market['slug']
+            volume = market['volume']
+            
+            session.add(PriceSnapshot(
+                condition_id=condition_id,
+                title=title,
+                slug=slug,
+                yes_price=current_price,
+                volume=volume
+            ))
+        
+        session.commit()
+        print(f"[STARTUP] Seeded {len(markets)} initial price snapshots for volatility tracking")
+    finally:
+        session.close()
+
+
 @tasks.loop(minutes=5)
 async def volatility_loop():
     try:
@@ -1742,23 +1776,25 @@ async def volatility_loop():
             
             session.commit()
             
-            one_hour_ago = now - timedelta(minutes=60)
-            cooldown_time = now - timedelta(minutes=120)
+            # Use 10 minutes minimum window (faster startup) instead of requiring 1 hour
+            min_comparison_time = now - timedelta(minutes=10)
+            cooldown_time = now - timedelta(minutes=30)  # 30 min cooldown between alerts for same market
             
             # Debug: Check how many old snapshots exist for volatility comparison
             old_snapshot_count = session.query(PriceSnapshot).filter(
-                PriceSnapshot.captured_at <= one_hour_ago
+                PriceSnapshot.captured_at <= min_comparison_time
             ).count()
-            print(f"[VOLATILITY] Status: {len(markets)} markets fetched, {old_snapshot_count} snapshots older than 1 hour available for comparison", flush=True)
+            print(f"[VOLATILITY] Status: {len(markets)} markets fetched, {old_snapshot_count} snapshots older than 10 min available for comparison", flush=True)
             
             for market in markets:
                 condition_id = market['condition_id']
                 current_price = market['yes_price']
                 
+                # Get oldest available snapshot (at least 10 min old) for this market
                 old_snapshot = session.query(PriceSnapshot).filter(
                     PriceSnapshot.condition_id == condition_id,
-                    PriceSnapshot.captured_at <= one_hour_ago
-                ).order_by(PriceSnapshot.captured_at.desc()).first()
+                    PriceSnapshot.captured_at <= min_comparison_time
+                ).order_by(PriceSnapshot.captured_at.asc()).first()  # Get oldest snapshot
                 
                 if not old_snapshot:
                     continue
@@ -1839,7 +1875,7 @@ async def cleanup_loop():
         from datetime import timedelta
         session = get_session()
         try:
-            cutoff = datetime.utcnow() - timedelta(hours=3)
+            cutoff = datetime.utcnow() - timedelta(hours=1, minutes=30)  # Keep 1.5 hours of snapshots
             deleted = session.query(PriceSnapshot).filter(
                 PriceSnapshot.captured_at < cutoff
             ).delete()
