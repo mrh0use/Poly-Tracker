@@ -2053,7 +2053,7 @@ async def handle_websocket_trade(trade: dict):
         
         top_trader_info = polymarket_client.is_top_trader(wallet)
         
-        if not top_trader_info and value >= 10000:
+        if not top_trader_info and value >= 5000:
             try:
                 top_trader_info = await asyncio.wait_for(
                     polymarket_client.lookup_trader_rank(wallet),

@@ -30,6 +30,7 @@ class PolymarketClient:
         self._top_traders_cache: List[Dict[str, Any]] = []
         self._top_traders_updated: Optional[datetime] = None
         self._proxy_to_trader_map: Dict[str, Dict[str, Any]] = {}
+        self._non_top_trader_cache: Dict[str, datetime] = {}  # Negative result cache (15 min TTL)
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -547,6 +548,16 @@ class PolymarketClient:
     
     async def lookup_trader_rank(self, wallet_address: str) -> Optional[Dict[str, Any]]:
         """Look up a wallet's leaderboard info - checks if they're in top 25."""
+        wallet_lower = wallet_address.lower()
+        
+        # Check negative cache (15 min TTL)
+        if wallet_lower in self._non_top_trader_cache:
+            cache_time = self._non_top_trader_cache[wallet_lower]
+            if datetime.now() - cache_time < timedelta(minutes=15):
+                return None  # Known non-top-25, skip API call
+            else:
+                del self._non_top_trader_cache[wallet_lower]
+        
         await self.ensure_session()
         try:
             async with self.session.get(
@@ -573,6 +584,9 @@ class PolymarketClient:
                                 'volume': float(user_data.get('vol', 0) or 0),
                                 'rank': rank
                             }
+                        else:
+                            # Cache negative result (not top 25) for 15 minutes
+                            self._non_top_trader_cache[wallet_lower] = datetime.now()
         except Exception as e:
             print(f"[LOOKUP] Error for {wallet_address[:10]}...: {e}", flush=True)
         return None
