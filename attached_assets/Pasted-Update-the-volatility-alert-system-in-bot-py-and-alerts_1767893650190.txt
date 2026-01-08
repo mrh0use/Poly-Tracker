@@ -1,0 +1,96 @@
+Update the volatility alert system in bot.py and alerts.py to fix several bugs preventing alerts from firing:
+Changes to bot.py:
+1. Update VolatilityWindowManager.__init__ (around line 85-94):
+
+Change window_minutes default from 10 to 15
+Change max_entries_per_market from 1500 to 2000
+Add a new instance variable: self._use_absolute_change = True
+
+2. Update VolatilityWindowManager.check_volatility method:
+Replace the price change calculation line:
+pythonprice_change_pct = ((current_price - oldest_price) / oldest_price) * 100
+With this logic:
+python# ABSOLUTE change: difference in percentage points (e.g., 0.50 -> 0.55 = 5 points)
+if self._use_absolute_change:
+    price_change_pct = (current_price - oldest_price) * 100
+else:
+    price_change_pct = ((current_price - oldest_price) / oldest_price) * 100
+3. Update the volatility_manager instantiation (around line 186):
+Change from window_minutes=10 to window_minutes=15
+4. CRITICAL FIX in handle_websocket_trade function:
+Move volatility price recording and alert checking to BEFORE the if value < 1000 early exit filter. Right after the if side == 'SELL': return check, add:
+python# VOLATILITY TRACKING: Record price for ALL trades (before any filtering)
+price = float(trade.get('price', 0) or 0)
+condition_id = trade.get('conditionId') or trade.get('condition_id') or trade.get('asset_id', '')
+if condition_id and price > 0:
+    market_title = trade.get('title', '') or polymarket_client.get_market_title(trade)
+    slug = trade.get('slug', '') or polymarket_client.get_market_slug(trade)
+    volatility_manager.record_price(condition_id, price, market_title, slug)
+    
+    # Check for volatility alerts
+    if bot.is_ready():
+        all_configs = get_cached_server_configs()
+        volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
+        
+        for config in volatility_configs:
+            threshold = config.volatility_threshold or 5.0
+            alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold)
+            
+            if alert:
+                try:
+                    session = get_session()
+                    cooldown_time = datetime.utcnow() - timedelta(minutes=30)
+                    recent_db_alert = session.query(VolatilityAlert).filter(
+                        VolatilityAlert.condition_id == condition_id,
+                        VolatilityAlert.alerted_at >= cooldown_time
+                    ).first()
+                    
+                    if not recent_db_alert:
+                        print(f"[VOLATILITY] ALERT: {alert['title'][:30]}... swing {alert['price_change_pct']:+.1f} pts", flush=True)
+                        channel = await get_or_fetch_channel(config.volatility_channel_id)
+                        if channel:
+                            embed, vol_market_url = create_volatility_alert_embed(
+                                market_title=alert['title'],
+                                slug=alert['slug'],
+                                old_price=alert['old_price'],
+                                new_price=alert['new_price'],
+                                price_change=alert['price_change_pct'],
+                                time_window_minutes=alert['time_window_minutes']
+                            )
+                            vol_event_slug = polymarket_client.get_event_slug_by_condition(condition_id, alert['slug'])
+                            button_view = create_trade_button_view(vol_event_slug, vol_market_url)
+                            
+                            try:
+                                message = await channel.send(embed=embed, view=button_view)
+                                session.add(VolatilityAlert(condition_id=condition_id, price_change=alert['price_change_pct']))
+                                session.commit()
+                                _ws_stats['alerts_sent'] += 1
+                                print(f"[VOLATILITY] ✓ ALERT SENT to channel {config.volatility_channel_id}", flush=True)
+                            except Exception as e:
+                                print(f"[VOLATILITY] ✗ ERROR: {e}", flush=True)
+                    session.close()
+                except Exception as e:
+                    print(f"[VOLATILITY] DB error: {e}", flush=True)
+5. Remove the duplicate volatility check later in the function:
+Delete the existing if condition_id and price > 0: volatility_manager.record_price(...) block and its nested volatility alert logic that appears after the database session setup (around lines 1987-2091). Replace it with just a comment noting volatility is handled earlier.
+
+Changes to alerts.py:
+Update create_volatility_alert_embed function:
+
+Change the description to say "points" instead of "%": f"Price moved **{arrow}{price_change:.1f} points** in {time_window_minutes} minutes."
+Change the "Change" field value from f"{arrow}{price_change:.1f}%" to f"{arrow}{price_change:.1f} pts"
+Update footer to show window: f"Polymarket Volatility Monitor • {time_window_minutes}min window"
+Add dynamic emoji based on magnitude:
+
+🚨 for changes >= 20 points
+📈 (up) or 📉 (down) for changes >= 10 points
+⚡ for smaller changes
+
+
+
+
+Why these changes matter:
+
+The $1000 trade filter was blocking volatility tracking - small trades never updated prices, so gradual moves weren't detected
+Relative % change was unintuitive - a 5¢→10¢ move (5 points) showed as "100%" while 50¢→60¢ (10 points) showed as "20%"
+15-minute window is better for capturing short-term prediction market volatility

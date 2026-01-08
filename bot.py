@@ -85,13 +85,14 @@ def invalidate_tracked_wallet_cache():
 class VolatilityWindowManager:
     """In-memory manager for real-time volatility detection using rolling price windows."""
     
-    def __init__(self, window_minutes: int = 10, max_entries_per_market: int = 1500):
+    def __init__(self, window_minutes: int = 15, max_entries_per_market: int = 2000):
         self.window_minutes = window_minutes
         self.max_entries = max_entries_per_market
         self._price_windows: Dict[str, Deque] = {}
         self._market_metadata: Dict[str, dict] = {}
         self._alert_cooldowns: Dict[str, datetime] = {}
         self._cooldown_minutes = 30
+        self._use_absolute_change = True  # Use percentage points instead of relative %
     
     def record_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
         """Record a price point for a market. Called on every trade."""
@@ -149,7 +150,11 @@ class VolatilityWindowManager:
         if oldest_price <= 0.01 or oldest_price >= 0.99:
             return None
         
-        price_change_pct = ((current_price - oldest_price) / oldest_price) * 100
+        # ABSOLUTE change: difference in percentage points (e.g., 0.50 -> 0.55 = 5 points)
+        if self._use_absolute_change:
+            price_change_pct = (current_price - oldest_price) * 100
+        else:
+            price_change_pct = ((current_price - oldest_price) / oldest_price) * 100
         
         if abs(price_change_pct) < threshold_pct:
             return None
@@ -183,7 +188,7 @@ class VolatilityWindowManager:
         }
 
 
-volatility_manager = VolatilityWindowManager(window_minutes=10)
+volatility_manager = VolatilityWindowManager(window_minutes=15)
 
 
 class PolymarketBot(commands.Bot):

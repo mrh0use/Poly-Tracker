@@ -637,12 +637,21 @@ def create_volatility_alert_embed(
     arrow = "+" if price_change > 0 else ""
     color = 0x27AE60 if price_change > 0 else 0xE74C3C
     
+    # Dynamic emoji based on magnitude
+    abs_change = abs(price_change)
+    if abs_change >= 20:
+        emoji = "🚨"
+    elif abs_change >= 10:
+        emoji = "📈" if price_change > 0 else "📉"
+    else:
+        emoji = "⚡"
+    
     market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
     market_display = get_market_link(market_title, market_url)
     
     embed = Embed(
-        title=f"📈 Volatility Alert",
-        description=f"A market is swinging wildly! Moved {arrow}{price_change:.1f}% in just {time_window_minutes} minutes!",
+        title=f"{emoji} Volatility Alert",
+        description=f"Price moved **{arrow}{price_change:.1f} points** in {time_window_minutes} minutes.",
         color=color,
         timestamp=datetime.utcnow()
     )
@@ -667,11 +676,11 @@ def create_volatility_alert_embed(
     
     embed.add_field(
         name="Change",
-        value=f"{arrow}{price_change:.1f}%",
+        value=f"{arrow}{price_change:.1f} pts",
         inline=True
     )
     
-    embed.set_footer(text="Polymarket Volatility Monitor")
+    embed.set_footer(text=f"Polymarket Volatility Monitor • {time_window_minutes}min window")
     
     return embed, market_url
 
