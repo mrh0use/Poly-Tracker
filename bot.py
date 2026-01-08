@@ -927,6 +927,41 @@ async def top_trader_channel(interaction: discord.Interaction, channel: discord.
         session.close()
 
 
+@bot.tree.command(name="top_trader_threshold", description="Set the minimum USD value for top 25 trader alerts")
+@app_commands.describe(amount="Minimum trade amount in USD (e.g., 5000 for $5k)")
+@app_commands.checks.has_permissions(administrator=True)
+async def top_trader_threshold_cmd(interaction: discord.Interaction, amount: float):
+    if amount < 0:
+        await interaction.response.send_message("Threshold must be a positive number.", ephemeral=True)
+        return
+    
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        if not config:
+            config = ServerConfig(guild_id=interaction.guild_id)
+            session.add(config)
+        
+        config.top_trader_threshold = amount
+        session.commit()
+        invalidate_server_config_cache()
+        print(f"[CMD] Top trader threshold updated to ${amount:,.0f} for guild {interaction.guild_id}", flush=True)
+        
+        await interaction.response.send_message(
+            f"Top 25 trader alert threshold set to ${amount:,.0f}",
+            ephemeral=True
+        )
+    except Exception as e:
+        print(f"[CMD ERROR] top_trader_threshold command failed: {e}", flush=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                f"Error saving threshold: {str(e)}",
+                ephemeral=True
+            )
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="trending", description="Show top trending markets by 24h volume")
 async def trending_command(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -2140,7 +2175,8 @@ async def handle_websocket_trade(trade: dict):
                     print(f"[WS] ✗ CHANNEL IS NONE - cannot send tracked wallet alert to {tracked_channel_id}", flush=True)
             
             if is_sports:
-                if top_trader_info and config.top_trader_channel_id:
+                top_trader_threshold = config.top_trader_threshold or 5000.0
+                if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                     top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
                     print(f"[WS] Channel fetch result: {top_channel} (type: {type(top_channel).__name__ if top_channel else 'None'})", flush=True)
@@ -2236,7 +2272,8 @@ async def handle_websocket_trade(trade: dict):
                         except Exception as e:
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
             else:
-                if top_trader_info and config.top_trader_channel_id:
+                top_trader_threshold = config.top_trader_threshold or 5000.0
+                if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
                     top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
                     print(f"[WS] Channel fetch result: {top_channel} (type: {type(top_channel).__name__ if top_channel else 'None'})", flush=True)

@@ -33,6 +33,7 @@ class ServerConfig(Base):
     whale_threshold = Column(Float, default=10000.0)
     fresh_wallet_threshold = Column(Float, default=10000.0)
     sports_threshold = Column(Float, default=5000.0)
+    top_trader_threshold = Column(Float, default=5000.0)
     volatility_threshold = Column(Float, default=20.0)
     volatility_window_minutes = Column(BigInteger, default=60)
     is_paused = Column(Boolean, default=False)
