@@ -18,7 +18,7 @@ The bot is built around a modular architecture comprising a main Discord bot han
     - **Fresh Wallet Alerts:** Identifies new wallets making their first trades (default $10k+).
     - **Custom Wallet Tracking:** Monitors activity for specific user-defined wallet addresses.
     - **Volatility Alerts:** Detects significant price swings (default 20%+ within 1 hour) using in-memory tracking.
-    - **Top Trader Alerts:** Tracks trades from Polymarket's top 25 all-time profit leaders (triggers at $5k+, uses on-demand leaderboard lookups with 15-min negative result caching).
+    - **Top Trader Alerts:** Tracks trades from Polymarket's top 25 all-time profit leaders (triggers at $5k+, uses on-demand leaderboard lookups with 24-hour negative result caching).
     - **Sports/Esports Alerts:** Dedicated channel for sports-related market activity (default $5k+).
     - **Bonds Alerts:** For high-certainty markets (>=95% price, $5k+).
 - **Filtering:** Excludes sell transactions above 99% (position closures) and focuses on BUY transactions for most alerts.
