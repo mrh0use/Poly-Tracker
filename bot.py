@@ -1301,134 +1301,57 @@ async def search_command(interaction: discord.Interaction, query: str):
 @bot.tree.command(name="help", description="Show available commands")
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="Polymarket Monitor - Help",
-        description="Monitor Polymarket activity in your Discord server",
+        title="Onsight Alerts - Commands",
         color=0x4ECDC4
     )
     
     embed.add_field(
-        name="/setup",
-        value="Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports, top_trader, bonds)",
-        inline=False
-    )
-    embed.add_field(
-        name="/volatility #channel",
-        value="Set the channel for volatility alerts (price swings)",
-        inline=False
-    )
-    embed.add_field(
-        name="/sports #channel",
-        value="Set the channel for sports/esports market alerts",
-        inline=False
-    )
-    embed.add_field(
-        name="/whale_channel #channel",
-        value="Set the channel for whale alerts",
-        inline=False
-    )
-    embed.add_field(
-        name="/fresh_wallet_channel #channel",
-        value="Set the channel for fresh wallet alerts",
-        inline=False
-    )
-    embed.add_field(
-        name="/tracked_wallet_channel #channel",
-        value="Set the channel for tracked wallet alerts",
-        inline=False
-    )
-    embed.add_field(
-        name="/top_trader_channel #channel",
-        value="Set the channel for top 25 trader alerts",
-        inline=False
-    )
-    embed.add_field(
-        name="/bonds #channel",
-        value="Set the channel for bond alerts (>=95% price markets, $5k+)",
-        inline=False
-    )
-    embed.add_field(
-        name="/threshold <amount>",
-        value="Set the minimum USD value for alerts (default: $10,000)",
-        inline=False
-    )
-    embed.add_field(
-        name="/sports_threshold <amount>",
-        value="Set the minimum USD value for sports alerts (default: $5,000)",
-        inline=False
-    )
-    embed.add_field(
-        name="/fresh_wallet_threshold <amount>",
-        value="Set the minimum USD value for fresh wallet alerts (default: $10,000)",
-        inline=False
-    )
-    embed.add_field(
-        name="/volatility_threshold <points>",
-        value="Set the minimum percentage point swing for volatility alerts (default: 5 points)",
-        inline=False
-    )
-    embed.add_field(
-        name="/volatility_window",
-        value="Set the time window for volatility detection (5/10/15/30/60 minutes, default: 15)",
-        inline=False
-    )
-    embed.add_field(
-        name="/top_trader_threshold <amount>",
-        value="Set minimum USD value for top trader alerts (default: $2,500)",
-        inline=False
-    )
-    embed.add_field(
-        name="/track <wallet> [label]",
-        value="Add a wallet to track (any activity will be alerted)",
-        inline=False
-    )
-    embed.add_field(
-        name="/untrack <wallet>",
-        value="Remove a wallet from tracking",
-        inline=False
-    )
-    embed.add_field(
-        name="/list",
-        value="Show current settings and tracked wallets",
-        inline=False
-    )
-    embed.add_field(
-        name="/pause",
-        value="Pause all alerts",
-        inline=False
-    )
-    embed.add_field(
-        name="/resume",
-        value="Resume alerts",
+        name="Setup & Channels",
+        value=(
+            "`/setup` - Configure all channels at once\n"
+            "`/whale_channel` `/sports` `/volatility`\n"
+            "`/fresh_wallet_channel` `/tracked_wallet_channel`\n"
+            "`/top_trader_channel` `/bonds`"
+        ),
         inline=False
     )
     
     embed.add_field(
-        name="/positions",
-        value="View positions of all tracked wallets",
-        inline=False
-    )
-    embed.add_field(
-        name="/rename <wallet> <new_name>",
-        value="Rename a tracked wallet",
-        inline=False
-    )
-    embed.add_field(
-        name="/trending",
-        value="Show top 10 trending markets by 24h volume",
-        inline=False
-    )
-    embed.add_field(
-        name="/sports_trending",
-        value="Show top 10 trending sports markets by 24h volume",
-        inline=False
-    )
-    embed.add_field(
-        name="/search <keywords>",
-        value="Search markets and view orderbooks (e.g., /search knicks)",
+        name="Thresholds",
+        value=(
+            "`/threshold` - Whale alerts ($10k)\n"
+            "`/sports_threshold` - Sports ($5k)\n"
+            "`/fresh_wallet_threshold` - Fresh wallets ($10k)\n"
+            "`/top_trader_threshold` - Top 25 ($2.5k)\n"
+            "`/volatility_threshold` - Price swing (5pts)\n"
+            "`/volatility_window` - Time window (15min)"
+        ),
         inline=False
     )
     
-    embed.set_footer(text="Administrator permissions required for configuration commands")
+    embed.add_field(
+        name="Wallet Tracking",
+        value=(
+            "`/track <wallet> [label]` - Track a wallet\n"
+            "`/untrack` - Stop tracking\n"
+            "`/rename <wallet> <name>` - Rename wallet\n"
+            "`/positions` - View tracked positions"
+        ),
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Info & Control",
+        value=(
+            "`/list` - Current settings\n"
+            "`/trending` `/sports_trending` - Hot markets\n"
+            "`/search <query>` - Find markets\n"
+            "`/pause` `/resume` - Toggle alerts"
+        ),
+        inline=False
+    )
+    
+    embed.set_footer(text="Admin permissions required for config commands")
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
