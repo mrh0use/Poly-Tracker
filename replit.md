@@ -1,148 +1,43 @@
 # Polymarket Discord Bot
 
 ## Overview
-A Discord bot that monitors Polymarket activity and sends real-time alerts to configured Discord channels. Supports multiple Discord servers with individual configurations.
-
-## Features
-- **Whale Alerts**: Notifications for large transactions ($10k+ by default)
-- **Fresh Wallet Alerts**: Detect new wallets making their first trades
-- **Custom Wallet Tracking**: Monitor specific wallet addresses (any trade amount)
-- **Volatility Alerts**: Track markets with 20%+ price swings within 1 hour
-- **Top Trader Alerts**: Monitor trades from top 25 all-time profit leaders
-- **Sports Channel**: Separate channel for sports/esports market alerts
-- **Bonds Channel**: Separate channel for high-certainty markets (>=95% price, $5k+)
-- **Sell Filtering**: Excludes sells above 99% (position closures)
-- **Position Viewing**: View current holdings of tracked wallets with drill-down
-- **Market Links**: Clickable links to Polymarket + Trade via Onsight buttons
-- **Per-Server Configuration**: Each Discord server has its own settings
-- **Slash Commands**: Simple Discord interface for configuration
-
-## Project Architecture
-
-```
-/
-├── bot.py                 # Main Discord bot with slash commands and monitoring loop
-├── database.py            # SQLAlchemy models and database setup
-├── polymarket_client.py   # Async Polymarket API client
-├── alerts.py              # Discord embed formatters for alerts
-├── pyproject.toml         # Python dependencies
-└── replit.md              # This file
-```
-
-## Database Schema
-
-- **server_configs**: Per-server settings (channels, thresholds, pause state)
-- **tracked_wallets**: Custom wallet addresses to monitor per server
-- **seen_transactions**: Prevent duplicate alerts
-- **wallet_activity**: Track wallet history for fresh wallet detection
-- **price_snapshots**: Store periodic market prices for volatility detection
-- **volatility_alerts**: Track recently alerted markets to prevent spam
-
-## Discord Commands
-
-| Command | Description | Permissions |
-|---------|-------------|-------------|
-| `/setup` | Configure all alert channels at once (whale, fresh_wallet, tracked_wallet, volatility, sports, bonds) | Admin |
-| `/whale_channel #channel` | Set whale alerts channel individually | Admin |
-| `/fresh_wallet_channel #channel` | Set fresh wallet alerts channel individually | Admin |
-| `/tracked_wallet_channel #channel` | Set tracked wallet alerts channel individually | Admin |
-| `/volatility #channel` | Set volatility alerts channel individually | Admin |
-| `/sports #channel` | Set sports alerts channel individually | Admin |
-| `/top_trader_channel #channel` | Set top 25 trader alerts channel | Admin |
-| `/bonds #channel` | Set bonds alerts channel (>=95% price markets) | Admin |
-| `/threshold <amount>` | Set USD threshold | Admin |
-| `/sports_threshold <amount>` | Set sports USD threshold (default: $5k) | Admin |
-| `/fresh_wallet_threshold <amount>` | Set fresh wallet USD threshold (default: $10k) | Admin |
-| `/volatility_threshold <percentage>` | Set volatility swing % (default: 20%) | Admin |
-| `/track <wallet> [label]` | Track a wallet | Admin |
-| `/untrack <wallet>` | Stop tracking | Admin |
-| `/rename <wallet> <name>` | Rename a tracked wallet | Admin |
-| `/positions` | View tracked wallets' positions | Anyone |
-| `/list` | Show settings | Anyone |
-| `/pause` | Pause alerts | Admin |
-| `/resume` | Resume alerts | Admin |
-| `/trending` | Show top 10 trending markets by 24h volume | Anyone |
-| `/sports_trending` | Show top 10 trending sports markets by 24h volume | Anyone |
-| `/search <keywords>` | Search markets and view orderbooks | Anyone |
-| `/help` | Show commands | Anyone |
-
-## Alert Types
-
-- **Whale Alerts**: Large transactions $10k+ (configurable threshold)
-- **Fresh Wallet Alerts**: New wallets making first trades $10k+
-- **Tracked Wallet Alerts**: Any activity from tracked wallets (no minimum)
-- **Volatility Alerts**: Markets with 20%+ price swings within 1 hour (separate channel)
-- **Top Trader Alerts**: Any trade from top 25 all-time profit leaders (separate channel)
-- **Sports Alerts**: Sports/esports market activity $5k+ (separate channel, configurable threshold)
-- **Bonds Alerts**: Trades on high-certainty markets (>=95% price) with $5k+ value (separate channel)
-
-Note: Only BUY transactions are tracked (sells are excluded). Sports markets and bonds (>=95% price trades) go to their own dedicated channels when configured.
-
-## Environment Variables
-
-- `DISCORD_BOT_TOKEN` - Production Discord bot token (used in production deployment)
-- `DEV_DISCORD_BOT_TOKEN` - Development Discord bot token (used when running locally, separate bot to avoid conflicts)
-- `DATABASE_URL` - PostgreSQL connection string (auto-configured)
-
-**Note**: Development and production use separate Discord bot tokens to allow both to run simultaneously without conflicts. The bot automatically detects the environment via `REPLIT_DEPLOYMENT` variable - in production it uses `DISCORD_BOT_TOKEN`, in development it uses `DEV_DISCORD_BOT_TOKEN`.
-
-## Recent Changes
-
-- 2026-01-08: **Fixed volatility cold-start problem** - Bot now seeds initial price snapshots on startup and uses 10-minute comparison window (was 60 min). Volatility alerts start working after ~10 minutes instead of requiring 1 hour of continuous running.
-- 2026-01-07: **Simplified alert buttons** - Removed "View on Polymarket" button (now only "Trade via Onsight" button).
-- 2026-01-07: **Major performance optimizations** - (1) Added early exit for trades <$1000 before any database query (tracked wallets still fire at any amount). (2) Increased cache TTL from 30 seconds to 5 minutes for both server configs and tracked wallets. (3) Removed noisy debug logs - only trades >= $5k are logged. (4) Stats logging reduced from every 1000 to every 5000 trades. This massively reduces CPU and database load.
-- 2026-01-07: **Added tracked wallet caching** - TrackedWallet queries now use a cache (refreshed every 5 minutes) instead of querying database on every trade. Cache is invalidated when /track or /untrack commands are used.
-- 2026-01-07: **Added server config caching** - ServerConfig queries are now cached for 5 minutes instead of querying the database on every trade. Cache is automatically invalidated when configs are updated via slash commands. Massively reduces database load and prevents event loop blocking.
-- 2026-01-07: **Added API call timeouts** - All `get_wallet_pnl_stats()` calls now have 3-second timeouts and `has_prior_activity()` calls have 2-second timeouts. Prevents slow API responses from blocking the event loop and delaying alerts. Falls back gracefully (empty stats or assume not fresh) on timeout.
-- 2026-01-07: **Fixed critical whale threshold bug** - Threshold comparisons now use `(config.whale_threshold or 10000.0)` fallback to prevent None comparison failures. Fixed in both WebSocket handler and monitor_loop.
-- 2026-01-07: **Added on_guild_join command sync** - Bot now automatically syncs slash commands when joining new servers, so /setup is immediately available.
-- 2026-01-07: **Added comprehensive alert logging** - All channel.send() calls now log: ALERT TRIGGERED, channel fetch result, specific Discord errors (Forbidden, NotFound, HTTPException), and success with message ID.
-- 2026-01-07: **Added Railway health check server (async v2)** - Bot now starts an async HTTP server on port 8080 (or $PORT) in the same event loop as Discord. Uses asyncio.create_task() for guaranteed startup order - health server binds before Discord bot starts. Endpoints: `/` and `/health` return "OK", `/metrics` returns uptime and ready status.
-- 2026-01-06: **Removed WebSocket ping/pong logic** - Railway/cloud proxies don't forward ping frames properly, causing reconnection storms. Now uses data activity timeout only (2 minutes). Backup WebSocket and 15-minute proactive reconnect remain for resilience.
-- 2026-01-06: **Major WebSocket resilience overhaul** - Based on Polymarket community best practices (GitHub issue #26): backup WebSocket ready for instant failover, 2-minute data timeout detection, proactive 15-minute reconnection to avoid known 20-minute data stream freeze bug.
-- 2026-01-06: **Added CPU-friendly optimizations** - Added asyncio.sleep(0) yields after each trade to prevent CPU monopolization, reduced logging frequency from 500 to 1000 trades. Recommended by Replit support for Reserved VM stability.
-- 2026-01-06: **Added separate dev/prod bot tokens** - Development now uses DEV_DISCORD_BOT_TOKEN to avoid conflicts with production. Both can run simultaneously.
-
-- 2026-01-06: **Added WebSocket activity timeout** - Auto-reconnects if no messages received for 2 minutes (prevents silent disconnections).
-- 2026-01-06: **Fixed alert routing priority** - Top trader alerts now take priority over bonds alerts. Top 25 traders go to top-trader channel even on 95%+ trades.
-- 2026-01-06: **Fixed trade stats accuracy** - Stats now only count BUY trades (SELLs were being counted as threshold hits but filtered out before alerting).
-- 2026-01-06: **Switched to real-time WebSocket feed** - Now uses Polymarket's RTDS WebSocket (wss://ws-live-data.polymarket.com) for instant trade alerts instead of polling. This catches every trade in real-time with no gaps. Polling loop remains as backup for tracked wallets.
-- 2026-01-06: **Added adjustable volatility threshold** - /volatility_threshold command allows each server to set their own % swing threshold (5-50%, default 20%)
-- 2026-01-06: **Added Bonds Alerts** - trades on markets with >=95% price ($5k+ minimum) now route to dedicated bonds channel, configurable via /bonds command. These are filtered from regular whale/fresh wallet alerts.
-- 2026-01-06: **Added wallet PnL to all alerts** - whale alerts, fresh wallet alerts, and sports alerts now display the trader's lifetime PnL and rank
-- 2026-01-06: **Added cash balance to /positions** - shows USDC balance for each tracked wallet (queried from Polygon blockchain)
-- 2026-01-05: **Added Top Trader Alerts** - monitors trades from top 25 all-time profit leaders, configurable via /top_trader_channel
-- 2026-01-05: **Improved /untrack command** - now uses dropdown menu to select wallet instead of pasting address
-- 2026-01-05: **Fixed Onsight trade button** - now uses correct `event_{slug_with_underscores}` format that Polysight bot expects (hyphens replaced with underscores, prefixed with "event_")
-- 2026-01-05: **Fixed market URLs** - changed from /event/{slug} to /market/{slug} format which works for all market types (sports, events, standalone) and auto-redirects correctly
-- 2026-01-05: **Added granular channel configuration** - each alert type can now be routed to a specific channel: /whale_channel, /fresh_wallet_channel, /tracked_wallet_channel (plus existing /volatility and /sports). Falls back to /setup channel if not configured.
-- 2026-01-05: Added /trending and /sports_trending commands to view top markets by 24h volume
-- 2026-01-05: **Fixed fresh wallet detection** - now queries Polymarket API to check if wallet has prior activity (prevents false fresh alerts for experienced traders)
-- 2026-01-05: Removed win rate calculation (was not calculating correctly)
-- 2026-01-05: Added debug logging to monitor loop to track large trades (shows when $10k+ trades are detected)
-- 2026-01-05: **PnL now matches Polymarket exactly** - switched to official v1/leaderboard endpoint which returns Polymarket's calculated PnL, volume, and rank (verified: SeriouslySirius shows $3.9M matching the site)
-- 2026-01-05: Switched to paginated Data API calls for accurate PnL matching Polymarket's displayed values - fetches open + closed positions up to 10,000 offset with realized PnL summing
-- 2026-01-05: Integrated Goldsky PnL Subgraph for complete wallet statistics - now fetches ALL positions (unlimited) via GraphQL with pagination, eliminating the 500 position limit from Data API
-- 2026-01-05: Added PnL and win rate display to /list command for each tracked wallet
-- 2026-01-05: Fixed PnL to fetch both open AND closed positions from API for accurate all-time totals (was missing historical closed positions)
-- 2026-01-05: Fixed PnL calculation to count all positions with realized PnL (not just fully closed ones) for accurate totals
-- 2026-01-05: Fixed tracked wallet alerts to only show trades made AFTER wallet was added to tracking (prevents old historical trades from appearing)
-- 2026-01-05: Fixed PnL stats to use Data API endpoint (was using wrong Gamma API endpoint which returned no data)
-- 2026-01-05: Improved alert display - shows "BUY Yes" / "SELL No" action format, full wallet addresses (copyable), and better market URL construction with cache lookup and conditionId fallback
-- 2026-01-05: Added lifetime PnL and win rate to tracked wallet alerts (fetched from Polymarket API with 10-min caching)
-- 2026-01-05: Added /sports_threshold command - configurable threshold for sports market alerts (default $5k)
-- 2026-01-05: Added separate sports channel (/sports command) - sports markets now route to dedicated channel instead of being excluded
-- 2026-01-05: Fixed sports detection with market metadata caching for accurate identification
-- 2026-01-05: Removed redeem alerts and filtered out sells above 99%
-- 2026-01-05: Updated trade button to "Trade via Onsight"
-- 2026-01-05: Added volatility tracker with separate channel (/volatility command) for 20%+ price swings
-- 2026-01-05: Added /positions command with wallet buttons for drill-down views
-- 2026-01-05: Added /rename command to update tracked wallet labels
-- 2026-01-05: Fixed tracked wallet alerts to query each wallet directly via API (catches all trades regardless of amount)
-- 2026-01-05: Initial project setup with full bot implementation
+This project is a Discord bot designed to monitor Polymarket activity and deliver real-time, configurable alerts to Discord channels. Its primary purpose is to provide users with immediate insights into significant market movements, including large transactions, new trader activity, market volatility, and top trader actions. The bot supports multiple Discord servers, each with independent configuration capabilities, aiming to enhance user engagement and provide timely, actionable information for Polymarket participants.
 
 ## User Preferences
-
 - Keep Discord interface simple
 - Real-time alerts only (no summaries)
 - Default thresholds: $10k for whale and fresh wallet alerts, $5k for sports alerts
+
+## System Architecture
+The bot is built around a modular architecture comprising a main Discord bot handling slash commands and a monitoring loop, a dedicated Polymarket API client, a database layer for persistence, and an alerting module for formatting Discord embeds.
+
+**Technical Implementations & Feature Specifications:**
+- **Real-time Monitoring:** Utilizes Polymarket's RTDS WebSocket for instant trade alerts, with a polling mechanism as a backup.
+- **Alert Types:**
+    - **Whale Alerts:** Configurable threshold for large transactions (default $10k+).
+    - **Fresh Wallet Alerts:** Identifies new wallets making their first trades (default $10k+).
+    - **Custom Wallet Tracking:** Monitors activity for specific user-defined wallet addresses.
+    - **Volatility Alerts:** Detects significant price swings (default 20%+ within 1 hour) using in-memory tracking.
+    - **Top Trader Alerts:** Tracks trades from Polymarket's top 25 all-time profit leaders.
+    - **Sports/Esports Alerts:** Dedicated channel for sports-related market activity (default $5k+).
+    - **Bonds Alerts:** For high-certainty markets (>=95% price, $5k+).
+- **Filtering:** Excludes sell transactions above 99% (position closures) and focuses on BUY transactions for most alerts.
+- **Data Enrichment:** Alerts include trader's lifetime PnL, rank, and cash balance for tracked wallets.
+- **Interactive Elements:** Alerts feature clickable links to Polymarket and "Trade via Onsight" buttons.
+- **Configuration:**
+    - **Per-Server Settings:** Each Discord server maintains its own configuration for alert channels, thresholds, and tracking.
+    - **Slash Commands:** Intuitive Discord slash commands (`/setup`, `/whale_channel`, `/track`, `/positions`, `/list`, `/pause`, `/resume`, `/trending`, `/search`, `/help`) for easy management.
+- **Performance Optimizations:** Implements caching for server configurations and tracked wallets, API call timeouts, and efficient WebSocket handling to reduce CPU and database load. Volatility tracking is managed in-memory to minimize database writes.
+- **Resilience:** Features WebSocket activity timeouts, proactive reconnections, and a backup WebSocket for enhanced reliability.
+
+**UI/UX Decisions:**
+- **Simple Discord Interface:** Focus on clear, concise alerts and easy-to-use slash commands for configuration.
+- **Informative Embeds:** Discord alerts are formatted as rich embeds, including essential trade details, market links, and trader statistics.
+
+## External Dependencies
+- **Polymarket API:** Primary data source for market data, trades, and wallet information.
+- **Discord API:** For bot interaction, sending messages, and receiving commands.
+- **PostgreSQL:** Used for database persistence (`DATABASE_URL`), storing server configurations, tracked wallets, and historical data like `seen_transactions`, `wallet_activity`, and `price_snapshots`.
+- **Polygon Blockchain:** Queried for real-time wallet cash balances.
+- **Goldsky PnL Subgraph:** Utilized for fetching comprehensive wallet PnL statistics via GraphQL.
+- **Railway:** Platform providing hosting and health check services.

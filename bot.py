@@ -114,19 +114,20 @@ class VolatilityWindowManager:
         self.record_price(condition_id, price, title, slug)
     
     def _prune_old_entries(self, condition_id: str):
-        """Remove entries older than the window."""
+        """Remove entries older than the window + buffer. Keep enough data for comparison."""
         if condition_id not in self._price_windows:
             return
         
-        cutoff = datetime.utcnow() - timedelta(minutes=self.window_minutes + 5)
+        cutoff = datetime.utcnow() - timedelta(minutes=self.window_minutes + 10)
         window = self._price_windows[condition_id]
         
-        while window and window[0][0] < cutoff:
+        while len(window) > 2 and window[0][0] < cutoff:
             window.popleft()
     
-    def check_volatility(self, condition_id: str, threshold_pct: float = 20.0) -> Optional[dict]:
+    def check_volatility(self, condition_id: str, guild_id: int, threshold_pct: float = 20.0) -> Optional[dict]:
         """
         Check if market has a price swing exceeding threshold.
+        Cooldowns are per guild to support multi-tenant alerting.
         Returns alert info dict or None if no alert needed.
         """
         if condition_id not in self._price_windows:
@@ -139,39 +140,34 @@ class VolatilityWindowManager:
         now = datetime.utcnow()
         min_age = now - timedelta(minutes=self.window_minutes)
         
-        oldest_valid = None
-        for timestamp, price in window:
-            if timestamp <= min_age:
-                oldest_valid = (timestamp, price)
-                break
-        
-        if oldest_valid is None:
+        oldest_time, oldest_price = window[0]
+        if oldest_time > min_age:
             return None
         
-        old_time, old_price = oldest_valid
         _, current_price = window[-1]
         
-        if old_price <= 0.01 or old_price >= 0.99:
+        if oldest_price <= 0.01 or oldest_price >= 0.99:
             return None
         
-        price_change_pct = ((current_price - old_price) / old_price) * 100
+        price_change_pct = ((current_price - oldest_price) / oldest_price) * 100
         
         if abs(price_change_pct) < threshold_pct:
             return None
         
-        if condition_id in self._alert_cooldowns:
-            cooldown_until = self._alert_cooldowns[condition_id]
+        cooldown_key = f"{condition_id}:{guild_id}"
+        if cooldown_key in self._alert_cooldowns:
+            cooldown_until = self._alert_cooldowns[cooldown_key]
             if now < cooldown_until:
                 return None
         
-        self._alert_cooldowns[condition_id] = now + timedelta(minutes=self._cooldown_minutes)
+        self._alert_cooldowns[cooldown_key] = now + timedelta(minutes=self._cooldown_minutes)
         
         metadata = self._market_metadata.get(condition_id, {})
         return {
             'condition_id': condition_id,
             'title': metadata.get('title', 'Unknown Market'),
             'slug': metadata.get('slug', ''),
-            'old_price': old_price,
+            'old_price': oldest_price,
             'new_price': current_price,
             'price_change_pct': price_change_pct,
             'time_window_minutes': self.window_minutes
@@ -1989,9 +1985,17 @@ async def handle_websocket_trade(trade: dict):
             if volatility_configs:
                 for config in volatility_configs:
                     threshold = config.volatility_threshold or 20.0
-                    alert = volatility_manager.check_volatility(condition_id, threshold)
+                    alert = volatility_manager.check_volatility(condition_id, config.guild_id, threshold)
                     
                     if alert:
+                        cooldown_time = datetime.utcnow() - timedelta(minutes=30)
+                        recent_db_alert = session.query(VolatilityAlert).filter(
+                            VolatilityAlert.condition_id == condition_id,
+                            VolatilityAlert.alerted_at >= cooldown_time
+                        ).first()
+                        if recent_db_alert:
+                            continue
+                        
                         print(f"[VOLATILITY] ALERT: {alert['title'][:30]}... swing {alert['price_change_pct']:+.1f}%", flush=True)
                         channel = await get_or_fetch_channel(config.volatility_channel_id)
                         if channel:
@@ -2008,6 +2012,8 @@ async def handle_websocket_trade(trade: dict):
                             
                             try:
                                 message = await channel.send(embed=embed, view=button_view)
+                                session.add(VolatilityAlert(condition_id=condition_id, price_change=alert['price_change_pct']))
+                                session.commit()
                                 print(f"[VOLATILITY] ✓ ALERT SENT: {alert['title'][:30]}... to channel {config.volatility_channel_id}, msg_id={message.id}", flush=True)
                             except discord.Forbidden as e:
                                 print(f"[VOLATILITY] ✗ FORBIDDEN: {e}", flush=True)
