@@ -96,6 +96,11 @@ class VolatilityWindowManager:
         self._startup_time = datetime.utcnow()
         self._warmup_minutes = warmup_minutes  # Ignore alerts during warm-up period
     
+    def reset_warmup(self):
+        """Reset the warm-up timer (call on WebSocket reconnection to prevent false alerts)."""
+        self._startup_time = datetime.utcnow()
+        print(f"[VOLATILITY] Warm-up timer reset - suppressing alerts for {self._warmup_minutes} minutes", flush=True)
+    
     def record_price(self, condition_id: str, price: float, title: str = "", slug: str = ""):
         """Record a price point for a market. Called on every trade."""
         if condition_id not in self._price_windows:
@@ -2220,7 +2225,7 @@ async def handle_websocket_trade(trade: dict):
                     print(f"[WS] ✗ CHANNEL IS NONE - cannot send tracked wallet alert to {tracked_channel_id}", flush=True)
             
             if is_sports:
-                top_trader_threshold = config.top_trader_threshold or 5000.0
+                top_trader_threshold = config.top_trader_threshold or 2500.0
                 sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
@@ -2323,7 +2328,7 @@ async def handle_websocket_trade(trade: dict):
                         except Exception as e:
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
             else:
-                top_trader_threshold = config.top_trader_threshold or 5000.0
+                top_trader_threshold = config.top_trader_threshold or 2500.0
                 sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
@@ -2475,7 +2480,14 @@ async def handle_websocket_trade(trade: dict):
         session.close()
 
 
-polymarket_ws = PolymarketWebSocket(on_trade_callback=handle_websocket_trade)
+def on_websocket_reconnect():
+    """Called when WebSocket reconnects - reset volatility warm-up to prevent false alerts."""
+    volatility_manager.reset_warmup()
+
+polymarket_ws = PolymarketWebSocket(
+    on_trade_callback=handle_websocket_trade,
+    on_reconnect_callback=on_websocket_reconnect
+)
 
 
 async def start_websocket():

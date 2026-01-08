@@ -1066,8 +1066,9 @@ class PolymarketWebSocket:
     DEBUG_MODE = False
     DEBUG_LOG_FIRST_N = 20
     
-    def __init__(self, on_trade_callback: Optional[Callable] = None):
+    def __init__(self, on_trade_callback: Optional[Callable] = None, on_reconnect_callback: Optional[Callable] = None):
         self.on_trade_callback = on_trade_callback
+        self.on_reconnect_callback = on_reconnect_callback
         self._running = False
         self._reconnect_delay = 2
         self._max_reconnect_delay = 30
@@ -1185,6 +1186,12 @@ class PolymarketWebSocket:
                 
                 print(f"[WS SWITCH] Switched to backup connection", flush=True)
                 
+                if self.on_reconnect_callback:
+                    try:
+                        self.on_reconnect_callback()
+                    except Exception as e:
+                        print(f"[WS] Reconnect callback error: {e}", flush=True)
+                
                 if old_ws:
                     try:
                         await old_ws.close()
@@ -1200,6 +1207,12 @@ class PolymarketWebSocket:
                 self._primary_ws = await self._create_connection("primary")
                 self._connection_start_time = time.time()
                 self._last_data_time = time.time()
+                
+                if self.on_reconnect_callback:
+                    try:
+                        self.on_reconnect_callback()
+                    except Exception as e:
+                        print(f"[WS] Reconnect callback error: {e}", flush=True)
         except Exception as e:
             print(f"[WS SWITCH] Error: {e}", flush=True)
     
