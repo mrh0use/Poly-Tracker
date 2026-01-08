@@ -173,6 +173,12 @@ class VolatilityTracker:
             old_price = self._get_price_at_time(asset_id, target_time)
             
             if old_price is None:
+                if len(window) > 0:
+                    first_time, first_price = window[0]
+                    if first_time >= target_time:
+                        old_price = first_price
+            
+            if old_price is None:
                 continue
             
             if old_price <= 0.02 or old_price >= 0.98:
