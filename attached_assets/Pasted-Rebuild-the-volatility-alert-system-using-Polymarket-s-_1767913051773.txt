@@ -1,0 +1,633 @@
+Rebuild the volatility alert system using Polymarket's CLOB Price WebSocket for accurate real-time price tracking:
+Overview
+This replaces the current trade-based volatility tracking with a dedicated Price WebSocket that receives real-time price_change events with best_bid/best_ask. This gives you accurate midpoint prices that update even when there are no trades.
+
+Changes to polymarket_client.py:
+Add a new PolymarketPriceWebSocket class at the end of the file (before the polymarket_client = PolymarketClient() line):
+pythonclass PolymarketPriceWebSocket:
+    """
+    WebSocket client for real-time price updates from Polymarket CLOB.
+    Subscribes to the market channel to receive price_change events with best_bid/best_ask.
+    """
+    
+    CLOB_WS_URL = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
+    
+    def __init__(self, on_price_callback: Optional[Callable] = None):
+        self.on_price_callback = on_price_callback
+        self._ws = None
+        self._running = False
+        self._subscribed_assets: set = set()
+        self._asset_metadata: Dict[str, dict] = {}  # asset_id -> {title, slug, outcome_index}
+        self._reconnect_delay = 5
+        self._max_reconnect_delay = 60
+        self._last_ping_time = 0
+        self._ping_interval = 30
+    
+    async def subscribe_to_markets(self, markets: List[Dict[str, Any]]):
+        """
+        Subscribe to price updates for a list of markets.
+        Each market should have: condition_id, tokens (with token_id, outcome), title, slug
+        """
+        asset_ids = []
+        
+        for market in markets:
+            tokens = market.get('tokens', [])
+            title = market.get('question', market.get('title', 'Unknown'))
+            slug = market.get('slug', '')
+            
+            for token in tokens:
+                token_id = token.get('token_id', '')
+                outcome = token.get('outcome', 'Yes')
+                outcome_index = 0 if outcome == 'Yes' else 1
+                
+                # Only track Yes outcomes to avoid duplicate alerts
+                if outcome_index == 0 and token_id:
+                    asset_ids.append(token_id)
+                    self._asset_metadata[token_id] = {
+                        'title': title,
+                        'slug': slug,
+                        'outcome': outcome,
+                        'outcome_index': outcome_index
+                    }
+        
+        self._subscribed_assets = set(asset_ids)
+        print(f"[PriceWS] Prepared {len(asset_ids)} assets for subscription", flush=True)
+        
+        # If already connected, send subscription message
+        if self._ws and self._running:
+            await self._send_subscription()
+    
+    async def _send_subscription(self):
+        """Send subscription message for all tracked assets."""
+        if not self._ws or not self._subscribed_assets:
+            return
+        
+        # CLOB WebSocket accepts assets_ids array
+        subscription = {
+            "assets_ids": list(self._subscribed_assets),
+            "type": "market"
+        }
+        
+        try:
+            await self._ws.send(json.dumps(subscription))
+            print(f"[PriceWS] Subscribed to {len(self._subscribed_assets)} assets", flush=True)
+        except Exception as e:
+            print(f"[PriceWS] Subscription error: {e}", flush=True)
+    
+    async def connect(self):
+        """Main connection loop with automatic reconnection."""
+        self._running = True
+        reconnect_delay = self._reconnect_delay
+        
+        while self._running:
+            try:
+                print(f"[PriceWS] Connecting to {self.CLOB_WS_URL}...", flush=True)
+                
+                async with websockets.connect(
+                    self.CLOB_WS_URL,
+                    ping_interval=30,
+                    ping_timeout=10,
+                    close_timeout=5
+                ) as ws:
+                    self._ws = ws
+                    reconnect_delay = self._reconnect_delay
+                    print("[PriceWS] Connected!", flush=True)
+                    
+                    # Send subscription
+                    await self._send_subscription()
+                    
+                    # Start ping task
+                    ping_task = asyncio.create_task(self._ping_loop())
+                    
+                    try:
+                        async for message in ws:
+                            await self._handle_message(message)
+                    finally:
+                        ping_task.cancel()
+                        try:
+                            await ping_task
+                        except asyncio.CancelledError:
+                            pass
+                        
+            except websockets.exceptions.ConnectionClosed as e:
+                print(f"[PriceWS] Connection closed: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
+            except Exception as e:
+                print(f"[PriceWS] Error: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
+            
+            self._ws = None
+            
+            if self._running:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 1.5, self._max_reconnect_delay)
+    
+    async def _ping_loop(self):
+        """Send periodic pings to keep connection alive."""
+        while self._running and self._ws:
+            try:
+                await asyncio.sleep(self._ping_interval)
+                if self._ws:
+                    pong = await self._ws.ping()
+                    await asyncio.wait_for(pong, timeout=10)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[PriceWS] Ping failed: {e}", flush=True)
+                break
+    
+    async def _handle_message(self, raw_message: str):
+        """Process incoming WebSocket messages."""
+        try:
+            data = json.loads(raw_message)
+            event_type = data.get('event_type', '')
+            
+            if event_type == 'price_change':
+                await self._handle_price_change(data)
+            elif event_type == 'book':
+                await self._handle_book(data)
+            elif event_type == 'last_trade_price':
+                # Can also use this as a backup price source
+                pass
+                
+        except json.JSONDecodeError:
+            pass
+        except Exception as e:
+            print(f"[PriceWS] Message handling error: {e}", flush=True)
+    
+    async def _handle_price_change(self, data: dict):
+        """Handle price_change events - these contain best_bid and best_ask."""
+        price_changes = data.get('price_changes', [])
+        timestamp = data.get('timestamp', '')
+        
+        for change in price_changes:
+            asset_id = change.get('asset_id', '')
+            best_bid = change.get('best_bid', '0')
+            best_ask = change.get('best_ask', '0')
+            
+            if not asset_id:
+                continue
+            
+            try:
+                bid = float(best_bid) if best_bid else 0
+                ask = float(best_ask) if best_ask else 0
+                
+                # Calculate midpoint price (what Polymarket displays)
+                if bid > 0 and ask > 0:
+                    midpoint = (bid + ask) / 2
+                elif bid > 0:
+                    midpoint = bid
+                elif ask > 0:
+                    midpoint = ask
+                else:
+                    continue
+                
+                # Get metadata
+                metadata = self._asset_metadata.get(asset_id, {})
+                
+                # Call the callback with price update
+                if self.on_price_callback:
+                    await self.on_price_callback({
+                        'asset_id': asset_id,
+                        'price': midpoint,
+                        'best_bid': bid,
+                        'best_ask': ask,
+                        'title': metadata.get('title', 'Unknown'),
+                        'slug': metadata.get('slug', ''),
+                        'timestamp': timestamp
+                    })
+                    
+            except (ValueError, TypeError) as e:
+                continue
+    
+    async def _handle_book(self, data: dict):
+        """Handle full book updates - use best bid/ask from order book."""
+        asset_id = data.get('asset_id', '')
+        bids = data.get('bids', [])
+        asks = data.get('asks', [])
+        
+        if not asset_id:
+            return
+        
+        try:
+            # Get best bid (highest) and best ask (lowest)
+            best_bid = float(bids[0].get('price', 0)) if bids else 0
+            best_ask = float(asks[0].get('price', 0)) if asks else 0
+            
+            if best_bid > 0 and best_ask > 0:
+                midpoint = (best_bid + best_ask) / 2
+            elif best_bid > 0:
+                midpoint = best_bid
+            elif best_ask > 0:
+                midpoint = best_ask
+            else:
+                return
+            
+            metadata = self._asset_metadata.get(asset_id, {})
+            
+            if self.on_price_callback:
+                await self.on_price_callback({
+                    'asset_id': asset_id,
+                    'price': midpoint,
+                    'best_bid': best_bid,
+                    'best_ask': best_ask,
+                    'title': metadata.get('title', 'Unknown'),
+                    'slug': metadata.get('slug', ''),
+                    'timestamp': data.get('timestamp', '')
+                })
+                
+        except (ValueError, TypeError, IndexError):
+            pass
+    
+    async def disconnect(self):
+        """Disconnect from the WebSocket."""
+        self._running = False
+        if self._ws:
+            try:
+                await self._ws.close()
+            except:
+                pass
+        self._ws = None
+        print("[PriceWS] Disconnected", flush=True)
+    
+    def is_connected(self) -> bool:
+        return self._ws is not None and self._running
+
+Changes to bot.py:
+1. Replace the entire VolatilityWindowManager class with this new version that uses persistent storage:
+pythonclass VolatilityTracker:
+    """
+    Tracks price history and detects volatility across multiple timeframes.
+    Stores prices in memory with timestamps for comparison.
+    """
+    
+    def __init__(self, windows_minutes: list = None, cooldown_minutes: int = 15):
+        self.windows_minutes = windows_minutes or [5, 15, 60]
+        self._prices: Dict[str, Deque] = {}  # asset_id -> deque of (timestamp, price)
+        self._metadata: Dict[str, dict] = {}  # asset_id -> {title, slug}
+        self._cooldowns: Dict[str, datetime] = {}  # "asset:guild:window" -> expiry time
+        self._cooldown_minutes = cooldown_minutes
+        self._max_history_minutes = max(self.windows_minutes) + 10
+        self._max_entries = 5000  # Per asset
+        self._startup_time = datetime.utcnow()
+        self._warmup_minutes = 2  # Short warmup since we get real prices immediately
+    
+    def record_price(self, asset_id: str, price: float, title: str = "", slug: str = ""):
+        """Record a price point for an asset."""
+        if asset_id not in self._prices:
+            self._prices[asset_id] = deque(maxlen=self._max_entries)
+        
+        now = datetime.utcnow()
+        self._prices[asset_id].append((now, price))
+        
+        if title or slug:
+            if asset_id not in self._metadata:
+                self._metadata[asset_id] = {}
+            if title:
+                self._metadata[asset_id]['title'] = title
+            if slug:
+                self._metadata[asset_id]['slug'] = slug
+        
+        # Prune old entries
+        self._prune_old_entries(asset_id)
+    
+    def _prune_old_entries(self, asset_id: str):
+        """Remove entries older than max history."""
+        if asset_id not in self._prices:
+            return
+        
+        cutoff = datetime.utcnow() - timedelta(minutes=self._max_history_minutes)
+        window = self._prices[asset_id]
+        
+        while len(window) > 2 and window[0][0] < cutoff:
+            window.popleft()
+    
+    def _get_price_at_time(self, asset_id: str, target_time: datetime) -> Optional[float]:
+        """Get the price closest to (but not after) target_time."""
+        if asset_id not in self._prices:
+            return None
+        
+        window = self._prices[asset_id]
+        if not window:
+            return None
+        
+        best_price = None
+        for timestamp, price in window:
+            if timestamp <= target_time:
+                best_price = price
+            else:
+                break
+        
+        return best_price
+    
+    def check_volatility(self, asset_id: str, guild_id: int, threshold_pct: float = 5.0) -> Optional[dict]:
+        """
+        Check if an asset has moved beyond threshold in any tracked timeframe.
+        Returns alert info for the shortest triggering timeframe, or None.
+        """
+        now = datetime.utcnow()
+        
+        # Skip during warmup
+        if now < self._startup_time + timedelta(minutes=self._warmup_minutes):
+            return None
+        
+        if asset_id not in self._prices:
+            return None
+        
+        window = self._prices[asset_id]
+        if len(window) < 2:
+            return None
+        
+        # Get current price
+        current_time, current_price = window[-1]
+        
+        # Skip extreme prices (resolved or nearly resolved markets)
+        if current_price <= 0.02 or current_price >= 0.98:
+            return None
+        
+        # Check each timeframe, shortest first
+        for window_minutes in sorted(self.windows_minutes):
+            target_time = now - timedelta(minutes=window_minutes)
+            old_price = self._get_price_at_time(asset_id, target_time)
+            
+            if old_price is None:
+                continue
+            
+            # Skip if old price was extreme
+            if old_price <= 0.02 or old_price >= 0.98:
+                continue
+            
+            # Calculate absolute change in percentage points
+            price_change = (current_price - old_price) * 100
+            
+            if abs(price_change) < threshold_pct:
+                continue
+            
+            # Check cooldown
+            cooldown_key = f"{asset_id}:{guild_id}:{window_minutes}"
+            if cooldown_key in self._cooldowns:
+                if now < self._cooldowns[cooldown_key]:
+                    continue
+            
+            # Set cooldown and return alert
+            self._cooldowns[cooldown_key] = now + timedelta(minutes=self._cooldown_minutes)
+            
+            metadata = self._metadata.get(asset_id, {})
+            return {
+                'asset_id': asset_id,
+                'title': metadata.get('title', 'Unknown Market'),
+                'slug': metadata.get('slug', ''),
+                'old_price': old_price,
+                'new_price': current_price,
+                'price_change_pct': price_change,
+                'time_window_minutes': window_minutes
+            }
+        
+        return None
+    
+    def cleanup(self):
+        """Remove expired cooldowns and old price data."""
+        now = datetime.utcnow()
+        
+        # Cleanup cooldowns
+        expired = [k for k, v in self._cooldowns.items() if v < now]
+        for k in expired:
+            del self._cooldowns[k]
+        
+        # Cleanup old prices
+        for asset_id in list(self._prices.keys()):
+            self._prune_old_entries(asset_id)
+    
+    def get_stats(self) -> dict:
+        """Get stats for debugging."""
+        now = datetime.utcnow()
+        total_entries = sum(len(w) for w in self._prices.values())
+        active_cooldowns = len([k for k, v in self._cooldowns.items() if v > now])
+        return {
+            'assets_tracked': len(self._prices),
+            'total_price_entries': total_entries,
+            'active_cooldowns': active_cooldowns,
+            'timeframes': self.windows_minutes
+        }
+
+
+# Global volatility tracker instance
+volatility_tracker = VolatilityTracker(windows_minutes=[5, 15, 60], cooldown_minutes=15)
+2. Add the price update handler function (add this after the volatility_tracker instantiation):
+pythonasync def handle_price_update(price_data: dict):
+    """
+    Handle real-time price updates from the Price WebSocket.
+    Records price and checks for volatility alerts.
+    """
+    asset_id = price_data.get('asset_id', '')
+    price = price_data.get('price', 0)
+    title = price_data.get('title', '')
+    slug = price_data.get('slug', '')
+    
+    if not asset_id or price <= 0:
+        return
+    
+    # Record the price
+    volatility_tracker.record_price(asset_id, price, title, slug)
+    
+    # Check for alerts across all configured servers
+    if not bot.is_ready():
+        return
+    
+    all_configs = get_cached_server_configs()
+    volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
+    
+    for config in volatility_configs:
+        threshold = config.volatility_threshold or 5.0
+        alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
+        
+        if alert:
+            try:
+                session = get_session()
+                cooldown_time = datetime.utcnow() - timedelta(minutes=15)
+                recent_db_alert = session.query(VolatilityAlert).filter(
+                    VolatilityAlert.condition_id == asset_id,
+                    VolatilityAlert.alerted_at >= cooldown_time
+                ).first()
+                
+                if not recent_db_alert:
+                    window_str = f"{alert['time_window_minutes']}min"
+                    print(f"[VOLATILITY] 🚨 {window_str}: {alert['title'][:40]}... {alert['price_change_pct']:+.1f} pts ({alert['old_price']*100:.0f}%→{alert['new_price']*100:.0f}%)", flush=True)
+                    
+                    channel = await get_or_fetch_channel(config.volatility_channel_id)
+                    if channel:
+                        embed, market_url = create_volatility_alert_embed(
+                            market_title=alert['title'],
+                            slug=alert['slug'],
+                            old_price=alert['old_price'],
+                            new_price=alert['new_price'],
+                            price_change=alert['price_change_pct'],
+                            time_window_minutes=alert['time_window_minutes']
+                        )
+                        
+                        event_slug = polymarket_client.get_event_slug_by_condition(asset_id, alert['slug'])
+                        button_view = create_trade_button_view(event_slug, market_url)
+                        
+                        try:
+                            await channel.send(embed=embed, view=button_view)
+                            session.add(VolatilityAlert(condition_id=asset_id, price_change=alert['price_change_pct']))
+                            session.commit()
+                            print(f"[VOLATILITY] ✓ Alert sent to channel {config.volatility_channel_id}", flush=True)
+                        except Exception as e:
+                            print(f"[VOLATILITY] ✗ Send error: {e}", flush=True)
+                
+                session.close()
+            except Exception as e:
+                print(f"[VOLATILITY] Error: {e}", flush=True)
+3. Add the Price WebSocket startup function:
+python# Import at top of file
+from polymarket_client import PolymarketPriceWebSocket
+
+# Create the price websocket instance (add near other global instances)
+price_ws = PolymarketPriceWebSocket(on_price_callback=handle_price_update)
+
+
+async def start_price_websocket():
+    """Initialize and start the price WebSocket for volatility tracking."""
+    await bot.wait_until_ready()
+    
+    print("[PriceWS] Fetching active markets...", flush=True)
+    
+    try:
+        # Fetch active markets to get asset IDs
+        await polymarket_client.ensure_session()
+        async with polymarket_client.session.get(
+            f"{polymarket_client.GAMMA_BASE_URL}/markets",
+            params={"limit": 500, "active": "true", "closed": "false"}
+        ) as resp:
+            if resp.status == 200:
+                markets = await resp.json()
+                print(f"[PriceWS] Found {len(markets)} active markets", flush=True)
+                
+                # Subscribe to these markets
+                await price_ws.subscribe_to_markets(markets)
+                
+                # Start the WebSocket connection
+                await price_ws.connect()
+            else:
+                print(f"[PriceWS] Failed to fetch markets: {resp.status}", flush=True)
+    except Exception as e:
+        print(f"[PriceWS] Startup error: {e}", flush=True)
+4. Update the on_ready method in PolymarketBot class to start the price WebSocket:
+Find the on_ready method and add after the existing WebSocket startup:
+python        # Start price WebSocket for volatility tracking
+        if not hasattr(self, 'price_ws_started') or not self.price_ws_started:
+            self.price_ws_started = True
+            asyncio.create_task(start_price_websocket())
+            print("Price WebSocket task scheduled for volatility tracking")
+5. Add a periodic task to refresh market subscriptions (add near other @tasks.loop functions):
+python@tasks.loop(minutes=10)
+async def refresh_price_subscriptions():
+    """Periodically refresh market subscriptions to catch new markets."""
+    try:
+        await polymarket_client.ensure_session()
+        async with polymarket_client.session.get(
+            f"{polymarket_client.GAMMA_BASE_URL}/markets",
+            params={"limit": 500, "active": "true", "closed": "false"}
+        ) as resp:
+            if resp.status == 200:
+                markets = await resp.json()
+                await price_ws.subscribe_to_markets(markets)
+                
+        # Cleanup old data
+        volatility_tracker.cleanup()
+        
+        stats = volatility_tracker.get_stats()
+        print(f"[VOLATILITY] Stats: {stats['assets_tracked']} assets, {stats['total_price_entries']} prices, {stats['active_cooldowns']} cooldowns", flush=True)
+    except Exception as e:
+        print(f"[VOLATILITY] Refresh error: {e}", flush=True)
+
+
+@refresh_price_subscriptions.before_loop
+async def before_refresh_price():
+    await bot.wait_until_ready()
+6. Start the refresh loop in on_ready:
+python        if not refresh_price_subscriptions.is_running():
+            refresh_price_subscriptions.start()
+            print("Price subscription refresh loop started")
+7. Remove the old volatility tracking from handle_websocket_trade:
+Find and delete the entire volatility tracking section in handle_websocket_trade (around lines 1995-2054) that starts with:
+python    # VOLATILITY TRACKING: Record price for ALL trades (before any filtering)
+And ends with:
+python                    except Exception as e:
+                        print(f"[VOLATILITY] DB error: {e}", flush=True)
+The trade WebSocket should no longer handle volatility - that's now handled by the dedicated Price WebSocket.
+
+Changes to alerts.py:
+Update create_volatility_alert_embed for better formatting:
+pythondef create_volatility_alert_embed(
+    market_title: str,
+    slug: str,
+    old_price: float,
+    new_price: float,
+    price_change: float,
+    time_window_minutes: int = 60
+) -> Embed:
+    arrow = "+" if price_change > 0 else ""
+    color = 0x27AE60 if price_change > 0 else 0xE74C3C
+    
+    # Urgency based on timeframe
+    if time_window_minutes <= 5:
+        emoji = "🚨"
+        urgency = "RAPID"
+    elif time_window_minutes <= 15:
+        emoji = "⚡"
+        urgency = "Fast"
+    else:
+        emoji = "📊"
+        urgency = "Swing"
+    
+    # Override for massive moves
+    if abs(price_change) >= 25:
+        emoji = "🔥"
+    
+    # Format time
+    if time_window_minutes >= 60:
+        time_str = f"{time_window_minutes // 60}hr"
+    else:
+        time_str = f"{time_window_minutes}min"
+    
+    market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
+    market_display = get_market_link(market_title, market_url)
+    
+    embed = Embed(
+        title=f"{emoji} {urgency} Alert ({time_str})",
+        description=f"**{arrow}{price_change:.1f} points** in {time_str}\n{old_price*100:.0f}% → {new_price*100:.0f}%",
+        color=color,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Market",
+        value=market_display,
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Before",
+        value=f"{old_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Now",
+        value=f"{new_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Δ",
+        value=f"{arrow}{price_change:.1f} pts",
+        inline=True
+    )
+    
+    embed.set_footer(text=f"Volatility • {time_str} window • Midpoint price")
+    
+    return embed, market_url
+
+Summary
+Old SystemNew SystemTracks prices from trade WebSocketDedicated CLOB Price WebSocketLast trade price (can be stale)Midpoint of best bid/ask (always current)Misses order book movementsCatches all price changesMixed different outcomes togetherTracks by asset_id (unique per outcome)Tracked Yes and No (redundant)Only tracks Yes outcomesSingle timeframe5min, 15min, 60min simultaneously30min cooldown15min cooldownPrices lost on restartCan add DB persistence later
+The new system will catch that 60%→99% swing in real-time because it's getting price updates from order book changes, not waiting for trades!
