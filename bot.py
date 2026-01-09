@@ -2188,13 +2188,12 @@ async def handle_websocket_trade(trade: dict):
             volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
             
             for config in volatility_configs:
-                if should_skip_volatility_category(asset_id, config.volatility_blacklist or "", market_title, slug):
-                    continue
-                
                 threshold = config.volatility_threshold or 5.0
                 alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
                 
                 if alert:
+                    if should_skip_volatility_category(asset_id, config.volatility_blacklist or "", market_title, slug):
+                        continue
                     try:
                         session = get_session()
                         cooldown_time = datetime.utcnow() - timedelta(minutes=15)
