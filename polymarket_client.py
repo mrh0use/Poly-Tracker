@@ -118,12 +118,12 @@ class PolymarketClient:
     ]
     
     CRYPTO_KEYWORDS = [
-        'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'sol', 'crypto', 'cryptocurrency',
-        'dogecoin', 'doge', 'cardano', 'ada', 'ripple', 'xrp', 'polkadot', 'dot', 'chainlink',
-        'avalanche', 'avax', 'polygon', 'matic', 'cosmos', 'atom', 'uniswap', 'litecoin', 'ltc',
-        'defi', 'nft', 'blockchain', 'coinbase', 'binance', 'kraken', 'ftx',
+        'bitcoin', 'btc', 'ethereum', 'solana', 'crypto', 'cryptocurrency',
+        'dogecoin', 'doge', 'cardano', 'ripple', 'xrp', 'polkadot', 'chainlink',
+        'avax', 'polygon', 'matic', 'cosmos', 'uniswap', 'litecoin',
+        'defi', 'nft', 'blockchain', 'coinbase', 'binance', 'kraken',
         'bitcoin price', 'eth price', 'crypto market', 'altcoin', 'memecoin',
-        'satoshi', 'halving', 'staking', 'mining', 'web3', 'dao',
+        'satoshi', 'halving', 'staking', 'mining', 'web3',
     ]
     
     POLITICS_KEYWORDS = [
@@ -281,7 +281,7 @@ class PolymarketClient:
                             }
                         tokens = market.get('tokens', [])
                         for token in tokens:
-                            token_id = token.get('token_id', '')
+                            token_id = token.get('token_id') or token.get('tokenId', '')
                             if token_id:
                                 self._market_cache[token_id] = {
                                     'slug': market.get('slug', ''),
