@@ -1,0 +1,533 @@
+Rebuild the volatility alert system using VWAP (Volume-Weighted Average Price) with volume confirmation to eliminate false alerts:
+Overview
+This replaces the current price-only tracking with a trade-based system that:
+
+Uses VWAP instead of last trade price (weights by volume)
+Requires minimum volume in the window to alert
+Tracks relative volume (is activity unusual?)
+Aggregates by minute buckets (memory efficient, no DB writes)
+Only tracks Yes outcomes (avoids redundant alerts)
+
+
+Changes to bot.py:
+1. Replace the entire VolatilityWindowManager class (and related code) with this new VWAPVolatilityTracker:
+pythonclass VWAPVolatilityTracker:
+    """
+    Volume-weighted volatility tracker using minute buckets.
+    Tracks VWAP (Volume-Weighted Average Price) and volume per minute.
+    Only alerts when price moves AND volume confirms the move.
+    """
+    
+    def __init__(self, windows_minutes: list = None, cooldown_minutes: int = 15):
+        self.windows_minutes = windows_minutes or [5, 15, 60]
+        self._max_history_minutes = max(self.windows_minutes) + 5
+        
+        # Per-asset data: asset_id -> { buckets: {minute_key -> bucket}, metadata: {...}, avg_volume: float }
+        self._assets: Dict[str, dict] = {}
+        
+        # Cooldowns: "asset:guild:window" -> expiry datetime
+        self._cooldowns: Dict[str, datetime] = {}
+        self._cooldown_minutes = cooldown_minutes
+        
+        # Thresholds
+        self._min_volume_usd = 2000  # Minimum $2k volume in window to alert
+        self._min_relative_volume = 1.3  # Volume must be 1.3x normal
+        self._min_trades_in_window = 3  # At least 3 trades to confirm
+        
+        # Startup
+        self._startup_time = datetime.utcnow()
+        self._warmup_minutes = 5  # Need 5 min of data before alerting
+    
+    def _get_minute_key(self, dt: datetime = None) -> str:
+        """Get minute bucket key like '2024-01-09-14:35'"""
+        if dt is None:
+            dt = datetime.utcnow()
+        return dt.strftime('%Y-%m-%d-%H:%M')
+    
+    def _ensure_asset(self, asset_id: str):
+        """Initialize tracking for an asset if needed."""
+        if asset_id not in self._assets:
+            self._assets[asset_id] = {
+                'buckets': {},
+                'metadata': {},
+                'volume_history': [],  # Rolling list of minute volumes for avg calculation
+            }
+    
+    def _get_or_create_bucket(self, asset_id: str, minute_key: str) -> dict:
+        """Get or create a minute bucket for an asset."""
+        self._ensure_asset(asset_id)
+        
+        if minute_key not in self._assets[asset_id]['buckets']:
+            self._assets[asset_id]['buckets'][minute_key] = {
+                'volume': 0.0,
+                'price_x_volume': 0.0,
+                'trades': 0,
+                'high': 0.0,
+                'low': float('inf'),
+                'last_price': 0.0,
+            }
+        
+        return self._assets[asset_id]['buckets'][minute_key]
+    
+    def record_trade(self, asset_id: str, price: float, volume_usd: float, 
+                     title: str = "", slug: str = ""):
+        """
+        Record a trade for VWAP calculation.
+        Called for every trade from WebSocket.
+        """
+        if price <= 0 or volume_usd <= 0:
+            return
+        
+        self._ensure_asset(asset_id)
+        minute_key = self._get_minute_key()
+        bucket = self._get_or_create_bucket(asset_id, minute_key)
+        
+        # Update bucket
+        bucket['volume'] += volume_usd
+        bucket['price_x_volume'] += price * volume_usd
+        bucket['trades'] += 1
+        bucket['high'] = max(bucket['high'], price)
+        bucket['low'] = min(bucket['low'], price) if bucket['low'] != float('inf') else price
+        bucket['last_price'] = price
+        
+        # Update metadata
+        if title:
+            self._assets[asset_id]['metadata']['title'] = title
+        if slug:
+            self._assets[asset_id]['metadata']['slug'] = slug
+        
+        # Prune old buckets periodically
+        if bucket['trades'] == 1:  # First trade in this minute
+            self._prune_old_buckets(asset_id)
+    
+    def _prune_old_buckets(self, asset_id: str):
+        """Remove buckets older than max history."""
+        if asset_id not in self._assets:
+            return
+        
+        cutoff = datetime.utcnow() - timedelta(minutes=self._max_history_minutes)
+        cutoff_key = self._get_minute_key(cutoff)
+        
+        buckets = self._assets[asset_id]['buckets']
+        old_keys = [k for k in buckets.keys() if k < cutoff_key]
+        
+        # Before deleting, record volumes for average calculation
+        for key in old_keys:
+            vol = buckets[key]['volume']
+            if vol > 0:
+                self._assets[asset_id]['volume_history'].append(vol)
+                # Keep only last 60 minutes of volume history
+                if len(self._assets[asset_id]['volume_history']) > 60:
+                    self._assets[asset_id]['volume_history'].pop(0)
+            del buckets[key]
+    
+    def _get_vwap_for_window(self, asset_id: str, minutes_ago: int) -> Optional[dict]:
+        """
+        Get VWAP and stats for a time window.
+        Returns: {vwap, volume, trades, high, low} or None
+        """
+        if asset_id not in self._assets:
+            return None
+        
+        now = datetime.utcnow()
+        buckets = self._assets[asset_id]['buckets']
+        
+        total_volume = 0.0
+        total_price_x_volume = 0.0
+        total_trades = 0
+        window_high = 0.0
+        window_low = float('inf')
+        
+        for i in range(minutes_ago):
+            target_time = now - timedelta(minutes=i)
+            minute_key = self._get_minute_key(target_time)
+            
+            if minute_key in buckets:
+                b = buckets[minute_key]
+                total_volume += b['volume']
+                total_price_x_volume += b['price_x_volume']
+                total_trades += b['trades']
+                if b['high'] > 0:
+                    window_high = max(window_high, b['high'])
+                if b['low'] < float('inf'):
+                    window_low = min(window_low, b['low'])
+        
+        if total_volume <= 0:
+            return None
+        
+        vwap = total_price_x_volume / total_volume
+        
+        return {
+            'vwap': vwap,
+            'volume': total_volume,
+            'trades': total_trades,
+            'high': window_high if window_high > 0 else None,
+            'low': window_low if window_low < float('inf') else None,
+        }
+    
+    def _get_average_minute_volume(self, asset_id: str) -> float:
+        """Get average volume per minute for this asset."""
+        if asset_id not in self._assets:
+            return 0
+        
+        history = self._assets[asset_id]['volume_history']
+        if not history:
+            return 0
+        
+        return sum(history) / len(history)
+    
+    def check_volatility(self, asset_id: str, guild_id: int, 
+                         threshold_pct: float = 5.0) -> Optional[dict]:
+        """
+        Check if asset has significant VWAP movement with volume confirmation.
+        Returns alert info for shortest triggering timeframe, or None.
+        """
+        now = datetime.utcnow()
+        
+        # Skip during warmup
+        if now < self._startup_time + timedelta(minutes=self._warmup_minutes):
+            return None
+        
+        if asset_id not in self._assets:
+            return None
+        
+        # Get current price (most recent)
+        buckets = self._assets[asset_id]['buckets']
+        if not buckets:
+            return None
+        
+        current_minute = self._get_minute_key()
+        current_bucket = buckets.get(current_minute)
+        if not current_bucket or current_bucket['volume'] <= 0:
+            # Try previous minute
+            prev_minute = self._get_minute_key(now - timedelta(minutes=1))
+            current_bucket = buckets.get(prev_minute)
+            if not current_bucket or current_bucket['volume'] <= 0:
+                return None
+        
+        current_vwap = current_bucket['price_x_volume'] / current_bucket['volume']
+        
+        # Skip extreme prices
+        if current_vwap <= 0.02 or current_vwap >= 0.98:
+            return None
+        
+        # Check each timeframe, shortest first
+        for window_minutes in sorted(self.windows_minutes):
+            # Get window stats
+            window_stats = self._get_vwap_for_window(asset_id, window_minutes)
+            if not window_stats:
+                continue
+            
+            # Get stats from the START of the window
+            old_stats = self._get_vwap_for_window(asset_id, window_minutes + 5)
+            if not old_stats:
+                continue
+            
+            old_vwap = old_stats['vwap']
+            
+            # Skip if old price was extreme
+            if old_vwap <= 0.02 or old_vwap >= 0.98:
+                continue
+            
+            # Calculate price change (absolute points)
+            price_change = (current_vwap - old_vwap) * 100
+            
+            if abs(price_change) < threshold_pct:
+                continue
+            
+            # VOLUME CONFIRMATION CHECKS
+            window_volume = window_stats['volume']
+            window_trades = window_stats['trades']
+            
+            # Check 1: Minimum volume threshold
+            if window_volume < self._min_volume_usd:
+                continue
+            
+            # Check 2: Minimum trade count
+            if window_trades < self._min_trades_in_window:
+                continue
+            
+            # Check 3: Relative volume (is this unusual activity?)
+            avg_minute_vol = self._get_average_minute_volume(asset_id)
+            if avg_minute_vol > 0:
+                expected_volume = avg_minute_vol * window_minutes
+                relative_volume = window_volume / expected_volume if expected_volume > 0 else 0
+                
+                # Only alert if volume is above normal
+                if relative_volume < self._min_relative_volume:
+                    continue
+            
+            # Check cooldown
+            cooldown_key = f"{asset_id}:{guild_id}:{window_minutes}"
+            if cooldown_key in self._cooldowns:
+                if now < self._cooldowns[cooldown_key]:
+                    continue
+            
+            # Set cooldown
+            self._cooldowns[cooldown_key] = now + timedelta(minutes=self._cooldown_minutes)
+            
+            metadata = self._assets[asset_id]['metadata']
+            return {
+                'asset_id': asset_id,
+                'title': metadata.get('title', 'Unknown Market'),
+                'slug': metadata.get('slug', ''),
+                'old_price': old_vwap,
+                'new_price': current_vwap,
+                'price_change_pct': price_change,
+                'time_window_minutes': window_minutes,
+                'volume_usd': window_volume,
+                'trade_count': window_trades,
+            }
+        
+        return None
+    
+    def cleanup(self):
+        """Periodic cleanup of old data and expired cooldowns."""
+        now = datetime.utcnow()
+        
+        # Cleanup cooldowns
+        expired = [k for k, v in self._cooldowns.items() if v < now]
+        for k in expired:
+            del self._cooldowns[k]
+        
+        # Cleanup old buckets for all assets
+        for asset_id in list(self._assets.keys()):
+            self._prune_old_buckets(asset_id)
+            
+            # Remove assets with no recent data
+            if not self._assets[asset_id]['buckets']:
+                del self._assets[asset_id]
+    
+    def get_stats(self) -> dict:
+        """Get stats for debugging."""
+        total_buckets = sum(len(a['buckets']) for a in self._assets.values())
+        active_cooldowns = len([k for k, v in self._cooldowns.items() 
+                               if v > datetime.utcnow()])
+        return {
+            'assets_tracked': len(self._assets),
+            'total_buckets': total_buckets,
+            'active_cooldowns': active_cooldowns,
+            'timeframes': self.windows_minutes,
+            'min_volume': self._min_volume_usd,
+        }
+
+
+# Global instance
+volatility_tracker = VWAPVolatilityTracker(
+    windows_minutes=[5, 15, 60],
+    cooldown_minutes=15
+)
+2. Update handle_websocket_trade to use the new tracker
+Find the volatility tracking section in handle_websocket_trade (the part that records prices) and replace it with:
+pythonasync def handle_websocket_trade(trade: dict):
+    global _ws_stats
+    
+    # EARLY EXTRACTION: Get value and wallet BEFORE any DB calls
+    value = polymarket_client.calculate_trade_value(trade)
+    wallet = polymarket_client.get_wallet_from_trade(trade)
+    
+    if not wallet:
+        return
+    
+    wallet = wallet.lower()
+    side = trade.get('side', '').upper()
+    price = float(trade.get('price', 0) or 0)
+    
+    # VOLATILITY TRACKING: Record ALL trades (buys and sells) for VWAP calculation
+    # Use asset (token ID) and only track Yes outcomes to avoid duplicates
+    asset_id = trade.get('asset', '')
+    outcome = trade.get('outcome', 'Yes')
+    outcome_index = trade.get('outcomeIndex', 0)
+    
+    # Only track Yes outcomes (outcome_index 0) - No is just the inverse
+    if asset_id and price > 0 and value > 0 and (outcome == 'Yes' or outcome_index == 0):
+        market_title = trade.get('title', '') or polymarket_client.get_market_title(trade)
+        slug = trade.get('slug', '') or polymarket_client.get_market_slug(trade)
+        
+        # Record trade with volume for VWAP
+        volatility_tracker.record_trade(asset_id, price, value, market_title, slug)
+        
+        # Check for volatility alerts (only on buys to avoid double-checking)
+        if side == 'BUY' and bot.is_ready():
+            all_configs = get_cached_server_configs()
+            volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
+            
+            for config in volatility_configs:
+                threshold = config.volatility_threshold or 5.0
+                alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
+                
+                if alert:
+                    try:
+                        session = get_session()
+                        cooldown_time = datetime.utcnow() - timedelta(minutes=15)
+                        recent_db_alert = session.query(VolatilityAlert).filter(
+                            VolatilityAlert.condition_id == asset_id,
+                            VolatilityAlert.alerted_at >= cooldown_time
+                        ).first()
+                        
+                        if not recent_db_alert:
+                            window_str = f"{alert['time_window_minutes']}min"
+                            vol_str = f"${alert['volume_usd']:,.0f}"
+                            trades_str = f"{alert['trade_count']} trades"
+                            print(f"[VOLATILITY] 🚨 {window_str}: {alert['title'][:40]}... {alert['price_change_pct']:+.1f} pts ({alert['old_price']*100:.0f}%→{alert['new_price']*100:.0f}%) | {vol_str}, {trades_str}", flush=True)
+                            
+                            channel = await get_or_fetch_channel(config.volatility_channel_id)
+                            if channel:
+                                embed, market_url = create_volatility_alert_embed(
+                                    market_title=alert['title'],
+                                    slug=alert['slug'],
+                                    old_price=alert['old_price'],
+                                    new_price=alert['new_price'],
+                                    price_change=alert['price_change_pct'],
+                                    time_window_minutes=alert['time_window_minutes'],
+                                    volume_usd=alert['volume_usd'],
+                                    trade_count=alert['trade_count']
+                                )
+                                
+                                event_slug = polymarket_client.get_event_slug_by_condition(asset_id, alert['slug'])
+                                button_view = create_trade_button_view(event_slug, market_url)
+                                
+                                try:
+                                    await channel.send(embed=embed, view=button_view)
+                                    session.add(VolatilityAlert(condition_id=asset_id, price_change=alert['price_change_pct']))
+                                    session.commit()
+                                    _ws_stats['alerts_sent'] += 1
+                                    print(f"[VOLATILITY] ✓ Alert sent to channel {config.volatility_channel_id}", flush=True)
+                                except Exception as e:
+                                    print(f"[VOLATILITY] ✗ Send error: {e}", flush=True)
+                        
+                        session.close()
+                    except Exception as e:
+                        print(f"[VOLATILITY] Error: {e}", flush=True)
+    
+    # Skip SELLs for other alerts (whale, fresh wallet, etc.)
+    if side == 'SELL':
+        return
+    
+    # Rest of the existing handle_websocket_trade code continues here...
+    # (tracked wallet checks, whale alerts, etc.)
+3. Update the cleanup/stats loop
+Find the volatility_loop or similar periodic task and update it:
+python@tasks.loop(minutes=5)
+async def volatility_cleanup_loop():
+    """Periodic cleanup of volatility tracker data."""
+    try:
+        volatility_tracker.cleanup()
+        
+        stats = volatility_tracker.get_stats()
+        print(f"[VOLATILITY] Stats: {stats['assets_tracked']} assets, {stats['total_buckets']} buckets, {stats['active_cooldowns']} cooldowns, min_vol=${stats['min_volume']}", flush=True)
+    except Exception as e:
+        print(f"[VOLATILITY] Cleanup error: {e}", flush=True)
+
+
+@volatility_cleanup_loop.before_loop
+async def before_volatility_cleanup():
+    await bot.wait_until_ready()
+Start this loop in on_ready:
+python        if not volatility_cleanup_loop.is_running():
+            volatility_cleanup_loop.start()
+            print("Volatility cleanup loop started")
+
+Changes to alerts.py:
+Update create_volatility_alert_embed to show volume confirmation:
+pythondef create_volatility_alert_embed(
+    market_title: str,
+    slug: str,
+    old_price: float,
+    new_price: float,
+    price_change: float,
+    time_window_minutes: int = 60,
+    volume_usd: float = 0,
+    trade_count: int = 0
+) -> Embed:
+    arrow = "+" if price_change > 0 else ""
+    color = 0x27AE60 if price_change > 0 else 0xE74C3C
+    
+    # Urgency based on timeframe
+    if time_window_minutes <= 5:
+        emoji = "🚨"
+        urgency = "RAPID"
+    elif time_window_minutes <= 15:
+        emoji = "⚡"
+        urgency = "Fast"
+    else:
+        emoji = "📊"
+        urgency = "Swing"
+    
+    # Override for massive moves
+    if abs(price_change) >= 20:
+        emoji = "🔥"
+    
+    # Format time
+    if time_window_minutes >= 60:
+        time_str = f"{time_window_minutes // 60}hr"
+    else:
+        time_str = f"{time_window_minutes}min"
+    
+    market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
+    market_display = get_market_link(market_title, market_url)
+    
+    # Volume formatting
+    if volume_usd >= 1000:
+        vol_str = f"${volume_usd/1000:.1f}k"
+    else:
+        vol_str = f"${volume_usd:.0f}"
+    
+    embed = Embed(
+        title=f"{emoji} {urgency} Alert ({time_str})",
+        description=f"**{arrow}{price_change:.1f} points** in {time_str}\n{old_price*100:.0f}% → {new_price*100:.0f}%",
+        color=color,
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(
+        name="Market",
+        value=market_display,
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Before",
+        value=f"{old_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Now",
+        value=f"{new_price*100:.1f}%",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Δ",
+        value=f"{arrow}{price_change:.1f} pts",
+        inline=True
+    )
+    
+    # Volume confirmation info
+    embed.add_field(
+        name="Volume",
+        value=vol_str,
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Trades",
+        value=str(trade_count),
+        inline=True
+    )
+    
+    embed.set_footer(text=f"VWAP Volatility • {time_str} window • Volume confirmed")
+    
+    return embed, market_url
+
+Summary: What This Fixes
+ProblemSolutionFalse alerts from order book changesOnly tracks actual trades with real volumeMixing different outcomesUses asset (token ID), not conditionIdYes/No duplicate alertsOnly tracks Yes outcomes (outcomeIndex 0)Phantom price spikesRequires minimum $2,000 volume in windowSingle large order triggering alertRequires minimum 3 trades to confirmAlerting on illiquid marketsChecks relative volume (1.3x normal)VWAP vs last priceUses volume-weighted average priceMemory/DB concernsIn-memory only, ~3MB, no DB writes except alerts
+New Alert Requirements (all must be true):
+
+✅ VWAP moved >= threshold (e.g., 5 points)
+✅ Volume in window >= $2,000
+✅ At least 3 trades in window
+✅ Volume is 1.3x+ normal activity
+✅ Not in cooldown for this timeframe
+✅ Price not at extremes (2-98%)
