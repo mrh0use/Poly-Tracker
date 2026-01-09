@@ -99,10 +99,16 @@ POLYMARKET_CATEGORIES = [
 ]
 
 
-def should_skip_volatility_category(asset_id: str, blacklist_str: str) -> bool:
+def should_skip_volatility_category(asset_id: str, blacklist_str: str, fallback_title: str = "", fallback_slug: str = "") -> bool:
     """
     Check if a market should be skipped based on category blacklist.
     Returns True if the market's category is blacklisted.
+    
+    Args:
+        asset_id: The market asset ID
+        blacklist_str: Comma-separated list of categories to block
+        fallback_title: Title from volatility tracker (used if cache lookup fails)
+        fallback_slug: Slug from volatility tracker (used if cache lookup fails)
     """
     if not blacklist_str:
         return False
@@ -111,13 +117,12 @@ def should_skip_volatility_category(asset_id: str, blacklist_str: str) -> bool:
     if not blacklist:
         return False
     
-    market_categories = polymarket_client.get_market_categories(asset_id)
+    market_categories = polymarket_client.get_market_categories(asset_id, fallback_title, fallback_slug)
     
     matched = market_categories & blacklist
     if matched:
-        market_info = polymarket_client._market_cache.get(asset_id, {})
-        title = market_info.get('title', 'Unknown')[:50]
-        print(f"[VOLATILITY] Blocked by blacklist: {title} | categories={market_categories} | matched={matched}", flush=True)
+        display_title = fallback_title or polymarket_client._market_cache.get(asset_id, {}).get('title', 'Unknown')
+        print(f"[VOLATILITY] Blocked by blacklist: {display_title[:50]} | categories={market_categories} | matched={matched}", flush=True)
         return True
     
     return False
@@ -2183,7 +2188,7 @@ async def handle_websocket_trade(trade: dict):
             volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
             
             for config in volatility_configs:
-                if should_skip_volatility_category(asset_id, config.volatility_blacklist or ""):
+                if should_skip_volatility_category(asset_id, config.volatility_blacklist or "", market_title, slug):
                     continue
                 
                 threshold = config.volatility_threshold or 5.0
