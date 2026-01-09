@@ -113,7 +113,11 @@ def should_skip_volatility_category(asset_id: str, blacklist_str: str) -> bool:
     
     market_categories = polymarket_client.get_market_categories(asset_id)
     
-    if market_categories & blacklist:
+    matched = market_categories & blacklist
+    if matched:
+        market_info = polymarket_client._market_cache.get(asset_id, {})
+        title = market_info.get('title', 'Unknown')[:50]
+        print(f"[VOLATILITY] Blocked by blacklist: {title} | categories={market_categories} | matched={matched}", flush=True)
         return True
     
     return False

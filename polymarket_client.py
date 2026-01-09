@@ -23,7 +23,10 @@ class PolymarketClient:
                    'baseball', 'hockey', 'tennis', 'golf', 'ufc', 'mma', 'boxing', 'f1', 
                    'formula-1', 'cricket', 'esports', 'epl', 'premier-league', 'champions-league',
                    'nba-games', 'nfl-games', 'college-football', 'college-basketball'},
-        'crypto': {'crypto', 'cryptocurrency', 'bitcoin', 'ethereum', 'btc', 'eth', 'defi', 'nft', 'solana'},
+        'crypto': {'crypto', 'cryptocurrency', 'bitcoin', 'ethereum', 'btc', 'eth', 'defi', 'nft', 'solana',
+                   'crypto-prices', 'price-prediction', 'altcoins', 'memecoin', 'memecoins', 'dogecoin', 
+                   'cardano', 'ripple', 'xrp', 'polkadot', 'chainlink', 'avalanche', 'polygon', 'matic',
+                   'litecoin', 'binance', 'coinbase', 'web3', 'blockchain'},
         'finance': {'finance', 'financial', 'stocks', 'markets', 'fed', 'interest-rates', 'bonds'},
         'geopolitics': {'geopolitics', 'geopolitical', 'international', 'war', 'conflict'},
         'earnings': {'earnings', 'quarterly-earnings', 'earnings-reports'},
@@ -312,6 +315,7 @@ class PolymarketClient:
         """
         Get the top-level Polymarket categories for a market.
         Returns set of category slugs like {'sports', 'politics'}
+        Uses both tag matching and keyword fallback for better detection.
         """
         market_info = self._market_cache.get(asset_id, {})
         tags = market_info.get('tags', [])
@@ -334,14 +338,48 @@ class PolymarketClient:
             if market_tag_slugs & related_tags:
                 categories.add(category)
         
+        title = market_info.get('title', '').lower()
+        slug = market_info.get('slug', '').lower()
+        text = f"{title} {slug}"
+        
+        if 'crypto' not in categories:
+            for kw in self.CRYPTO_KEYWORDS:
+                if kw in text:
+                    categories.add('crypto')
+                    break
+        
+        if 'finance' not in categories:
+            finance_keywords = ['stock', 'stocks', 'treasury', 'fed ', 'federal reserve', 
+                               'interest rate', 'bond ', 'bonds', 'gdp', 'inflation', 
+                               'recession', 'trade deal', 'tariff', 'trade war', 'trade policy']
+            for kw in finance_keywords:
+                if kw in text:
+                    categories.add('finance')
+                    break
+        
+        if 'economy' not in categories:
+            economy_keywords = ['economy', 'economic', 'unemployment', 'jobs report', 
+                               'cpi', 'pce', 'gdp growth']
+            for kw in economy_keywords:
+                if kw in text:
+                    categories.add('economy')
+                    break
+        
         return categories
     
     def is_sports_market(self, trade_or_event: Dict[str, Any]) -> bool:
+        """
+        Detect if a market is sports-related.
+        Priority: 1) Official sports tags/slugs, 2) Sports keywords with context check
+        Excludes markets that have finance/economy/crypto categories to avoid false positives.
+        """
         market_info = self.get_market_info(trade_or_event)
+        has_official_sports_tag = False
+        
         if market_info:
             group_slug = market_info.get('groupSlug', '').lower()
             if group_slug in self.SPORTS_SLUGS:
-                return True
+                has_official_sports_tag = True
             
             tags = market_info.get('tags', [])
             if isinstance(tags, list):
@@ -350,37 +388,54 @@ class PolymarketClient:
                         slug = tag.get('slug', '').lower()
                         tag_id = str(tag.get('id', ''))
                         if slug in self.SPORTS_SLUGS or tag_id in self._sports_tag_ids:
-                            return True
+                            has_official_sports_tag = True
+                            break
                     elif isinstance(tag, str):
                         if tag.lower() in self.SPORTS_SLUGS or tag in self._sports_tag_ids:
-                            return True
-            
-            slug = market_info.get('slug', '').lower()
+                            has_official_sports_tag = True
+                            break
+        
+        if not has_official_sports_tag:
+            tags = trade_or_event.get('tags', [])
+            if isinstance(tags, list):
+                for tag in tags:
+                    if isinstance(tag, dict):
+                        slug = tag.get('slug', '').lower()
+                        tag_id = str(tag.get('id', ''))
+                        if slug in self.SPORTS_SLUGS or tag_id in self._sports_tag_ids:
+                            has_official_sports_tag = True
+                            break
+                    elif isinstance(tag, str):
+                        if tag.lower() in self.SPORTS_SLUGS or tag in self._sports_tag_ids:
+                            has_official_sports_tag = True
+                            break
+        
+        if has_official_sports_tag:
+            return True
+        
+        asset_id = trade_or_event.get('asset', '')
+        if asset_id:
+            categories = self.get_market_categories(asset_id)
+            conflicting_categories = {'finance', 'economy', 'crypto', 'geopolitics'}
+            if categories & conflicting_categories:
+                return False
+        
+        title = ''
+        slug = ''
+        if market_info:
             title = market_info.get('title', '').lower()
-            
-            for term in self.SPORTS_KEYWORDS:
-                if term in slug or term in title:
-                    return True
+            slug = market_info.get('slug', '').lower()
         
-        tags = trade_or_event.get('tags', [])
-        if isinstance(tags, list):
-            for tag in tags:
-                if isinstance(tag, dict):
-                    slug = tag.get('slug', '').lower()
-                    tag_id = str(tag.get('id', ''))
-                    if slug in self.SPORTS_SLUGS or tag_id in self._sports_tag_ids:
-                        return True
-                elif isinstance(tag, str):
-                    if tag.lower() in self.SPORTS_SLUGS or tag in self._sports_tag_ids:
-                        return True
-        
-        slug = trade_or_event.get('slug', '').lower()
-        title = trade_or_event.get('title', '').lower()
+        title = title or trade_or_event.get('title', '').lower()
+        slug = slug or trade_or_event.get('slug', '').lower()
         outcome = trade_or_event.get('outcome', '').lower()
-        
         all_text = f"{slug} {title} {outcome}"
         
+        ambiguous_terms = {'trade', 'trading'}
         for term in self.SPORTS_KEYWORDS:
+            term_base = term.split()[0] if ' ' in term else term
+            if term_base in ambiguous_terms:
+                continue
             if term in all_text:
                 return True
         
