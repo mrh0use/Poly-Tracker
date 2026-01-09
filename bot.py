@@ -928,7 +928,8 @@ async def list_settings(interaction: discord.Interaction):
             top_trader_channel_name=top_trader_channel_name,
             top_trader_threshold=config.top_trader_threshold or 2500.0,
             bonds_channel_name=bonds_channel_name,
-            volatility_window_minutes=config.volatility_window_minutes or 15
+            volatility_window_minutes=config.volatility_window_minutes or 15,
+            volatility_blacklist=config.volatility_blacklist or ""
         )
         
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -1608,7 +1609,8 @@ async def help_command(interaction: discord.Interaction):
             "`/fresh_wallet_threshold` - Fresh wallets ($10k)\n"
             "`/top_trader_threshold` - Top 25 ($2.5k)\n"
             "`/volatility_threshold` - Price swing (5pts)\n"
-            "`/volatility_window` - Time window (15min)"
+            "`/volatility_window` - Time window (15min)\n"
+            "`/volatility_blacklist` - Exclude categories"
         ),
         inline=False
     )
