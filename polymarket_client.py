@@ -790,8 +790,20 @@ class PolymarketClient:
                         else:
                             yes_price = 0.5
                         
+                        clob_token_ids_raw = m.get('clobTokenIds', [])
+                        if isinstance(clob_token_ids_raw, str):
+                            try:
+                                clob_token_ids = json.loads(clob_token_ids_raw)
+                            except:
+                                clob_token_ids = []
+                        else:
+                            clob_token_ids = clob_token_ids_raw if isinstance(clob_token_ids_raw, list) else []
+                        
+                        yes_token_id = clob_token_ids[0] if clob_token_ids and len(clob_token_ids) > 0 else ''
+                        
                         result.append({
                             'condition_id': condition_id,
+                            'yes_token_id': yes_token_id,
                             'title': m.get('question', m.get('title', 'Unknown')),
                             'slug': m.get('slug', ''),
                             'yes_price': yes_price,
