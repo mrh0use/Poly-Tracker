@@ -325,11 +325,16 @@ class PolymarketClient:
         
         return None
     
-    def get_market_categories(self, asset_id: str) -> set:
+    def get_market_categories(self, asset_id: str, fallback_title: str = "", fallback_slug: str = "") -> set:
         """
         Get the top-level Polymarket categories for a market.
         Returns set of category slugs like {'sports', 'politics'}
         Uses both tag matching and keyword fallback for better detection.
+        
+        Args:
+            asset_id: The market asset ID to look up in cache
+            fallback_title: Title to use for keyword matching if cache lookup fails
+            fallback_slug: Slug to use for keyword matching if cache lookup fails
         """
         market_info = self._market_cache.get(asset_id, {})
         tags = market_info.get('tags', [])
@@ -352,8 +357,8 @@ class PolymarketClient:
             if market_tag_slugs & related_tags:
                 categories.add(category)
         
-        title = market_info.get('title', '').lower()
-        slug = market_info.get('slug', '').lower()
+        title = market_info.get('title', '').lower() or fallback_title.lower()
+        slug = market_info.get('slug', '').lower() or fallback_slug.lower()
         text = f"{title} {slug}"
         
         if 'crypto' not in categories:
