@@ -790,20 +790,8 @@ class PolymarketClient:
                         else:
                             yes_price = 0.5
                         
-                        clob_token_ids_raw = m.get('clobTokenIds', [])
-                        if isinstance(clob_token_ids_raw, str):
-                            try:
-                                clob_token_ids = json.loads(clob_token_ids_raw)
-                            except:
-                                clob_token_ids = []
-                        else:
-                            clob_token_ids = clob_token_ids_raw if isinstance(clob_token_ids_raw, list) else []
-                        
-                        yes_token_id = clob_token_ids[0] if clob_token_ids and len(clob_token_ids) > 0 else ''
-                        
                         result.append({
                             'condition_id': condition_id,
-                            'yes_token_id': yes_token_id,
                             'title': m.get('question', m.get('title', 'Unknown')),
                             'slug': m.get('slug', ''),
                             'yes_price': yes_price,
@@ -1602,12 +1590,6 @@ class PolymarketPriceWebSocket:
                     continue
                 
                 metadata = self._asset_metadata.get(asset_id, {})
-                title = metadata.get('title', '')
-                
-                if not title and asset_id in self._subscribed_assets:
-                    title = 'Unknown'
-                elif not title:
-                    continue
                 
                 if self.on_price_callback:
                     await self.on_price_callback({
@@ -1616,7 +1598,7 @@ class PolymarketPriceWebSocket:
                         'best_bid': bid,
                         'best_ask': ask,
                         'spread': spread,
-                        'title': title,
+                        'title': metadata.get('title', 'Unknown'),
                         'slug': metadata.get('slug', ''),
                         'timestamp': timestamp
                     })
@@ -1656,12 +1638,6 @@ class PolymarketPriceWebSocket:
                 return
             
             metadata = self._asset_metadata.get(asset_id, {})
-            title = metadata.get('title', '')
-            
-            if not title and asset_id in self._subscribed_assets:
-                title = 'Unknown'
-            elif not title:
-                return
             
             if self.on_price_callback:
                 await self.on_price_callback({
@@ -1670,7 +1646,7 @@ class PolymarketPriceWebSocket:
                     'best_bid': best_bid,
                     'best_ask': best_ask,
                     'spread': spread,
-                    'title': title,
+                    'title': metadata.get('title', 'Unknown'),
                     'slug': metadata.get('slug', ''),
                     'timestamp': data.get('timestamp', '')
                 })

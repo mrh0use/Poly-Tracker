@@ -348,7 +348,7 @@ async def handle_price_update(price_data: dict):
     last_price = volatility_tracker.get_last_price(asset_id)
     if last_price is not None:
         price_jump = abs(price - last_price)
-        if price_jump > 0.25 and abs(last_price - 0.5) > 0.01:
+        if price_jump > 0.25:
             print(f"[VOLATILITY] Rejected suspicious price jump: {asset_id[:20]}... {last_price*100:.1f}%→{price*100:.1f}% (spread: {spread*100:.1f}%)", flush=True)
             return
     
@@ -2019,21 +2019,16 @@ async def seed_initial_prices():
     """Seed initial prices into in-memory volatility manager on startup."""
     markets = await polymarket_client.get_active_markets_prices(limit=500, include_sports=True)
     
-    seeded_count = 0
     for market in markets:
-        token_id = market.get('yes_token_id', '')
-        if not token_id:
-            continue
-        
+        condition_id = market['condition_id']
         current_price = market['yes_price']
         title = market['title']
         slug = market['slug']
         
-        volatility_tracker.record_price(token_id, current_price, title, slug)
-        seeded_count += 1
+        volatility_tracker.record_price(condition_id, current_price, title, slug)
     
     stats = volatility_tracker.get_stats()
-    print(f"[STARTUP] Seeded {seeded_count} markets into in-memory volatility tracker")
+    print(f"[STARTUP] Seeded {stats['assets_tracked']} markets into in-memory volatility tracker")
 
 
 @tasks.loop(minutes=5)
@@ -2043,15 +2038,12 @@ async def volatility_loop():
         markets = await polymarket_client.get_active_markets_prices(limit=500, include_sports=True)
         
         for market in markets:
-            token_id = market.get('yes_token_id', '')
-            if not token_id:
-                continue
-            
+            condition_id = market['condition_id']
             current_price = market['yes_price']
             title = market['title']
             slug = market['slug']
             
-            volatility_tracker.record_price(token_id, current_price, title, slug)
+            volatility_tracker.record_price(condition_id, current_price, title, slug)
         
         volatility_tracker.cleanup()
         
