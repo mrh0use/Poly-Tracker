@@ -254,6 +254,25 @@ class PolymarketClient:
                                     'groupSlug': market.get('groupSlug', ''),
                                     'eventSlug': event_slug,
                                 }
+                        
+                        clob_token_ids_raw = market.get('clobTokenIds', [])
+                        if isinstance(clob_token_ids_raw, str):
+                            try:
+                                clob_token_ids = json.loads(clob_token_ids_raw)
+                            except:
+                                clob_token_ids = []
+                        else:
+                            clob_token_ids = clob_token_ids_raw if isinstance(clob_token_ids_raw, list) else []
+                        
+                        for token_id in clob_token_ids:
+                            if token_id and token_id not in self._market_cache:
+                                self._market_cache[token_id] = {
+                                    'slug': market.get('slug', ''),
+                                    'title': market.get('question', market.get('title', '')),
+                                    'tags': market.get('tags', []),
+                                    'groupSlug': market.get('groupSlug', ''),
+                                    'eventSlug': event_slug,
+                                }
                     self._cache_last_updated = now
                     print(f"Market cache refreshed: {len(self._market_cache)} entries")
         except Exception as e:
@@ -1591,6 +1610,15 @@ class PolymarketPriceWebSocket:
                 
                 metadata = self._asset_metadata.get(asset_id, {})
                 
+                title = metadata.get('title', '')
+                slug = metadata.get('slug', '')
+                
+                if not title or title == 'Unknown':
+                    main_cache = polymarket_client._market_cache.get(asset_id, {})
+                    if main_cache:
+                        title = main_cache.get('title', title)
+                        slug = main_cache.get('slug', slug)
+                
                 if self.on_price_callback:
                     await self.on_price_callback({
                         'asset_id': asset_id,
@@ -1598,8 +1626,8 @@ class PolymarketPriceWebSocket:
                         'best_bid': bid,
                         'best_ask': ask,
                         'spread': spread,
-                        'title': metadata.get('title', 'Unknown'),
-                        'slug': metadata.get('slug', ''),
+                        'title': title or 'Unknown',
+                        'slug': slug,
                         'timestamp': timestamp
                     })
                     
@@ -1639,6 +1667,15 @@ class PolymarketPriceWebSocket:
             
             metadata = self._asset_metadata.get(asset_id, {})
             
+            title = metadata.get('title', '')
+            slug = metadata.get('slug', '')
+            
+            if not title or title == 'Unknown':
+                main_cache = polymarket_client._market_cache.get(asset_id, {})
+                if main_cache:
+                    title = main_cache.get('title', title)
+                    slug = main_cache.get('slug', slug)
+            
             if self.on_price_callback:
                 await self.on_price_callback({
                     'asset_id': asset_id,
@@ -1646,8 +1683,8 @@ class PolymarketPriceWebSocket:
                     'best_bid': best_bid,
                     'best_ask': best_ask,
                     'spread': spread,
-                    'title': metadata.get('title', 'Unknown'),
-                    'slug': metadata.get('slug', ''),
+                    'title': title or 'Unknown',
+                    'slug': slug,
                     'timestamp': data.get('timestamp', '')
                 })
                 
