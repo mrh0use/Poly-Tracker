@@ -4,8 +4,22 @@ import websockets
 from websockets.protocol import State as WSState
 import json
 import time
+import re
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Callable
+
+
+def keyword_matches(keyword: str, text: str) -> bool:
+    """
+    Check if keyword matches in text with word boundary awareness.
+    Short keywords (<=4 chars) require word boundaries to avoid false positives.
+    Longer keywords can match as substrings.
+    """
+    if len(keyword) <= 4:
+        pattern = r'\b' + re.escape(keyword) + r'\b'
+        return bool(re.search(pattern, text, re.IGNORECASE))
+    else:
+        return keyword.lower() in text.lower()
 
 
 class PolymarketClient:
@@ -344,24 +358,24 @@ class PolymarketClient:
         
         if 'crypto' not in categories:
             for kw in self.CRYPTO_KEYWORDS:
-                if kw in text:
+                if keyword_matches(kw, text):
                     categories.add('crypto')
                     break
         
         if 'finance' not in categories:
-            finance_keywords = ['stock', 'stocks', 'treasury', 'fed ', 'federal reserve', 
-                               'interest rate', 'bond ', 'bonds', 'gdp', 'inflation', 
+            finance_keywords = ['stock', 'stocks', 'treasury', 'federal reserve', 
+                               'interest rate', 'bonds', 'inflation', 
                                'recession', 'trade deal', 'tariff', 'trade war', 'trade policy']
             for kw in finance_keywords:
-                if kw in text:
+                if keyword_matches(kw, text):
                     categories.add('finance')
                     break
         
         if 'economy' not in categories:
             economy_keywords = ['economy', 'economic', 'unemployment', 'jobs report', 
-                               'cpi', 'pce', 'gdp growth']
+                               'gdp growth']
             for kw in economy_keywords:
-                if kw in text:
+                if keyword_matches(kw, text):
                     categories.add('economy')
                     break
         
