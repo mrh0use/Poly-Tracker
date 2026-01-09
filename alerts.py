@@ -730,7 +730,6 @@ def create_settings_embed(
     top_trader_channel_name: Optional[str] = None,
     top_trader_threshold: float = 2500.0,
     bonds_channel_name: Optional[str] = None,
-    volatility_window_minutes: int = 15,
     volatility_blacklist: str = ""
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
@@ -784,7 +783,7 @@ def create_settings_embed(
     
     volatility_value = "Not configured"
     if volatility_channel_name:
-        vol_base = f"#{volatility_channel_name} ({volatility_threshold:.0f} pts, {volatility_window_minutes}min)"
+        vol_base = f"#{volatility_channel_name} ({volatility_threshold:.0f} pts, 5/15/60min)"
         if volatility_blacklist:
             blacklist_items = [x.strip() for x in volatility_blacklist.split(",") if x.strip()]
             if blacklist_items:

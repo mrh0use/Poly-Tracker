@@ -928,7 +928,6 @@ async def list_settings(interaction: discord.Interaction):
             top_trader_channel_name=top_trader_channel_name,
             top_trader_threshold=config.top_trader_threshold or 2500.0,
             bonds_channel_name=bonds_channel_name,
-            volatility_window_minutes=config.volatility_window_minutes or 15,
             volatility_blacklist=config.volatility_blacklist or ""
         )
         
@@ -1170,44 +1169,6 @@ async def volatility_threshold_cmd(interaction: discord.Interaction, percentage:
         if not interaction.response.is_done():
             await interaction.response.send_message(
                 f"Error saving threshold: {str(e)}",
-                ephemeral=True
-            )
-    finally:
-        session.close()
-
-
-@bot.tree.command(name="volatility_window", description="Set the time window for detecting volatility")
-@app_commands.describe(minutes="Time window in minutes")
-@app_commands.choices(minutes=[
-    app_commands.Choice(name="5 minutes", value=5),
-    app_commands.Choice(name="10 minutes", value=10),
-    app_commands.Choice(name="15 minutes", value=15),
-    app_commands.Choice(name="30 minutes", value=30),
-    app_commands.Choice(name="60 minutes", value=60),
-])
-@app_commands.checks.has_permissions(administrator=True)
-async def volatility_window_cmd(interaction: discord.Interaction, minutes: app_commands.Choice[int]):
-    session = get_session()
-    try:
-        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
-        if not config:
-            config = ServerConfig(guild_id=interaction.guild_id)
-            session.add(config)
-        
-        config.volatility_window_minutes = minutes.value
-        session.commit()
-        invalidate_server_config_cache()
-        print(f"[CMD] Volatility window updated to {minutes.value} minutes for guild {interaction.guild_id}", flush=True)
-        
-        await interaction.response.send_message(
-            f"Volatility detection window set to {minutes.value} minutes",
-            ephemeral=True
-        )
-    except Exception as e:
-        print(f"[CMD ERROR] volatility_window command failed: {e}", flush=True)
-        if not interaction.response.is_done():
-            await interaction.response.send_message(
-                f"Error saving window: {str(e)}",
                 ephemeral=True
             )
     finally:
@@ -1609,7 +1570,6 @@ async def help_command(interaction: discord.Interaction):
             "`/fresh_wallet_threshold` - Fresh wallets ($10k)\n"
             "`/top_trader_threshold` - Top 25 ($2.5k)\n"
             "`/volatility_threshold` - Price swing (5pts)\n"
-            "`/volatility_window` - Time window (15min)\n"
             "`/volatility_blacklist` - Exclude categories"
         ),
         inline=False
