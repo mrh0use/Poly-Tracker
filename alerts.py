@@ -631,12 +631,13 @@ def create_volatility_alert_embed(
     old_price: float,
     new_price: float,
     price_change: float,
-    time_window_minutes: int = 60
+    time_window_minutes: int = 60,
+    volume_usd: float = 0,
+    trade_count: int = 0
 ) -> Embed:
     arrow = "+" if price_change > 0 else ""
     color = 0x27AE60 if price_change > 0 else 0xE74C3C
     
-    abs_change = abs(price_change)
     if time_window_minutes <= 5:
         emoji = "🚨"
         urgency = "RAPID"
@@ -647,7 +648,7 @@ def create_volatility_alert_embed(
         emoji = "📊"
         urgency = "Swing"
     
-    if abs_change >= 25:
+    if abs(price_change) >= 20:
         emoji = "🔥"
     
     if time_window_minutes >= 60:
@@ -657,6 +658,11 @@ def create_volatility_alert_embed(
     
     market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
     market_display = get_market_link(market_title, market_url)
+    
+    if volume_usd >= 1000:
+        vol_str = f"${volume_usd/1000:.1f}k"
+    else:
+        vol_str = f"${volume_usd:.0f}"
     
     embed = Embed(
         title=f"{emoji} {urgency} Alert ({time_str})",
@@ -689,7 +695,19 @@ def create_volatility_alert_embed(
         inline=True
     )
     
-    embed.set_footer(text=f"Volatility • {time_str} window")
+    embed.add_field(
+        name="Volume",
+        value=vol_str,
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Trades",
+        value=str(trade_count),
+        inline=True
+    )
+    
+    embed.set_footer(text=f"VWAP Volatility • {time_str} window • Volume confirmed")
     
     return embed, market_url
 

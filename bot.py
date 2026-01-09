@@ -12,7 +12,7 @@ import time
 
 from sqlalchemy import text
 from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
-from polymarket_client import polymarket_client, PolymarketWebSocket, PolymarketPriceWebSocket
+from polymarket_client import polymarket_client, PolymarketWebSocket
 from alerts import (
     create_whale_alert_embed,
     create_fresh_wallet_alert_embed,
@@ -82,123 +82,228 @@ def invalidate_tracked_wallet_cache():
     _tracked_wallet_cache_time = 0
 
 
-class VolatilityTracker:
+class VWAPVolatilityTracker:
     """
-    Tracks price history and detects volatility across multiple timeframes.
-    Stores prices in memory with timestamps for comparison.
+    Volume-weighted volatility tracker using minute buckets.
+    Tracks VWAP (Volume-Weighted Average Price) and volume per minute.
+    Only alerts when price moves AND volume confirms the move.
     """
     
     def __init__(self, windows_minutes: list = None, cooldown_minutes: int = 15):
         self.windows_minutes = windows_minutes or [5, 15, 60]
-        self._prices: Dict[str, Deque] = {}
-        self._metadata: Dict[str, dict] = {}
+        self._max_history_minutes = max(self.windows_minutes) + 5
+        
+        self._assets: Dict[str, dict] = {}
+        
         self._cooldowns: Dict[str, datetime] = {}
         self._cooldown_minutes = cooldown_minutes
-        self._max_history_minutes = max(self.windows_minutes) + 10
-        self._max_entries = 5000
+        
+        self._min_volume_usd = 2000
+        self._min_relative_volume = 1.3
+        self._min_trades_in_window = 3
+        
         self._startup_time = datetime.utcnow()
-        self._warmup_minutes = 2
+        self._warmup_minutes = 5
     
-    def record_price(self, asset_id: str, price: float, title: str = "", slug: str = ""):
-        """Record a price point for an asset."""
-        if asset_id not in self._prices:
-            self._prices[asset_id] = deque(maxlen=self._max_entries)
-        
-        now = datetime.utcnow()
-        self._prices[asset_id].append((now, price))
-        
-        if title or slug:
-            if asset_id not in self._metadata:
-                self._metadata[asset_id] = {}
-            if title:
-                self._metadata[asset_id]['title'] = title
-            if slug:
-                self._metadata[asset_id]['slug'] = slug
-        
-        self._prune_old_entries(asset_id)
+    def _get_minute_key(self, dt: datetime = None) -> str:
+        """Get minute bucket key like '2024-01-09-14:35'"""
+        if dt is None:
+            dt = datetime.utcnow()
+        return dt.strftime('%Y-%m-%d-%H:%M')
     
-    def _prune_old_entries(self, asset_id: str):
-        """Remove entries older than max history."""
-        if asset_id not in self._prices:
+    def _ensure_asset(self, asset_id: str):
+        """Initialize tracking for an asset if needed."""
+        if asset_id not in self._assets:
+            self._assets[asset_id] = {
+                'buckets': {},
+                'metadata': {},
+                'volume_history': [],
+            }
+    
+    def _get_or_create_bucket(self, asset_id: str, minute_key: str) -> dict:
+        """Get or create a minute bucket for an asset."""
+        self._ensure_asset(asset_id)
+        
+        if minute_key not in self._assets[asset_id]['buckets']:
+            self._assets[asset_id]['buckets'][minute_key] = {
+                'volume': 0.0,
+                'price_x_volume': 0.0,
+                'trades': 0,
+                'high': 0.0,
+                'low': float('inf'),
+                'last_price': 0.0,
+            }
+        
+        return self._assets[asset_id]['buckets'][minute_key]
+    
+    def record_trade(self, asset_id: str, price: float, volume_usd: float, 
+                     title: str = "", slug: str = ""):
+        """
+        Record a trade for VWAP calculation.
+        Called for every trade from WebSocket.
+        """
+        if price <= 0 or volume_usd <= 0:
+            return
+        
+        self._ensure_asset(asset_id)
+        minute_key = self._get_minute_key()
+        bucket = self._get_or_create_bucket(asset_id, minute_key)
+        
+        bucket['volume'] += volume_usd
+        bucket['price_x_volume'] += price * volume_usd
+        bucket['trades'] += 1
+        bucket['high'] = max(bucket['high'], price)
+        bucket['low'] = min(bucket['low'], price) if bucket['low'] != float('inf') else price
+        bucket['last_price'] = price
+        
+        if title:
+            self._assets[asset_id]['metadata']['title'] = title
+        if slug:
+            self._assets[asset_id]['metadata']['slug'] = slug
+        
+        if bucket['trades'] == 1:
+            self._prune_old_buckets(asset_id)
+    
+    def _prune_old_buckets(self, asset_id: str):
+        """Remove buckets older than max history."""
+        if asset_id not in self._assets:
             return
         
         cutoff = datetime.utcnow() - timedelta(minutes=self._max_history_minutes)
-        window = self._prices[asset_id]
+        cutoff_key = self._get_minute_key(cutoff)
         
-        while len(window) > 2 and window[0][0] < cutoff:
-            window.popleft()
+        buckets = self._assets[asset_id]['buckets']
+        old_keys = [k for k in buckets.keys() if k < cutoff_key]
+        
+        for key in old_keys:
+            vol = buckets[key]['volume']
+            if vol > 0:
+                self._assets[asset_id]['volume_history'].append(vol)
+                if len(self._assets[asset_id]['volume_history']) > 60:
+                    self._assets[asset_id]['volume_history'].pop(0)
+            del buckets[key]
     
-    def _get_price_at_time(self, asset_id: str, target_time: datetime) -> Optional[float]:
-        """Get the price closest to (but not after) target_time."""
-        if asset_id not in self._prices:
-            return None
-        
-        window = self._prices[asset_id]
-        if not window:
-            return None
-        
-        best_price = None
-        for timestamp, price in window:
-            if timestamp <= target_time:
-                best_price = price
-            else:
-                break
-        
-        return best_price
-    
-    def get_last_price(self, asset_id: str) -> Optional[float]:
-        """Get the most recent recorded price for an asset."""
-        if asset_id not in self._prices:
-            return None
-        
-        window = self._prices[asset_id]
-        if not window:
-            return None
-        
-        return window[-1][1]
-    
-    def check_volatility(self, asset_id: str, guild_id: int, threshold_pct: float = 5.0) -> Optional[dict]:
+    def _get_vwap_for_window(self, asset_id: str, minutes_ago: int) -> Optional[dict]:
         """
-        Check if an asset has moved beyond threshold in any tracked timeframe.
-        Returns alert info for the shortest triggering timeframe, or None.
+        Get VWAP and stats for a time window.
+        Returns: {vwap, volume, trades, high, low} or None
+        """
+        if asset_id not in self._assets:
+            return None
+        
+        now = datetime.utcnow()
+        buckets = self._assets[asset_id]['buckets']
+        
+        total_volume = 0.0
+        total_price_x_volume = 0.0
+        total_trades = 0
+        window_high = 0.0
+        window_low = float('inf')
+        
+        for i in range(minutes_ago):
+            target_time = now - timedelta(minutes=i)
+            minute_key = self._get_minute_key(target_time)
+            
+            if minute_key in buckets:
+                b = buckets[minute_key]
+                total_volume += b['volume']
+                total_price_x_volume += b['price_x_volume']
+                total_trades += b['trades']
+                if b['high'] > 0:
+                    window_high = max(window_high, b['high'])
+                if b['low'] < float('inf'):
+                    window_low = min(window_low, b['low'])
+        
+        if total_volume <= 0:
+            return None
+        
+        vwap = total_price_x_volume / total_volume
+        
+        return {
+            'vwap': vwap,
+            'volume': total_volume,
+            'trades': total_trades,
+            'high': window_high if window_high > 0 else None,
+            'low': window_low if window_low < float('inf') else None,
+        }
+    
+    def _get_average_minute_volume(self, asset_id: str) -> float:
+        """Get average volume per minute for this asset."""
+        if asset_id not in self._assets:
+            return 0
+        
+        history = self._assets[asset_id]['volume_history']
+        if not history:
+            return 0
+        
+        return sum(history) / len(history)
+    
+    def check_volatility(self, asset_id: str, guild_id: int, 
+                         threshold_pct: float = 5.0) -> Optional[dict]:
+        """
+        Check if asset has significant VWAP movement with volume confirmation.
+        Returns alert info for shortest triggering timeframe, or None.
         """
         now = datetime.utcnow()
         
         if now < self._startup_time + timedelta(minutes=self._warmup_minutes):
             return None
         
-        if asset_id not in self._prices:
+        if asset_id not in self._assets:
             return None
         
-        window = self._prices[asset_id]
-        if len(window) < 2:
+        buckets = self._assets[asset_id]['buckets']
+        if not buckets:
             return None
         
-        current_time, current_price = window[-1]
+        current_minute = self._get_minute_key()
+        current_bucket = buckets.get(current_minute)
+        if not current_bucket or current_bucket['volume'] <= 0:
+            prev_minute = self._get_minute_key(now - timedelta(minutes=1))
+            current_bucket = buckets.get(prev_minute)
+            if not current_bucket or current_bucket['volume'] <= 0:
+                return None
         
-        if current_price <= 0.02 or current_price >= 0.98:
+        current_vwap = current_bucket['price_x_volume'] / current_bucket['volume']
+        
+        if current_vwap <= 0.02 or current_vwap >= 0.98:
             return None
         
         for window_minutes in sorted(self.windows_minutes):
-            target_time = now - timedelta(minutes=window_minutes)
-            old_price = self._get_price_at_time(asset_id, target_time)
-            
-            if old_price is None:
-                if len(window) > 0:
-                    first_time, first_price = window[0]
-                    if first_time >= target_time:
-                        old_price = first_price
-            
-            if old_price is None:
+            window_stats = self._get_vwap_for_window(asset_id, window_minutes)
+            if not window_stats:
                 continue
             
-            if old_price <= 0.02 or old_price >= 0.98:
+            old_stats = self._get_vwap_for_window(asset_id, window_minutes + 5)
+            if not old_stats:
                 continue
             
-            price_change = (current_price - old_price) * 100
+            old_vwap = old_stats['vwap']
+            
+            if old_vwap <= 0.02 or old_vwap >= 0.98:
+                continue
+            
+            price_change = (current_vwap - old_vwap) * 100
             
             if abs(price_change) < threshold_pct:
                 continue
+            
+            window_volume = window_stats['volume']
+            window_trades = window_stats['trades']
+            
+            if window_volume < self._min_volume_usd:
+                continue
+            
+            if window_trades < self._min_trades_in_window:
+                continue
+            
+            avg_minute_vol = self._get_average_minute_volume(asset_id)
+            if avg_minute_vol > 0:
+                expected_volume = avg_minute_vol * window_minutes
+                relative_volume = window_volume / expected_volume if expected_volume > 0 else 0
+                
+                if relative_volume < self._min_relative_volume:
+                    continue
             
             cooldown_key = f"{asset_id}:{guild_id}:{window_minutes}"
             if cooldown_key in self._cooldowns:
@@ -207,48 +312,53 @@ class VolatilityTracker:
             
             self._cooldowns[cooldown_key] = now + timedelta(minutes=self._cooldown_minutes)
             
-            metadata = self._metadata.get(asset_id, {})
+            metadata = self._assets[asset_id]['metadata']
             return {
                 'asset_id': asset_id,
                 'title': metadata.get('title', 'Unknown Market'),
                 'slug': metadata.get('slug', ''),
-                'old_price': old_price,
-                'new_price': current_price,
+                'old_price': old_vwap,
+                'new_price': current_vwap,
                 'price_change_pct': price_change,
-                'time_window_minutes': window_minutes
+                'time_window_minutes': window_minutes,
+                'volume_usd': window_volume,
+                'trade_count': window_trades,
             }
         
         return None
     
     def cleanup(self):
-        """Remove expired cooldowns and old price data."""
+        """Periodic cleanup of old data and expired cooldowns."""
         now = datetime.utcnow()
         
         expired = [k for k, v in self._cooldowns.items() if v < now]
         for k in expired:
             del self._cooldowns[k]
         
-        for asset_id in list(self._prices.keys()):
-            self._prune_old_entries(asset_id)
+        for asset_id in list(self._assets.keys()):
+            self._prune_old_buckets(asset_id)
+            
+            if not self._assets[asset_id]['buckets']:
+                del self._assets[asset_id]
     
     def get_stats(self) -> dict:
         """Get stats for debugging."""
-        now = datetime.utcnow()
-        total_entries = sum(len(w) for w in self._prices.values())
-        active_cooldowns = len([k for k, v in self._cooldowns.items() if v > now])
+        total_buckets = sum(len(a['buckets']) for a in self._assets.values())
+        active_cooldowns = len([k for k, v in self._cooldowns.items() 
+                               if v > datetime.utcnow()])
         return {
-            'assets_tracked': len(self._prices),
-            'total_price_entries': total_entries,
+            'assets_tracked': len(self._assets),
+            'total_buckets': total_buckets,
             'active_cooldowns': active_cooldowns,
-            'timeframes': self.windows_minutes
+            'timeframes': self.windows_minutes,
+            'min_volume': self._min_volume_usd,
         }
 
 
-volatility_tracker = VolatilityTracker(windows_minutes=[5, 15, 60], cooldown_minutes=15)
-
-
-# Price WebSocket will be initialized after bot is defined
-price_ws = None
+volatility_tracker = VWAPVolatilityTracker(
+    windows_minutes=[5, 15, 60],
+    cooldown_minutes=15
+)
 
 
 class PolymarketBot(commands.Bot):
@@ -276,12 +386,7 @@ class PolymarketBot(commands.Bot):
             monitor_loop.start()
             print("Monitor loop started (backup for tracked wallets)")
         
-        # Seed initial price snapshots immediately so volatility can work faster
-        try:
-            await seed_initial_prices()
-            print("In-memory volatility tracker seeded")
-        except Exception as e:
-            print(f"Error seeding initial snapshots: {e}")
+        print("VWAP volatility tracker ready (builds from trade WebSocket)")
         
         if not volatility_loop.is_running():
             volatility_loop.start()
@@ -299,15 +404,6 @@ class PolymarketBot(commands.Bot):
             asyncio.create_task(start_websocket())
             print("WebSocket task scheduled")
         
-        # Start price WebSocket for volatility tracking
-        if not hasattr(self, 'price_ws_started') or not self.price_ws_started:
-            self.price_ws_started = True
-            asyncio.create_task(start_price_websocket())
-            print("Price WebSocket task scheduled for volatility tracking")
-        
-        if not refresh_price_subscriptions.is_running():
-            refresh_price_subscriptions.start()
-            print("Price subscription refresh loop started")
         
         # Log all server configs at startup
         session = get_session()
@@ -329,106 +425,6 @@ class PolymarketBot(commands.Bot):
 
 
 bot = PolymarketBot()
-
-
-async def handle_price_update(price_data: dict):
-    """
-    Handle real-time price updates from the Price WebSocket.
-    Records price and checks for volatility alerts.
-    """
-    asset_id = price_data.get('asset_id', '')
-    price = price_data.get('price', 0)
-    spread = price_data.get('spread', 1)
-    title = price_data.get('title', '')
-    slug = price_data.get('slug', '')
-    
-    if not asset_id or price <= 0:
-        return
-    
-    last_price = volatility_tracker.get_last_price(asset_id)
-    if last_price is not None:
-        price_jump = abs(price - last_price)
-        if price_jump > 0.25:
-            print(f"[VOLATILITY] Rejected suspicious price jump: {asset_id[:20]}... {last_price*100:.1f}%→{price*100:.1f}% (spread: {spread*100:.1f}%)", flush=True)
-            return
-    
-    volatility_tracker.record_price(asset_id, price, title, slug)
-    
-    if not bot.is_ready():
-        return
-    
-    all_configs = get_cached_server_configs()
-    volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
-    
-    for config in volatility_configs:
-        threshold = config.volatility_threshold or 5.0
-        alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
-        
-        if alert:
-            try:
-                session = get_session()
-                cooldown_time = datetime.utcnow() - timedelta(minutes=15)
-                recent_db_alert = session.query(VolatilityAlert).filter(
-                    VolatilityAlert.condition_id == asset_id,
-                    VolatilityAlert.alerted_at >= cooldown_time
-                ).first()
-                
-                if not recent_db_alert:
-                    window_str = f"{alert['time_window_minutes']}min"
-                    print(f"[VOLATILITY] {window_str}: {alert['title'][:40]}... {alert['price_change_pct']:+.1f} pts ({alert['old_price']*100:.0f}%→{alert['new_price']*100:.0f}%)", flush=True)
-                    
-                    channel = await get_or_fetch_channel(config.volatility_channel_id)
-                    if channel:
-                        embed, market_url = create_volatility_alert_embed(
-                            market_title=alert['title'],
-                            slug=alert['slug'],
-                            old_price=alert['old_price'],
-                            new_price=alert['new_price'],
-                            price_change=alert['price_change_pct'],
-                            time_window_minutes=alert['time_window_minutes']
-                        )
-                        
-                        event_slug = polymarket_client.get_event_slug_by_condition(asset_id, alert['slug'])
-                        button_view = create_trade_button_view(event_slug, market_url)
-                        
-                        try:
-                            await channel.send(embed=embed, view=button_view)
-                            session.add(VolatilityAlert(condition_id=asset_id, price_change=alert['price_change_pct']))
-                            session.commit()
-                            print(f"[VOLATILITY] ✓ Alert sent to channel {config.volatility_channel_id}", flush=True)
-                        except Exception as e:
-                            print(f"[VOLATILITY] ✗ Send error: {e}", flush=True)
-                
-                session.close()
-            except Exception as e:
-                print(f"[VOLATILITY] Error: {e}", flush=True)
-
-
-async def start_price_websocket():
-    """Initialize and start the price WebSocket for volatility tracking."""
-    global price_ws
-    
-    await bot.wait_until_ready()
-    
-    print("[PriceWS] Fetching active markets...", flush=True)
-    
-    try:
-        await polymarket_client.ensure_session()
-        async with polymarket_client.session.get(
-            f"{polymarket_client.GAMMA_BASE_URL}/markets",
-            params={"limit": 500, "active": "true", "closed": "false"}
-        ) as resp:
-            if resp.status == 200:
-                markets = await resp.json()
-                print(f"[PriceWS] Found {len(markets)} active markets", flush=True)
-                
-                price_ws = PolymarketPriceWebSocket(on_price_callback=handle_price_update)
-                await price_ws.subscribe_to_markets(markets)
-                await price_ws.connect()
-            else:
-                print(f"[PriceWS] Failed to fetch markets: {resp.status}", flush=True)
-    except Exception as e:
-        print(f"[PriceWS] Startup error: {e}", flush=True)
 
 
 async def get_or_fetch_channel(channel_id):
@@ -2015,42 +2011,16 @@ async def before_monitor():
     await bot.wait_until_ready()
 
 
-async def seed_initial_prices():
-    """Seed initial prices into in-memory volatility manager on startup."""
-    markets = await polymarket_client.get_active_markets_prices(limit=500, include_sports=True)
-    
-    for market in markets:
-        condition_id = market['condition_id']
-        current_price = market['yes_price']
-        title = market['title']
-        slug = market['slug']
-        
-        volatility_tracker.record_price(condition_id, current_price, title, slug)
-    
-    stats = volatility_tracker.get_stats()
-    print(f"[STARTUP] Seeded {stats['assets_tracked']} markets into in-memory volatility tracker")
-
-
 @tasks.loop(minutes=5)
 async def volatility_loop():
-    """Periodic price refresh to keep in-memory volatility tracker current for markets with no recent trades."""
+    """Periodic cleanup of VWAP volatility tracker data."""
     try:
-        markets = await polymarket_client.get_active_markets_prices(limit=500, include_sports=True)
-        
-        for market in markets:
-            condition_id = market['condition_id']
-            current_price = market['yes_price']
-            title = market['title']
-            slug = market['slug']
-            
-            volatility_tracker.record_price(condition_id, current_price, title, slug)
-        
         volatility_tracker.cleanup()
         
         stats = volatility_tracker.get_stats()
-        print(f"[VOLATILITY] Stats: {stats['assets_tracked']} assets, {stats['total_price_entries']} prices, {stats['active_cooldowns']} cooldowns, windows={stats['timeframes']}", flush=True)
+        print(f"[VOLATILITY] Stats: {stats['assets_tracked']} assets, {stats['total_buckets']} buckets, {stats['active_cooldowns']} cooldowns, min_vol=${stats['min_volume']}", flush=True)
     except Exception as e:
-        print(f"Error in volatility refresh: {e}")
+        print(f"[VOLATILITY] Cleanup error: {e}")
 
 
 @volatility_loop.before_loop
@@ -2088,32 +2058,6 @@ async def before_cleanup():
     await bot.wait_until_ready()
 
 
-@tasks.loop(minutes=10)
-async def refresh_price_subscriptions():
-    """Periodically refresh market subscriptions to catch new markets."""
-    global price_ws
-    try:
-        if price_ws and price_ws.is_connected():
-            await polymarket_client.ensure_session()
-            async with polymarket_client.session.get(
-                f"{polymarket_client.GAMMA_BASE_URL}/markets",
-                params={"limit": 500, "active": "true", "closed": "false"}
-            ) as resp:
-                if resp.status == 200:
-                    markets = await resp.json()
-                    await price_ws.subscribe_to_markets(markets)
-            
-            volatility_tracker.cleanup()
-            
-            stats = volatility_tracker.get_stats()
-            print(f"[VOLATILITY] Stats: {stats['assets_tracked']} assets, {stats['total_price_entries']} prices, {stats['active_cooldowns']} cooldowns", flush=True)
-    except Exception as e:
-        print(f"[VOLATILITY] Refresh error: {e}", flush=True)
-
-
-@refresh_price_subscriptions.before_loop
-async def before_refresh_price():
-    await bot.wait_until_ready()
 
 
 _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
@@ -2121,7 +2065,6 @@ _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'l
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
     
-    # EARLY EXTRACTION: Get value and wallet BEFORE any DB calls
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
     
@@ -2130,17 +2073,76 @@ async def handle_websocket_trade(trade: dict):
     
     wallet = wallet.lower()
     side = trade.get('side', '').upper()
+    price = float(trade.get('price', 0) or 0)
     
-    # Skip SELLs for trade processing (volatility now handled by Price WebSocket)
+    asset_id = trade.get('asset', '')
+    outcome = trade.get('outcome', 'Yes')
+    outcome_index = trade.get('outcomeIndex', 0)
+    
+    if asset_id and price > 0 and value > 0 and (outcome == 'Yes' or outcome_index == 0):
+        market_title = trade.get('title', '') or polymarket_client.get_market_title(trade)
+        slug = trade.get('slug', '') or polymarket_client.get_market_slug(trade)
+        
+        volatility_tracker.record_trade(asset_id, price, value, market_title, slug)
+        
+        if side == 'BUY' and bot.is_ready():
+            all_configs = get_cached_server_configs()
+            volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
+            
+            for config in volatility_configs:
+                threshold = config.volatility_threshold or 5.0
+                alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
+                
+                if alert:
+                    try:
+                        session = get_session()
+                        cooldown_time = datetime.utcnow() - timedelta(minutes=15)
+                        recent_db_alert = session.query(VolatilityAlert).filter(
+                            VolatilityAlert.condition_id == asset_id,
+                            VolatilityAlert.alerted_at >= cooldown_time
+                        ).first()
+                        
+                        if not recent_db_alert:
+                            window_str = f"{alert['time_window_minutes']}min"
+                            vol_str = f"${alert['volume_usd']:,.0f}"
+                            trades_str = f"{alert['trade_count']} trades"
+                            print(f"[VOLATILITY] 🚨 {window_str}: {alert['title'][:40]}... {alert['price_change_pct']:+.1f} pts ({alert['old_price']*100:.0f}%→{alert['new_price']*100:.0f}%) | {vol_str}, {trades_str}", flush=True)
+                            
+                            channel = await get_or_fetch_channel(config.volatility_channel_id)
+                            if channel:
+                                embed, market_url = create_volatility_alert_embed(
+                                    market_title=alert['title'],
+                                    slug=alert['slug'],
+                                    old_price=alert['old_price'],
+                                    new_price=alert['new_price'],
+                                    price_change=alert['price_change_pct'],
+                                    time_window_minutes=alert['time_window_minutes'],
+                                    volume_usd=alert['volume_usd'],
+                                    trade_count=alert['trade_count']
+                                )
+                                
+                                event_slug = polymarket_client.get_event_slug_by_condition(asset_id, alert['slug'])
+                                button_view = create_trade_button_view(event_slug, market_url)
+                                
+                                try:
+                                    await channel.send(embed=embed, view=button_view)
+                                    session.add(VolatilityAlert(condition_id=asset_id, price_change=alert['price_change_pct']))
+                                    session.commit()
+                                    _ws_stats['alerts_sent'] += 1
+                                    print(f"[VOLATILITY] ✓ Alert sent to channel {config.volatility_channel_id}", flush=True)
+                                except Exception as e:
+                                    print(f"[VOLATILITY] ✗ Send error: {e}", flush=True)
+                        
+                        session.close()
+                    except Exception as e:
+                        print(f"[VOLATILITY] Error: {e}", flush=True)
+    
     if side == 'SELL':
         return
     
-    # Check if wallet is tracked (uses cache, no DB query)
     tracked_addresses, tracked_by_guild = get_cached_tracked_wallets()
     is_tracked = wallet in tracked_addresses
     
-    # EARLY EXIT: Skip trades below $1000 unless it's a tracked wallet
-    # This prevents database overload from tiny trades
     if value < 1000 and not is_tracked:
         return
     
