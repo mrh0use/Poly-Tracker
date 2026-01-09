@@ -82,6 +82,43 @@ def invalidate_tracked_wallet_cache():
     _tracked_wallet_cache_time = 0
 
 
+POLYMARKET_CATEGORIES = [
+    ("Politics", "politics"),
+    ("Sports", "sports"),
+    ("Crypto", "crypto"),
+    ("Finance", "finance"),
+    ("Geopolitics", "geopolitics"),
+    ("Earnings", "earnings"),
+    ("Tech", "tech"),
+    ("Culture", "culture"),
+    ("World", "world"),
+    ("Economy", "economy"),
+    ("Climate & Science", "climate-science"),
+    ("Elections", "elections"),
+    ("Mentions", "mentions"),
+]
+
+
+def should_skip_volatility_category(asset_id: str, blacklist_str: str) -> bool:
+    """
+    Check if a market should be skipped based on category blacklist.
+    Returns True if the market's category is blacklisted.
+    """
+    if not blacklist_str:
+        return False
+    
+    blacklist = {x.strip().lower() for x in blacklist_str.split(",") if x.strip()}
+    if not blacklist:
+        return False
+    
+    market_categories = polymarket_client.get_market_categories(asset_id)
+    
+    if market_categories & blacklist:
+        return True
+    
+    return False
+
+
 class VWAPVolatilityTracker:
     """
     Volume-weighted volatility tracker using minute buckets.
@@ -723,6 +760,60 @@ class UntrackView(discord.ui.View):
         self.add_item(UntrackSelect(wallets))
 
 
+class VolatilityBlacklistSelect(discord.ui.Select):
+    """Dropdown to select categories to exclude from volatility alerts."""
+    
+    def __init__(self, current_blacklist: list):
+        options = [
+            discord.SelectOption(
+                label=label,
+                value=value,
+                default=value in current_blacklist
+            )
+            for label, value in POLYMARKET_CATEGORIES
+        ]
+        
+        super().__init__(
+            placeholder="Select categories to exclude...",
+            min_values=0,
+            max_values=len(options),
+            options=options
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        session = get_session()
+        try:
+            config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+            
+            if config:
+                config.volatility_blacklist = ",".join(self.values) if self.values else ""
+                session.commit()
+                invalidate_server_config_cache()
+            
+            if self.values:
+                label_map = {v: l for l, v in POLYMARKET_CATEGORIES}
+                formatted = ", ".join(f"**{label_map.get(v, v)}**" for v in self.values)
+                await interaction.response.send_message(
+                    f"Volatility alerts will now exclude: {formatted}",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    "Blacklist cleared - all categories will trigger alerts.",
+                    ephemeral=True
+                )
+        finally:
+            session.close()
+
+
+class VolatilityBlacklistView(discord.ui.View):
+    """View containing the blacklist dropdown."""
+    
+    def __init__(self, current_blacklist: list):
+        super().__init__(timeout=120)
+        self.add_item(VolatilityBlacklistSelect(current_blacklist))
+
+
 @bot.tree.command(name="untrack", description="Remove a wallet from tracking")
 @app_commands.checks.has_permissions(administrator=True)
 async def untrack(interaction: discord.Interaction):
@@ -1118,6 +1209,42 @@ async def volatility_window_cmd(interaction: discord.Interaction, minutes: app_c
                 f"Error saving window: {str(e)}",
                 ephemeral=True
             )
+    finally:
+        session.close()
+
+
+@bot.tree.command(name="volatility_blacklist", description="Exclude categories from volatility alerts")
+@app_commands.checks.has_permissions(administrator=True)
+async def volatility_blacklist_cmd(interaction: discord.Interaction):
+    """Manage which categories are excluded from volatility alerts."""
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+        
+        if not config:
+            await interaction.response.send_message("Server not configured. Run `/setup` first.", ephemeral=True)
+            return
+        
+        if not config.volatility_channel_id:
+            await interaction.response.send_message("Volatility alerts not enabled. Set a volatility channel first.", ephemeral=True)
+            return
+        
+        current = []
+        if config.volatility_blacklist:
+            current = [x.strip().lower() for x in config.volatility_blacklist.split(",") if x.strip()]
+        
+        label_map = {v: l for l, v in POLYMARKET_CATEGORIES}
+        current_display = ", ".join(label_map.get(c, c) for c in current) if current else "None"
+        
+        view = VolatilityBlacklistView(current)
+        await interaction.response.send_message(
+            f"**Volatility Alert Blacklist**\n\n"
+            f"Currently excluded: `{current_display}`\n\n"
+            f"Select categories to exclude from volatility alerts.\n"
+            f"Markets in these categories will not trigger alerts:",
+            view=view,
+            ephemeral=True
+        )
     finally:
         session.close()
 
@@ -2090,6 +2217,9 @@ async def handle_websocket_trade(trade: dict):
             volatility_configs = [c for c in all_configs if not c.is_paused and c.volatility_channel_id]
             
             for config in volatility_configs:
+                if should_skip_volatility_category(asset_id, config.volatility_blacklist or ""):
+                    continue
+                
                 threshold = config.volatility_threshold or 5.0
                 alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
                 

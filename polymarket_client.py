@@ -17,6 +17,25 @@ class PolymarketClient:
                    'formula-1', 'cricket', 'esports', 'league-of-legends', 'dota', 'csgo',
                    'valorant', 'nba-games', 'nfl-games', 'epl', 'premier-league', 'champions-league'}
     
+    CATEGORY_TAG_MAP = {
+        'politics': {'politics', 'political'},
+        'sports': {'sports', 'nba', 'nfl', 'mlb', 'nhl', 'soccer', 'football', 'basketball', 
+                   'baseball', 'hockey', 'tennis', 'golf', 'ufc', 'mma', 'boxing', 'f1', 
+                   'formula-1', 'cricket', 'esports', 'epl', 'premier-league', 'champions-league',
+                   'nba-games', 'nfl-games', 'college-football', 'college-basketball'},
+        'crypto': {'crypto', 'cryptocurrency', 'bitcoin', 'ethereum', 'btc', 'eth', 'defi', 'nft', 'solana'},
+        'finance': {'finance', 'financial', 'stocks', 'markets', 'fed', 'interest-rates', 'bonds'},
+        'geopolitics': {'geopolitics', 'geopolitical', 'international', 'war', 'conflict'},
+        'earnings': {'earnings', 'quarterly-earnings', 'earnings-reports'},
+        'tech': {'tech', 'technology', 'ai', 'artificial-intelligence', 'software', 'apple', 'google', 'microsoft'},
+        'culture': {'culture', 'pop-culture', 'entertainment', 'celebrities', 'movies', 'music', 'tv', 'awards'},
+        'world': {'world', 'world-news', 'global'},
+        'economy': {'economy', 'economic', 'gdp', 'inflation', 'unemployment', 'recession'},
+        'climate-science': {'climate', 'science', 'climate-science', 'weather', 'environment', 'temperature'},
+        'elections': {'elections', 'election', 'voting', '2024-election', '2025-election', '2026-election', 'presidential'},
+        'mentions': {'mentions', 'tweet-count', 'tweets', 'social-media', 'x-mentions'},
+    }
+    
     SPORTS_KEYWORDS = [
         # League/sport names (unique and safe)
         'nba', 'nfl', 'mlb', 'nhl', 'ufc', 'boxing', 'soccer', 'basketball', 'baseball',
@@ -288,6 +307,34 @@ class PolymarketClient:
             return self._market_cache[condition_id]
         
         return None
+    
+    def get_market_categories(self, asset_id: str) -> set:
+        """
+        Get the top-level Polymarket categories for a market.
+        Returns set of category slugs like {'sports', 'politics'}
+        """
+        market_info = self._market_cache.get(asset_id, {})
+        tags = market_info.get('tags', [])
+        
+        market_tag_slugs = set()
+        for tag in tags:
+            if isinstance(tag, dict):
+                slug = tag.get('slug', '').lower()
+                if slug:
+                    market_tag_slugs.add(slug)
+            elif isinstance(tag, str):
+                market_tag_slugs.add(tag.lower())
+        
+        group_slug = market_info.get('groupSlug', '').lower()
+        if group_slug:
+            market_tag_slugs.add(group_slug)
+        
+        categories = set()
+        for category, related_tags in self.CATEGORY_TAG_MAP.items():
+            if market_tag_slugs & related_tags:
+                categories.add(category)
+        
+        return categories
     
     def is_sports_market(self, trade_or_event: Dict[str, Any]) -> bool:
         market_info = self.get_market_info(trade_or_event)

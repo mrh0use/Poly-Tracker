@@ -1,0 +1,205 @@
+1. Database Migration
+Add a new column to ServerConfig in models.py:
+pythonvolatility_blacklist = Column(String, nullable=True, default="")  # Comma-separated: "sports,crypto,mentions"
+Run the migration or add the column manually to the database.
+
+2. Add to polymarket_client.py
+Add this constant near the top of the PolymarketClient class (after SPORTS_SLUGS):
+python# Map top-level Polymarket categories to related tag slugs
+CATEGORY_TAG_MAP = {
+    'politics': {'politics', 'political'},
+    'sports': {'sports', 'nba', 'nfl', 'mlb', 'nhl', 'soccer', 'football', 'basketball', 
+               'baseball', 'hockey', 'tennis', 'golf', 'ufc', 'mma', 'boxing', 'f1', 
+               'formula-1', 'cricket', 'esports', 'epl', 'premier-league', 'champions-league',
+               'nba-games', 'nfl-games', 'college-football', 'college-basketball'},
+    'crypto': {'crypto', 'cryptocurrency', 'bitcoin', 'ethereum', 'btc', 'eth', 'defi', 'nft', 'solana'},
+    'finance': {'finance', 'financial', 'stocks', 'markets', 'fed', 'interest-rates', 'bonds'},
+    'geopolitics': {'geopolitics', 'geopolitical', 'international', 'war', 'conflict'},
+    'earnings': {'earnings', 'quarterly-earnings', 'earnings-reports'},
+    'tech': {'tech', 'technology', 'ai', 'artificial-intelligence', 'software', 'apple', 'google', 'microsoft'},
+    'culture': {'culture', 'pop-culture', 'entertainment', 'celebrities', 'movies', 'music', 'tv', 'awards'},
+    'world': {'world', 'world-news', 'global'},
+    'economy': {'economy', 'economic', 'gdp', 'inflation', 'unemployment', 'recession'},
+    'climate-science': {'climate', 'science', 'climate-science', 'weather', 'environment', 'temperature'},
+    'elections': {'elections', 'election', 'voting', '2024-election', '2025-election', '2026-election', 'presidential'},
+    'mentions': {'mentions', 'tweet-count', 'tweets', 'social-media', 'x-mentions'},
+}
+Add this method to the PolymarketClient class:
+pythondef get_market_categories(self, asset_id: str) -> set:
+    """
+    Get the top-level Polymarket categories for a market.
+    Returns set of category slugs like {'sports', 'politics'}
+    """
+    market_info = self._market_cache.get(asset_id, {})
+    tags = market_info.get('tags', [])
+    
+    # Collect all tag slugs from the market
+    market_tag_slugs = set()
+    for tag in tags:
+        if isinstance(tag, dict):
+            slug = tag.get('slug', '').lower()
+            if slug:
+                market_tag_slugs.add(slug)
+        elif isinstance(tag, str):
+            market_tag_slugs.add(tag.lower())
+    
+    # Also check groupSlug for category hints
+    group_slug = market_info.get('groupSlug', '').lower()
+    if group_slug:
+        market_tag_slugs.add(group_slug)
+    
+    # Map to top-level categories
+    categories = set()
+    for category, related_tags in self.CATEGORY_TAG_MAP.items():
+        if market_tag_slugs & related_tags:  # If any overlap
+            categories.add(category)
+    
+    return categories
+
+3. Add to bot.py
+Add constants near the top (with other constants):
+python# Polymarket top-level categories for volatility blacklist
+POLYMARKET_CATEGORIES = [
+    ("Politics", "politics"),
+    ("Sports", "sports"),
+    ("Crypto", "crypto"),
+    ("Finance", "finance"),
+    ("Geopolitics", "geopolitics"),
+    ("Earnings", "earnings"),
+    ("Tech", "tech"),
+    ("Culture", "culture"),
+    ("World", "world"),
+    ("Economy", "economy"),
+    ("Climate & Science", "climate-science"),
+    ("Elections", "elections"),
+    ("Mentions", "mentions"),
+]
+Add the Select menu and View classes (near other UI components):
+pythonclass VolatilityBlacklistSelect(discord.ui.Select):
+    """Dropdown to select categories to exclude from volatility alerts."""
+    
+    def __init__(self, current_blacklist: list):
+        options = [
+            discord.SelectOption(
+                label=label,
+                value=value,
+                default=value in current_blacklist
+            )
+            for label, value in POLYMARKET_CATEGORIES
+        ]
+        
+        super().__init__(
+            placeholder="Select categories to exclude...",
+            min_values=0,
+            max_values=len(options),
+            options=options
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        session = get_session()
+        try:
+            config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
+            
+            if config:
+                config.volatility_blacklist = ",".join(self.values) if self.values else ""
+                session.commit()
+                invalidate_config_cache()
+            
+            if self.values:
+                # Get display names for selected values
+                label_map = {v: l for l, v in POLYMARKET_CATEGORIES}
+                formatted = ", ".join(f"**{label_map.get(v, v)}**" for v in self.values)
+                await interaction.response.send_message(
+                    f"✅ Volatility alerts will now exclude: {formatted}",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    "✅ Blacklist cleared - all categories will trigger alerts.",
+                    ephemeral=True
+                )
+        finally:
+            session.close()
+
+
+class VolatilityBlacklistView(discord.ui.View):
+    """View containing the blacklist dropdown."""
+    
+    def __init__(self, current_blacklist: list):
+        super().__init__(timeout=120)
+        self.add_item(VolatilityBlacklistSelect(current_blacklist))
+Add the slash command (with other slash commands):
+python@bot.slash_command(name="volatility-blacklist", description="Exclude categories from volatility alerts")
+@commands.has_permissions(administrator=True)
+async def volatility_blacklist_cmd(ctx):
+    """Manage which categories are excluded from volatility alerts."""
+    session = get_session()
+    try:
+        config = session.query(ServerConfig).filter_by(guild_id=ctx.guild_id).first()
+        
+        if not config:
+            await ctx.respond("❌ Server not configured. Run `/setup` first.", ephemeral=True)
+            return
+        
+        if not config.volatility_channel_id:
+            await ctx.respond("❌ Volatility alerts not enabled. Set a volatility channel first.", ephemeral=True)
+            return
+        
+        current = []
+        if config.volatility_blacklist:
+            current = [x.strip().lower() for x in config.volatility_blacklist.split(",") if x.strip()]
+        
+        # Get display names for current blacklist
+        label_map = {v: l for l, v in POLYMARKET_CATEGORIES}
+        current_display = ", ".join(label_map.get(c, c) for c in current) if current else "None"
+        
+        view = VolatilityBlacklistView(current)
+        await ctx.respond(
+            f"**📊 Volatility Alert Blacklist**\n\n"
+            f"Currently excluded: `{current_display}`\n\n"
+            f"Select categories to exclude from volatility alerts.\n"
+            f"Markets in these categories will not trigger alerts:",
+            view=view,
+            ephemeral=True
+        )
+    finally:
+        session.close()
+Add helper function for checking blacklist (near other helper functions):
+pythondef should_skip_volatility_category(asset_id: str, blacklist_str: str) -> bool:
+    """
+    Check if a market should be skipped based on category blacklist.
+    Returns True if the market's category is blacklisted.
+    """
+    if not blacklist_str:
+        return False
+    
+    blacklist = {x.strip().lower() for x in blacklist_str.split(",") if x.strip()}
+    if not blacklist:
+        return False
+    
+    # Get market's categories from cache
+    market_categories = polymarket_client.get_market_categories(asset_id)
+    
+    # Skip if ANY of the market's categories are blacklisted
+    if market_categories & blacklist:
+        return True
+    
+    return False
+Modify the volatility alert logic in handle_websocket_trade
+Find the section where volatility alerts are checked and add the blacklist filter. Look for something like:
+pythonfor config in volatility_configs:
+And add the blacklist check right after:
+pythonfor config in volatility_configs:
+    # Check category blacklist
+    if should_skip_volatility_category(asset_id, config.volatility_blacklist or ""):
+        continue
+    
+    threshold = config.volatility_threshold or 5.0
+    alert = volatility_tracker.check_volatility(asset_id, config.guild_id, threshold)
+    # ... rest of existing alert logic
+
+4. Summary of Changes
+FileChangesmodels.pyAdd volatility_blacklist = Column(String, nullable=True, default="") to ServerConfigpolymarket_client.pyAdd CATEGORY_TAG_MAP constant and get_market_categories() methodbot.pyAdd POLYMARKET_CATEGORIES constant, VolatilityBlacklistSelect class, VolatilityBlacklistView class, /volatility-blacklist command, and should_skip_volatility_category() helper
+
+5. Usage
+Users run /volatility-blacklist and get a dropdown with all 13 categories. They can select multiple categories to exclude. For example, if a user selects "Sports" and "Mentions", they won't receive volatility alerts for any markets tagged with sports-related tags or tweet/mention markets.
