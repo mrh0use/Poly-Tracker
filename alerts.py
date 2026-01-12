@@ -84,23 +84,16 @@ def extract_slug_from_url(market_url: str) -> str:
     return ''
 
 
-def encode_onsight_param(slug: str) -> str:
-    """Encode slug for Onsight Telegram bot deep link.
-    
-    Always uses short ID mapping stored in database.
-    Telegram bot looks up the short ID to get the full slug.
-    """
-    if not slug:
+def encode_onsight_param(market_id: str) -> str:
+    """Encode market ID for Onsight Telegram bot deep link."""
+    if not market_id:
         return ''
-    
-    clean_slug = slug.split('?')[0].strip('/')
-    short_id = get_or_create_slug_mapping(clean_slug)
-    return short_id
+    return f"m_{market_id}"
 
 
-def create_trade_button_view(slug: str, market_url: str) -> View:
+def create_trade_button_view(market_id: str, market_url: str) -> View:
     view = View()
-    encoded_param = encode_onsight_param(slug)
+    encoded_param = encode_onsight_param(market_id)
     if encoded_param:
         onsight_url = f"{ONSIGHT_BOT_URL}?start={encoded_param}"
     else:
