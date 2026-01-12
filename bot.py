@@ -200,13 +200,6 @@ class VWAPVolatilityTracker:
         if price <= 0.01 or price >= 0.99:
             return
         
-        last_price = self.get_last_price(asset_id)
-        if last_price is not None:
-            price_jump = abs(price - last_price)
-            if price_jump > 0.25:
-                print(f"[VOLATILITY] Rejected suspicious trade price: {title[:30] if title else asset_id[:20]}... {last_price*100:.1f}%→{price*100:.1f}%", flush=True)
-                return
-        
         self._ensure_asset(asset_id)
         minute_key = self._get_minute_key()
         bucket = self._get_or_create_bucket(asset_id, minute_key)
