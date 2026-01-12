@@ -418,6 +418,14 @@ class PolymarketClient:
                     categories.add('sports')
                     break
         
+        if 'sports' not in categories:
+            if re.search(r'will .+ win on \d{4}-\d{2}-\d{2}', text):
+                categories.add('sports')
+            elif re.search(r'\bvs\.?\s+', text) and re.search(r'win|winner|match|game', text):
+                categories.add('sports')
+            elif 'end in a draw' in text or 'end in draw' in text:
+                categories.add('sports')
+        
         if 'crypto' not in categories:
             for kw in self.CRYPTO_KEYWORDS:
                 if keyword_matches(kw, text):

@@ -1,0 +1,67 @@
+## Replit Changes for polymarket_client.py
+
+### 1. Find the Saudi teams line (around line 65-66) and replace:
+
+**Find:**
+```python
+        'saudi pro league', 'saudi club', 'saudi league',  # Saudi football
+        'al nassr', 'al hilal', 'al ittihad', 'al ahli', 'al najmah', 'al fateh', 'al shabab',  # Saudi teams
+```
+
+**Replace with:**
+```python
+        'saudi pro league', 'saudi club', 'saudi league', 'spl',  # Saudi football
+        # Saudi Pro League teams (all 18)
+        'al nassr', 'al hilal', 'al ittihad', 'al ahli', 'al shabab', 'al fateh',
+        'al taawoun', 'al ettifaq', 'al khaleej', 'al raed', 'al riyadh', 'al hazem',
+        'al feiha', 'al okhdood', 'al orubah', 'al qadsiah', 'al wehda', 'damac',
+```
+
+---
+
+### 2. Find the sports team name detection section in `get_market_categories` and replace:
+
+**Find:**
+```python
+        # SPORTS team name detection from API (if not already detected)
+        if 'sports' not in categories and self._sports_team_names:
+            for team in self._sports_team_names:
+                if len(team) > 3 and team in text:  # Only match team names > 3 chars to avoid false positives
+                    categories.add('sports')
+                    break
+        
+        # CRYPTO keyword detection (if not already detected via tags)
+```
+
+**Replace with:**
+```python
+        # SPORTS team name detection from API (if not already detected)
+        if 'sports' not in categories and self._sports_team_names:
+            for team in self._sports_team_names:
+                if len(team) > 3 and team in text:  # Only match team names > 3 chars to avoid false positives
+                    categories.add('sports')
+                    break
+        
+        # SPORTS pattern detection - common game title patterns
+        if 'sports' not in categories:
+            import re
+            # "Will X win on YYYY-MM-DD?" - almost always a sports game
+            if re.search(r'will .+ win on \d{4}-\d{2}-\d{2}', text):
+                categories.add('sports')
+            # "X vs Y" or "X vs. Y" with team-like names
+            elif re.search(r'\bvs\.?\s+', text) and re.search(r'win|winner|match|game', text):
+                categories.add('sports')
+            # "end in a draw" - definitely sports
+            elif 'end in a draw' in text or 'end in draw' in text:
+                categories.add('sports')
+        
+        # CRYPTO keyword detection (if not already detected via tags)
+```
+
+---
+
+This will catch patterns like:
+- "Will Al Hazem SC win on 2026-01-12?" ✓
+- "Will VfB Stuttgart win on 2026-01-10?" ✓  
+- "X vs. Y" game titles ✓
+- "end in a draw" ✓
