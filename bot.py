@@ -120,12 +120,16 @@ def should_skip_volatility_category(asset_id: str, blacklist_str: str, fallback_
     market_categories = polymarket_client.get_market_categories(asset_id, fallback_title, fallback_slug)
     
     matched = market_categories & blacklist
-    if matched:
-        display_title = fallback_title or polymarket_client._market_cache.get(asset_id, {}).get('title', 'Unknown')
-        print(f"[VOLATILITY] Blocked by blacklist: {display_title[:50]} | categories={market_categories} | matched={matched}", flush=True)
-        return True
     
-    return False
+    display_title = fallback_title or polymarket_client._market_cache.get(asset_id, {}).get('title', 'Unknown')
+    
+    if matched:
+        print(f"[VOLATILITY] ✗ Blocked: {display_title[:50]}... | detected={market_categories} | blocked_by={matched}", flush=True)
+        return True
+    else:
+        if market_categories:
+            print(f"[VOLATILITY] ✓ Allowed: {display_title[:50]}... | detected={market_categories} | blacklist={blacklist}", flush=True)
+        return False
 
 
 class VWAPVolatilityTracker:

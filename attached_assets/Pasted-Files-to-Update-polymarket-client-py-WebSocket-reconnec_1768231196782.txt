@@ -1,0 +1,475 @@
+Files to Update
+
+polymarket_client.py - WebSocket reconnection fix
+bot.py - Volatility blacklist fix
+
+
+1. polymarket_client.py - WebSocket Fix
+Find the class PolymarketWebSocket: section (around line 1193) and replace the entire class definition through the connect() method with the fixed version below.
+Key changes:
+
+Added _connection_switched flag to handle reconnection without breaking the main loop
+_create_connection() now verifies the connection actually works before returning
+_switch_to_backup() now retries 5 times with exponential backoff
+Main loop checks for connection switches and continues instead of breaking
+
+Replace from class PolymarketWebSocket: through the end of async def connect() (before async def _handle_message):
+pythonclass PolymarketWebSocket:
+    """
+    Production-ready WebSocket client for Polymarket RTDS feed.
+    
+    KEY CHANGE: Does NOT rely on ping/pong for health monitoring.
+    Instead uses data activity timeout which works reliably across all platforms.
+    
+    RECONNECTION FIX: Uses a flag-based approach to handle reconnection properly
+    without breaking out of the main loop prematurely.
+    """
+    
+    RTDS_URL = "wss://ws-live-data.polymarket.com"
+    
+    DATA_TIMEOUT = 120
+    MAX_CONNECTION_AGE = 900
+    
+    # Reconnection settings
+    INITIAL_RECONNECT_DELAY = 2
+    MAX_RECONNECT_DELAY = 60
+    RECONNECT_BACKOFF_FACTOR = 1.5
+    
+    DEBUG_MODE = False
+    DEBUG_LOG_FIRST_N = 20
+    
+    def __init__(self, on_trade_callback: Optional[Callable] = None, on_reconnect_callback: Optional[Callable] = None):
+        self.on_trade_callback = on_trade_callback
+        self.on_reconnect_callback = on_reconnect_callback
+        self._running = False
+        self._reconnect_delay = self.INITIAL_RECONNECT_DELAY
+        
+        self._primary_ws = None
+        self._backup_ws = None
+        
+        self._last_data_time = time.time()
+        self._connection_start_time = time.time()
+        self._total_trades = 0
+        
+        # Flag to signal main loop that connection was switched
+        self._connection_switched = False
+        # Counter for consecutive reconnection failures
+        self._consecutive_failures = 0
+        self._max_consecutive_failures = 10
+        
+        self._debug_msg_count = 0
+        self._debug_trade_count = 0
+        self._debug_non_trade_count = 0
+        self._debug_empty_count = 0
+        self._debug_error_count = 0
+        self._debug_last_msg_time = None
+        self._debug_topics_seen = set()
+        self._debug_types_seen = set()
+        
+        self._backup_task = None
+        self._monitor_task = None
+    
+    def _is_ws_open(self, ws) -> bool:
+        """Check if a WebSocket connection is open."""
+        if ws is None:
+            return False
+        try:
+            return ws.state == WSState.OPEN
+        except:
+            return False
+    
+    async def _create_connection(self, name: str, timeout: float = 30.0):
+        """
+        Create and subscribe a new WebSocket connection.
+        Returns the websocket if successful, None otherwise.
+        """
+        try:
+            print(f"[WS {name.upper()}] Attempting connection...", flush=True)
+            
+            ws = await asyncio.wait_for(
+                websockets.connect(
+                    self.RTDS_URL,
+                    ping_interval=None,
+                    ping_timeout=None,
+                    close_timeout=10
+                ),
+                timeout=timeout
+            )
+            
+            subscription = {
+                "action": "subscribe",
+                "subscriptions": [{"topic": "activity", "type": "trades"}]
+            }
+            await ws.send(json.dumps(subscription))
+            
+            # Wait briefly and verify we can receive data
+            try:
+                first_msg = await asyncio.wait_for(ws.recv(), timeout=10)
+                if first_msg:
+                    print(f"[WS {name.upper()}] ✓ Connected and verified (received data)", flush=True)
+                    self._consecutive_failures = 0  # Reset on success
+                    return ws
+            except asyncio.TimeoutError:
+                # No data within 10s, but connection might still be valid
+                print(f"[WS {name.upper()}] ⚠ Connected but no initial data (might be slow)", flush=True)
+                return ws
+                
+        except asyncio.TimeoutError:
+            print(f"[WS {name.upper()}] ✗ Connection timeout after {timeout}s", flush=True)
+            self._consecutive_failures += 1
+            return None
+        except Exception as e:
+            print(f"[WS {name.upper()}] ✗ Connection failed: {type(e).__name__}: {e}", flush=True)
+            self._consecutive_failures += 1
+            return None
+    
+    async def _maintain_backup(self):
+        """Maintain a backup connection ready to take over."""
+        while self._running:
+            try:
+                await asyncio.sleep(30)
+                
+                if not self._is_ws_open(self._backup_ws):
+                    self._backup_ws = await self._create_connection("backup")
+                    if self._backup_ws:
+                        print("[WS BACKUP] ✓ Backup connection ready", flush=True)
+                        
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[WS BACKUP] Error maintaining backup: {e}", flush=True)
+    
+    async def _monitor_health(self):
+        """
+        Monitor connection health using ONLY data activity timeout.
+        This is reliable across all platforms unlike ping/pong.
+        """
+        while self._running:
+            try:
+                await asyncio.sleep(10)
+                
+                now = time.time()
+                data_age = now - self._last_data_time
+                connection_age = now - self._connection_start_time
+                
+                if data_age > self.DATA_TIMEOUT:
+                    print(f"[WS MONITOR] No data for {data_age:.0f}s (>{self.DATA_TIMEOUT}s) - triggering reconnect", flush=True)
+                    await self._switch_to_backup()
+                
+                elif connection_age > self.MAX_CONNECTION_AGE:
+                    print(f"[WS MONITOR] Connection age {connection_age:.0f}s > {self.MAX_CONNECTION_AGE}s - proactive reconnect", flush=True)
+                    await self._switch_to_backup()
+                
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[WS MONITOR] Error: {e}", flush=True)
+    
+    async def _switch_to_backup(self):
+        """
+        Switch from primary to backup connection.
+        Sets _connection_switched flag so main loop knows to use new connection.
+        """
+        try:
+            old_ws = self._primary_ws
+            
+            if self._is_ws_open(self._backup_ws):
+                # Use existing backup
+                self._primary_ws = self._backup_ws
+                self._backup_ws = None
+                self._connection_start_time = time.time()
+                self._last_data_time = time.time()
+                self._connection_switched = True
+                
+                print(f"[WS SWITCH] ✓ Switched to backup connection", flush=True)
+                
+            else:
+                # No backup available - create new primary with retries
+                print(f"[WS SWITCH] No backup available - creating new primary...", flush=True)
+                
+                # Close old connection first
+                if old_ws:
+                    try:
+                        await old_ws.close()
+                    except:
+                        pass
+                    old_ws = None
+                
+                # Try to create new connection with exponential backoff
+                retry_delay = self.INITIAL_RECONNECT_DELAY
+                for attempt in range(5):
+                    new_ws = await self._create_connection("primary")
+                    if new_ws and self._is_ws_open(new_ws):
+                        self._primary_ws = new_ws
+                        self._connection_start_time = time.time()
+                        self._last_data_time = time.time()
+                        self._connection_switched = True
+                        self._reconnect_delay = self.INITIAL_RECONNECT_DELAY  # Reset backoff
+                        print(f"[WS SWITCH] ✓ New primary connection established (attempt {attempt + 1})", flush=True)
+                        break
+                    else:
+                        if attempt < 4:
+                            print(f"[WS SWITCH] Retry {attempt + 1}/5 failed, waiting {retry_delay:.1f}s...", flush=True)
+                            await asyncio.sleep(retry_delay)
+                            retry_delay = min(retry_delay * self.RECONNECT_BACKOFF_FACTOR, self.MAX_RECONNECT_DELAY)
+                        else:
+                            print(f"[WS SWITCH] ✗ All 5 reconnection attempts failed", flush=True)
+                            self._primary_ws = None
+            
+            # Close old connection if we successfully switched
+            if old_ws and old_ws != self._primary_ws:
+                try:
+                    await old_ws.close()
+                except:
+                    pass
+            
+            # Call reconnect callback
+            if self._connection_switched and self.on_reconnect_callback:
+                try:
+                    self.on_reconnect_callback()
+                except Exception as e:
+                    print(f"[WS] Reconnect callback error: {e}", flush=True)
+                    
+        except Exception as e:
+            print(f"[WS SWITCH] Error during switch: {type(e).__name__}: {e}", flush=True)
+    
+    async def connect(self):
+        """
+        Main connection loop with backup WebSocket support.
+        
+        KEY FIX: Uses _connection_switched flag to handle reconnection
+        without breaking out of the inner loop prematurely.
+        """
+        self._running = True
+        reconnect_delay = self.INITIAL_RECONNECT_DELAY
+        
+        while self._running:
+            try:
+                print("[WebSocket] Connecting to Polymarket RTDS...", flush=True)
+                
+                self._primary_ws = await self._create_connection("primary")
+                if not self._primary_ws:
+                    print(f"[WebSocket] Initial connection failed, retrying in {reconnect_delay}s...", flush=True)
+                    await asyncio.sleep(reconnect_delay)
+                    reconnect_delay = min(reconnect_delay * self.RECONNECT_BACKOFF_FACTOR, self.MAX_RECONNECT_DELAY)
+                    continue
+                
+                self._connection_start_time = time.time()
+                self._last_data_time = time.time()
+                self._connection_switched = False
+                reconnect_delay = self.INITIAL_RECONNECT_DELAY
+                
+                self._first_message_logged = False
+                self._debug_msg_count = 0
+                self._debug_trade_count = 0
+                self._debug_non_trade_count = 0
+                self._debug_empty_count = 0
+                self._debug_error_count = 0
+                self._debug_topics_seen = set()
+                self._debug_types_seen = set()
+                
+                # Start background tasks
+                self._backup_task = asyncio.create_task(self._maintain_backup())
+                self._monitor_task = asyncio.create_task(self._monitor_health())
+                
+                print("[WebSocket] Connected - NO PING mode (data activity timeout only)", flush=True)
+                
+                # Main message processing loop
+                while self._running:
+                    try:
+                        # Check if connection was switched by monitor/backup
+                        if self._connection_switched:
+                            self._connection_switched = False
+                            self._first_message_logged = False
+                            print("[WS] Connection was switched, continuing with new connection...", flush=True)
+                            # Don't break - continue using the new _primary_ws
+                        
+                        ws = self._primary_ws
+                        if not self._is_ws_open(ws):
+                            print("[WS] Primary connection not open, attempting recovery...", flush=True)
+                            await self._switch_to_backup()
+                            if not self._is_ws_open(self._primary_ws):
+                                print("[WS] Recovery failed, breaking to outer loop...", flush=True)
+                                break
+                            continue
+                        
+                        message = await asyncio.wait_for(ws.recv(), timeout=30)
+                        self._last_data_time = time.time()
+                        
+                        if not self._first_message_logged:
+                            print(f"[WebSocket] ✓ Receiving messages...", flush=True)
+                            self._first_message_logged = True
+                        
+                        await self._handle_message(message)
+                        await asyncio.sleep(0)
+                        
+                    except asyncio.TimeoutError:
+                        # Normal timeout, just continue
+                        continue
+                    except websockets.exceptions.ConnectionClosed as e:
+                        print(f"[WS] Connection closed ({e.code if hasattr(e, 'code') else 'unknown'}), attempting recovery...", flush=True)
+                        await self._switch_to_backup()
+                        if not self._is_ws_open(self._primary_ws):
+                            break
+                        # Continue with new connection
+                        
+            except Exception as e:
+                print(f"[WebSocket] Error: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
+            finally:
+                for task in [self._backup_task, self._monitor_task]:
+                    if task:
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
+                self._backup_task = None
+                self._monitor_task = None
+            
+            if self._running:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * self.RECONNECT_BACKOFF_FACTOR, self.MAX_RECONNECT_DELAY)
+
+2. polymarket_client.py - Category Detection Fix
+Find the get_market_categories method and replace it entirely:
+python    def get_market_categories(self, asset_id: str, fallback_title: str = "", fallback_slug: str = "") -> set:
+        """
+        Get the top-level Polymarket categories for a market.
+        Returns set of category slugs like {'sports', 'politics', 'crypto'}
+        Uses both tag matching AND keyword matching for comprehensive detection.
+        
+        Args:
+            asset_id: The market asset ID to look up in cache
+            fallback_title: Title to use for keyword matching if cache lookup fails
+            fallback_slug: Slug to use for keyword matching if cache lookup fails
+        """
+        market_info = self._market_cache.get(asset_id, {})
+        tags = market_info.get('tags', [])
+        
+        # Collect all tag slugs from the market
+        market_tag_slugs = set()
+        for tag in tags:
+            if isinstance(tag, dict):
+                slug = tag.get('slug', '').lower()
+                if slug:
+                    market_tag_slugs.add(slug)
+            elif isinstance(tag, str):
+                market_tag_slugs.add(tag.lower())
+        
+        # Also check groupSlug
+        group_slug = market_info.get('groupSlug', '').lower()
+        if group_slug:
+            market_tag_slugs.add(group_slug)
+        
+        # Map tags to top-level categories
+        categories = set()
+        for category, related_tags in self.CATEGORY_TAG_MAP.items():
+            if market_tag_slugs & related_tags:
+                categories.add(category)
+        
+        # Get text for keyword matching
+        title = market_info.get('title', '').lower() or fallback_title.lower()
+        slug = market_info.get('slug', '').lower() or fallback_slug.lower()
+        text = f"{title} {slug}"
+        
+        # SPORTS keyword detection (if not already detected via tags)
+        if 'sports' not in categories:
+            for kw in self.SPORTS_KEYWORDS:
+                if keyword_matches(kw, text):
+                    categories.add('sports')
+                    break
+        
+        # CRYPTO keyword detection (if not already detected via tags)
+        if 'crypto' not in categories:
+            for kw in self.CRYPTO_KEYWORDS:
+                if keyword_matches(kw, text):
+                    categories.add('crypto')
+                    break
+        
+        # FINANCE keyword detection
+        if 'finance' not in categories:
+            finance_keywords = ['stock', 'stocks', 'treasury', 'federal reserve', 
+                               'interest rate', 'bonds', 'inflation', 
+                               'recession', 'trade deal', 'tariff', 'trade war', 'trade policy']
+            for kw in finance_keywords:
+                if keyword_matches(kw, text):
+                    categories.add('finance')
+                    break
+        
+        # ECONOMY keyword detection
+        if 'economy' not in categories:
+            economy_keywords = ['economy', 'economic', 'unemployment', 'jobs report', 
+                               'gdp growth']
+            for kw in economy_keywords:
+                if keyword_matches(kw, text):
+                    categories.add('economy')
+                    break
+        
+        # MENTIONS/TWEETS detection
+        if 'mentions' not in categories:
+            mentions_keywords = ['mention', 'mentions', 'tweet', 'tweets', 'x post', 'x posts',
+                                'twitter mention', 'x mention']
+            for kw in mentions_keywords:
+                if keyword_matches(kw, text):
+                    categories.add('mentions')
+                    break
+        
+        return categories
+
+3. bot.py - Blacklist Function Fix
+Find the should_skip_volatility_category function and replace it:
+pythondef should_skip_volatility_category(asset_id: str, blacklist_str: str, fallback_title: str = "", fallback_slug: str = "") -> bool:
+    """
+    Check if a market should be skipped based on category blacklist.
+    Returns True if the market's category is blacklisted.
+    
+    Args:
+        asset_id: The market asset ID
+        blacklist_str: Comma-separated list of categories to block
+        fallback_title: Title from volatility tracker (used if cache lookup fails)
+        fallback_slug: Slug from volatility tracker (used if cache lookup fails)
+    """
+    if not blacklist_str:
+        return False
+    
+    blacklist = {x.strip().lower() for x in blacklist_str.split(",") if x.strip()}
+    if not blacklist:
+        return False
+    
+    # Get market categories using both cache and fallback title/slug
+    market_categories = polymarket_client.get_market_categories(asset_id, fallback_title, fallback_slug)
+    
+    # Check for matches
+    matched = market_categories & blacklist
+    
+    # Log the result
+    display_title = fallback_title or polymarket_client._market_cache.get(asset_id, {}).get('title', 'Unknown')
+    
+    if matched:
+        print(f"[VOLATILITY] ✗ Blocked: {display_title[:50]}... | detected={market_categories} | blocked_by={matched}", flush=True)
+        return True
+    else:
+        # Only log if we detected any categories (helps with debugging)
+        if market_categories:
+            print(f"[VOLATILITY] ✓ Allowed: {display_title[:50]}... | detected={market_categories} | blacklist={blacklist}", flush=True)
+        return False
+```
+
+---
+
+## What These Fixes Do
+
+### WebSocket Fix
+- **Problem:** Bot was entering a death loop where it said "creating new primary" but never actually used the new connection
+- **Solution:** Added a `_connection_switched` flag so the main loop knows to use the new connection instead of breaking
+
+### Blacklist Fix  
+- **Problem:** Sports and crypto markets weren't being detected because keyword matching wasn't implemented for those categories
+- **Solution:** Added `SPORTS_KEYWORDS` and `CRYPTO_KEYWORDS` matching to `get_market_categories()`
+
+### New Log Messages
+```
+[WS SWITCH] ✓ New primary connection established (attempt 1)
+[WS] Connection was switched, continuing with new connection...
+[VOLATILITY] ✗ Blocked: Lakers vs Celtics... | detected={'sports'} | blocked_by={'sports'}
+[VOLATILITY] ✓ Allowed: Fed Rate Decision... | detected={'finance

@@ -328,8 +328,8 @@ class PolymarketClient:
     def get_market_categories(self, asset_id: str, fallback_title: str = "", fallback_slug: str = "") -> set:
         """
         Get the top-level Polymarket categories for a market.
-        Returns set of category slugs like {'sports', 'politics'}
-        Uses both tag matching and keyword fallback for better detection.
+        Returns set of category slugs like {'sports', 'politics', 'crypto'}
+        Uses both tag matching AND keyword matching for comprehensive detection.
         
         Args:
             asset_id: The market asset ID to look up in cache
@@ -361,6 +361,12 @@ class PolymarketClient:
         slug = market_info.get('slug', '').lower() or fallback_slug.lower()
         text = f"{title} {slug}"
         
+        if 'sports' not in categories:
+            for kw in self.SPORTS_KEYWORDS:
+                if keyword_matches(kw, text):
+                    categories.add('sports')
+                    break
+        
         if 'crypto' not in categories:
             for kw in self.CRYPTO_KEYWORDS:
                 if keyword_matches(kw, text):
@@ -382,6 +388,14 @@ class PolymarketClient:
             for kw in economy_keywords:
                 if keyword_matches(kw, text):
                     categories.add('economy')
+                    break
+        
+        if 'mentions' not in categories:
+            mentions_keywords = ['mention', 'mentions', 'tweet', 'tweets', 'x post', 'x posts',
+                                'twitter mention', 'x mention']
+            for kw in mentions_keywords:
+                if keyword_matches(kw, text):
+                    categories.add('mentions')
                     break
         
         return categories
@@ -1196,12 +1210,19 @@ class PolymarketWebSocket:
     
     KEY CHANGE: Does NOT rely on ping/pong for health monitoring.
     Instead uses data activity timeout which works reliably across all platforms.
+    
+    RECONNECTION FIX: Uses a flag-based approach to handle reconnection properly
+    without breaking out of the main loop prematurely.
     """
     
     RTDS_URL = "wss://ws-live-data.polymarket.com"
     
     DATA_TIMEOUT = 120
     MAX_CONNECTION_AGE = 900
+    
+    INITIAL_RECONNECT_DELAY = 2
+    MAX_RECONNECT_DELAY = 60
+    RECONNECT_BACKOFF_FACTOR = 1.5
     
     DEBUG_MODE = False
     DEBUG_LOG_FIRST_N = 20
@@ -1210,8 +1231,7 @@ class PolymarketWebSocket:
         self.on_trade_callback = on_trade_callback
         self.on_reconnect_callback = on_reconnect_callback
         self._running = False
-        self._reconnect_delay = 2
-        self._max_reconnect_delay = 30
+        self._reconnect_delay = self.INITIAL_RECONNECT_DELAY
         
         self._primary_ws = None
         self._backup_ws = None
@@ -1219,6 +1239,10 @@ class PolymarketWebSocket:
         self._last_data_time = time.time()
         self._connection_start_time = time.time()
         self._total_trades = 0
+        
+        self._connection_switched = False
+        self._consecutive_failures = 0
+        self._max_consecutive_failures = 10
         
         self._debug_msg_count = 0
         self._debug_trade_count = 0
@@ -1241,14 +1265,22 @@ class PolymarketWebSocket:
         except:
             return False
     
-    async def _create_connection(self, name: str):
-        """Create and subscribe a new WebSocket connection."""
+    async def _create_connection(self, name: str, timeout: float = 30.0):
+        """
+        Create and subscribe a new WebSocket connection.
+        Returns the websocket if successful, None otherwise.
+        """
         try:
-            ws = await websockets.connect(
-                self.RTDS_URL,
-                ping_interval=None,
-                ping_timeout=None,
-                close_timeout=10
+            print(f"[WS {name.upper()}] Attempting connection...", flush=True)
+            
+            ws = await asyncio.wait_for(
+                websockets.connect(
+                    self.RTDS_URL,
+                    ping_interval=None,
+                    ping_timeout=None,
+                    close_timeout=10
+                ),
+                timeout=timeout
             )
             
             subscription = {
@@ -1257,12 +1289,23 @@ class PolymarketWebSocket:
             }
             await ws.send(json.dumps(subscription))
             
-            if self.DEBUG_MODE:
-                print(f"[WS {name.upper()}] Connected and subscribed", flush=True)
-            
-            return ws
+            try:
+                first_msg = await asyncio.wait_for(ws.recv(), timeout=10)
+                print(f"[WS {name.upper()}] ✓ Connected and verified (received data)", flush=True)
+                self._consecutive_failures = 0
+                return ws
+            except asyncio.TimeoutError:
+                print(f"[WS {name.upper()}] ⚠ Connected but no initial data (might be slow)", flush=True)
+                self._consecutive_failures = 0
+                return ws
+                
+        except asyncio.TimeoutError:
+            print(f"[WS {name.upper()}] ✗ Connection timeout after {timeout}s", flush=True)
+            self._consecutive_failures += 1
+            return None
         except Exception as e:
-            print(f"[WS {name.upper()}] Connection failed: {e}", flush=True)
+            print(f"[WS {name.upper()}] ✗ Connection failed: {type(e).__name__}: {e}", flush=True)
+            self._consecutive_failures += 1
             return None
     
     async def _maintain_backup(self):
@@ -1272,17 +1315,10 @@ class PolymarketWebSocket:
                 await asyncio.sleep(30)
                 
                 if not self._is_ws_open(self._backup_ws):
-                    if self.DEBUG_MODE:
-                        print("[WS BACKUP] Creating backup connection...", flush=True)
                     self._backup_ws = await self._create_connection("backup")
-                    
                     if self._backup_ws:
-                        try:
-                            await asyncio.wait_for(self._backup_ws.recv(), timeout=5)
-                            if self.DEBUG_MODE:
-                                print("[WS BACKUP] Backup connection verified", flush=True)
-                        except asyncio.TimeoutError:
-                            pass
+                        print("[WS BACKUP] ✓ Backup connection ready", flush=True)
+                        
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -1302,7 +1338,7 @@ class PolymarketWebSocket:
                 connection_age = now - self._connection_start_time
                 
                 if data_age > self.DATA_TIMEOUT:
-                    print(f"[WS MONITOR] No data for {data_age:.0f}s (>{self.DATA_TIMEOUT}s) - switching to backup", flush=True)
+                    print(f"[WS MONITOR] No data for {data_age:.0f}s (>{self.DATA_TIMEOUT}s) - triggering reconnect", flush=True)
                     await self._switch_to_backup()
                 
                 elif connection_age > self.MAX_CONNECTION_AGE:
@@ -1315,51 +1351,76 @@ class PolymarketWebSocket:
                 print(f"[WS MONITOR] Error: {e}", flush=True)
     
     async def _switch_to_backup(self):
-        """Switch from primary to backup connection."""
+        """
+        Switch from primary to backup connection.
+        Sets _connection_switched flag so main loop knows to use new connection.
+        """
         try:
+            old_ws = self._primary_ws
+            
             if self._is_ws_open(self._backup_ws):
-                old_ws = self._primary_ws
                 self._primary_ws = self._backup_ws
                 self._backup_ws = None
                 self._connection_start_time = time.time()
                 self._last_data_time = time.time()
+                self._connection_switched = True
                 
-                print(f"[WS SWITCH] Switched to backup connection", flush=True)
+                print(f"[WS SWITCH] ✓ Switched to backup connection", flush=True)
                 
-                if self.on_reconnect_callback:
-                    try:
-                        self.on_reconnect_callback()
-                    except Exception as e:
-                        print(f"[WS] Reconnect callback error: {e}", flush=True)
+            else:
+                print(f"[WS SWITCH] No backup available - creating new primary...", flush=True)
                 
                 if old_ws:
                     try:
                         await old_ws.close()
                     except:
                         pass
-            else:
-                print(f"[WS SWITCH] No backup available - creating new primary", flush=True)
-                if self._primary_ws:
-                    try:
-                        await self._primary_ws.close()
-                    except:
-                        pass
-                self._primary_ws = await self._create_connection("primary")
-                self._connection_start_time = time.time()
-                self._last_data_time = time.time()
+                    old_ws = None
                 
-                if self.on_reconnect_callback:
-                    try:
-                        self.on_reconnect_callback()
-                    except Exception as e:
-                        print(f"[WS] Reconnect callback error: {e}", flush=True)
+                retry_delay = self.INITIAL_RECONNECT_DELAY
+                for attempt in range(5):
+                    new_ws = await self._create_connection("primary")
+                    if new_ws and self._is_ws_open(new_ws):
+                        self._primary_ws = new_ws
+                        self._connection_start_time = time.time()
+                        self._last_data_time = time.time()
+                        self._connection_switched = True
+                        self._reconnect_delay = self.INITIAL_RECONNECT_DELAY
+                        print(f"[WS SWITCH] ✓ New primary connection established (attempt {attempt + 1})", flush=True)
+                        break
+                    else:
+                        if attempt < 4:
+                            print(f"[WS SWITCH] Retry {attempt + 1}/5 failed, waiting {retry_delay:.1f}s...", flush=True)
+                            await asyncio.sleep(retry_delay)
+                            retry_delay = min(retry_delay * self.RECONNECT_BACKOFF_FACTOR, self.MAX_RECONNECT_DELAY)
+                        else:
+                            print(f"[WS SWITCH] ✗ All 5 reconnection attempts failed", flush=True)
+                            self._primary_ws = None
+            
+            if old_ws and old_ws != self._primary_ws:
+                try:
+                    await old_ws.close()
+                except:
+                    pass
+            
+            if self._connection_switched and self.on_reconnect_callback:
+                try:
+                    self.on_reconnect_callback()
+                except Exception as e:
+                    print(f"[WS] Reconnect callback error: {e}", flush=True)
+                    
         except Exception as e:
-            print(f"[WS SWITCH] Error: {e}", flush=True)
+            print(f"[WS SWITCH] Error during switch: {type(e).__name__}: {e}", flush=True)
     
     async def connect(self):
-        """Main connection loop with backup WebSocket support."""
+        """
+        Main connection loop with backup WebSocket support.
+        
+        KEY FIX: Uses _connection_switched flag to handle reconnection
+        without breaking out of the inner loop prematurely.
+        """
         self._running = True
-        reconnect_delay = self._reconnect_delay
+        reconnect_delay = self.INITIAL_RECONNECT_DELAY
         
         while self._running:
             try:
@@ -1367,13 +1428,15 @@ class PolymarketWebSocket:
                 
                 self._primary_ws = await self._create_connection("primary")
                 if not self._primary_ws:
+                    print(f"[WebSocket] Initial connection failed, retrying in {reconnect_delay}s...", flush=True)
                     await asyncio.sleep(reconnect_delay)
-                    reconnect_delay = min(reconnect_delay * 2, self._max_reconnect_delay)
+                    reconnect_delay = min(reconnect_delay * self.RECONNECT_BACKOFF_FACTOR, self.MAX_RECONNECT_DELAY)
                     continue
                 
                 self._connection_start_time = time.time()
                 self._last_data_time = time.time()
-                reconnect_delay = self._reconnect_delay
+                self._connection_switched = False
+                reconnect_delay = self.INITIAL_RECONNECT_DELAY
                 
                 self._first_message_logged = False
                 self._debug_msg_count = 0
@@ -1389,22 +1452,27 @@ class PolymarketWebSocket:
                 
                 print("[WebSocket] Connected - NO PING mode (data activity timeout only)", flush=True)
                 
-                if self.DEBUG_MODE:
-                    print(f"[WS DEBUG] Started: data timeout {self.DATA_TIMEOUT}s, max age {self.MAX_CONNECTION_AGE}s", flush=True)
-                    print(f"[WS DEBUG] NO PING/PONG - using data activity only for health", flush=True)
-                
                 while self._running:
                     try:
+                        if self._connection_switched:
+                            self._connection_switched = False
+                            self._first_message_logged = False
+                            print("[WS] Connection was switched, continuing with new connection...", flush=True)
+                        
                         ws = self._primary_ws
                         if not self._is_ws_open(ws):
-                            print("[WS] Primary connection lost, reconnecting...", flush=True)
-                            break
+                            print("[WS] Primary connection not open, attempting recovery...", flush=True)
+                            await self._switch_to_backup()
+                            if not self._is_ws_open(self._primary_ws):
+                                print("[WS] Recovery failed, breaking to outer loop...", flush=True)
+                                break
+                            continue
                         
                         message = await asyncio.wait_for(ws.recv(), timeout=30)
                         self._last_data_time = time.time()
                         
                         if not self._first_message_logged:
-                            print(f"[WebSocket] Receiving messages...", flush=True)
+                            print(f"[WebSocket] ✓ Receiving messages...", flush=True)
                             self._first_message_logged = True
                         
                         await self._handle_message(message)
@@ -1412,9 +1480,11 @@ class PolymarketWebSocket:
                         
                     except asyncio.TimeoutError:
                         continue
-                    except websockets.exceptions.ConnectionClosed:
-                        print("[WS] Connection closed, switching to backup...", flush=True)
+                    except websockets.exceptions.ConnectionClosed as e:
+                        print(f"[WS] Connection closed ({e.code if hasattr(e, 'code') else 'unknown'}), attempting recovery...", flush=True)
                         await self._switch_to_backup()
+                        if not self._is_ws_open(self._primary_ws):
+                            break
                         
             except Exception as e:
                 print(f"[WebSocket] Error: {e}. Reconnecting in {reconnect_delay}s...", flush=True)
@@ -1431,7 +1501,7 @@ class PolymarketWebSocket:
             
             if self._running:
                 await asyncio.sleep(reconnect_delay)
-                reconnect_delay = min(reconnect_delay * 2, self._max_reconnect_delay)
+                reconnect_delay = min(reconnect_delay * self.RECONNECT_BACKOFF_FACTOR, self.MAX_RECONNECT_DELAY)
     
     async def _handle_message(self, raw_message: str):
         now = time.time()
