@@ -97,26 +97,15 @@ def extract_slug_from_url(market_url: str) -> str:
     return ''
 
 
-def encode_onsight_param(event_slug: str) -> str:
-    """Encode event slug for Onsight Telegram bot deep link.
+def encode_onsight_param(market_slug: str) -> str:
+    """Encode market slug for Onsight Telegram bot deep link.
     
-    Uses short ID mapping to handle long slugs that exceed Telegram's 64 char limit.
-    Short IDs are stored in the database for the Telegram bot to look up.
+    Always uses short ID mapping for consistency.
     """
-    if not event_slug:
+    if not market_slug:
         return ''
     
-    clean_slug = event_slug.split('?')[0].strip('/')
-    underscore_slug = clean_slug.replace('-', '_')
-    
-    # Check if the traditional format fits within limit
-    traditional_param = f"event_{underscore_slug}"
-    
-    if len(traditional_param) <= 64:
-        # Fits! Use the traditional format (no database needed)
-        return traditional_param
-    
-    # Too long - use short ID mapping
+    clean_slug = market_slug.split('?')[0].strip('/')
     short_id = get_or_create_slug_mapping(clean_slug)
     return short_id
 
