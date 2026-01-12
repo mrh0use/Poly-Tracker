@@ -1830,7 +1830,7 @@ async def monitor_loop():
                 
                 for config in configs:
                     tracked_addresses = tracked_by_guild.get(config.guild_id, {})
-                    market_id = polymarket_client.get_market_id(trade)
+                    market_id = await polymarket_client.get_market_id_async(trade)
                     button_view = create_trade_button_view(market_id, market_url)
                     
                     trade_timestamp = trade.get('timestamp', 0)
@@ -2253,7 +2253,7 @@ async def handle_websocket_trade(trade: dict):
                                     trade_count=alert['trade_count']
                                 )
                                 
-                                market_id = polymarket_client.get_market_id({'asset': asset_id})
+                                market_id = await polymarket_client.get_market_id_async({'asset': asset_id, 'conditionId': asset_id})
                                 button_view = create_trade_button_view(market_id, market_url)
                                 
                                 try:
@@ -2395,7 +2395,7 @@ async def handle_websocket_trade(trade: dict):
         
         for config in configs:
             tracked_addresses = tracked_by_guild.get(config.guild_id, {})
-            market_id = polymarket_client.get_market_id(trade)
+            market_id = await polymarket_client.get_market_id_async(trade)
             button_view = create_trade_button_view(market_id, market_url)
             
             if wallet in tracked_addresses:

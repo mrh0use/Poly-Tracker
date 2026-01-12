@@ -972,26 +972,68 @@ class PolymarketClient:
         
         return ''
     
+    async def fetch_and_cache_market(self, condition_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch a single market by condition ID and cache it."""
+        if not condition_id:
+            return None
+        
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/markets",
+                params={"condition_id": condition_id}
+            ) as resp:
+                if resp.status == 200:
+                    markets = await resp.json()
+                    if markets and len(markets) > 0:
+                        market = markets[0]
+                        market_data = {
+                            'slug': market.get('slug', ''),
+                            'title': market.get('question', market.get('title', '')),
+                            'tags': market.get('tags', []),
+                            'groupSlug': market.get('groupSlug', ''),
+                            'eventSlug': '',
+                            'marketId': market.get('id', ''),
+                        }
+                        # Cache by condition_id
+                        self._market_cache[condition_id] = market_data
+                        # Also cache by asset/token IDs
+                        for token in market.get('tokens', []):
+                            token_id = token.get('token_id') or token.get('tokenId', '')
+                            if token_id:
+                                self._market_cache[token_id] = market_data
+                        print(f"[CACHE] Added market {market.get('id')} for condition {condition_id[:20]}...", flush=True)
+                        return market_data
+        except Exception as e:
+            print(f"[CACHE] Error fetching market for {condition_id[:20]}: {e}", flush=True)
+        return None
+
     def get_market_id(self, trade_or_activity: Dict[str, Any]) -> str:
-        """Get the numeric market ID for Telegram deep links."""
-        # Try from cache first
+        """Get the numeric market ID for Telegram deep links (sync version, cache only)."""
         market_info = self.get_market_info(trade_or_activity)
         if market_info:
             market_id = market_info.get('marketId', '')
             if market_id:
-                print(f"[MARKET_ID] Found in cache: {market_id}", flush=True)
+                return str(market_id)
+        return ''
+
+    async def get_market_id_async(self, trade_or_activity: Dict[str, Any]) -> str:
+        """Get the numeric market ID, fetching from API if needed."""
+        # Try cache first
+        market_info = self.get_market_info(trade_or_activity)
+        if market_info:
+            market_id = market_info.get('marketId', '')
+            if market_id:
                 return str(market_id)
         
-        # Try from trade data directly (some responses include it)
-        market_id = trade_or_activity.get('marketId') or trade_or_activity.get('market_id') or trade_or_activity.get('id')
-        if market_id:
-            print(f"[MARKET_ID] Found in trade data: {market_id}", flush=True)
-            return str(market_id)
-        
-        # Log what we have for debugging
-        asset = trade_or_activity.get('asset', '')
-        condition_id = trade_or_activity.get('conditionId', '')
-        print(f"[MARKET_ID] Not found. asset={asset[:20] if asset else 'None'}, conditionId={condition_id[:20] if condition_id else 'None'}, cache_size={len(self._market_cache)}", flush=True)
+        # Not in cache - fetch from API
+        condition_id = trade_or_activity.get('conditionId', trade_or_activity.get('condition_id', ''))
+        if condition_id:
+            market_data = await self.fetch_and_cache_market(condition_id)
+            if market_data:
+                market_id = market_data.get('marketId', '')
+                if market_id:
+                    return str(market_id)
         
         return ''
     
