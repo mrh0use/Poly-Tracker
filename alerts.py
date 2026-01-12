@@ -97,16 +97,20 @@ def extract_slug_from_url(market_url: str) -> str:
     return ''
 
 
-def encode_onsight_param(market_id: str) -> str:
-    """Encode market ID for Onsight Telegram bot deep link."""
-    if not market_id:
+def encode_onsight_param(slug: str) -> str:
+    """Encode slug for Onsight Telegram bot deep link."""
+    if not slug:
         return ''
-    return f"m_{market_id}"
+    # Clean and convert to underscore format
+    clean_slug = slug.split('?')[0].strip('/')
+    underscore_slug = clean_slug.replace('-', '_')
+    # Use event_ prefix (this format worked with NHL market)
+    return f"event_{underscore_slug}"
 
 
-def create_trade_button_view(market_id: str, market_url: str) -> View:
+def create_trade_button_view(slug: str, market_url: str) -> View:
     view = View()
-    encoded_param = encode_onsight_param(market_id)
+    encoded_param = encode_onsight_param(slug)
     if encoded_param:
         onsight_url = f"{ONSIGHT_BOT_URL}?start={encoded_param}"
     else:
