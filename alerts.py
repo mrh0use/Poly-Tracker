@@ -87,6 +87,16 @@ def get_or_create_slug_mapping(event_slug: str) -> str:
         session.close()
 
 
+def extract_slug_from_url(market_url: str) -> str:
+    """Extract the market slug from a Polymarket URL."""
+    if not market_url:
+        return ''
+    url = market_url.split('?')[0].strip('/')
+    if '/market/' in url:
+        return url.split('/market/')[-1]
+    return ''
+
+
 def encode_onsight_param(event_slug: str) -> str:
     """Encode event slug for Onsight Telegram bot deep link.
     
@@ -113,7 +123,9 @@ def encode_onsight_param(event_slug: str) -> str:
 
 def create_trade_button_view(onsight_slug: str, market_url: str) -> View:
     view = View()
-    encoded_param = encode_onsight_param(onsight_slug)
+    # Use market_url to get the correct slug (onsight_slug is often wrong)
+    market_slug = extract_slug_from_url(market_url) or onsight_slug
+    encoded_param = encode_onsight_param(market_slug)
     if encoded_param:
         onsight_url = f"{ONSIGHT_BOT_URL}?start={encoded_param}"
     else:
