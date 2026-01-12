@@ -987,12 +987,18 @@ class PolymarketClient:
                     markets = await resp.json()
                     if markets and len(markets) > 0:
                         market = markets[0]
-                        # DEBUG: Log all available ID fields
-                        print(f"[CACHE DEBUG] Market keys: {list(market.keys())[:15]}", flush=True)
-                        print(f"[CACHE DEBUG] id={market.get('id')}, marketId={market.get('marketId')}, market_id={market.get('market_id')}", flush=True)
+                        # DEBUG: Log FULL market response
+                        import json
+                        print(f"[CACHE DEBUG FULL] {json.dumps(market)[:800]}", flush=True)
                         
                         # Try multiple possible field names for the ID
-                        market_id = market.get('id') or market.get('marketId') or market.get('market_id') or ''
+                        market_id = market.get('market_id') or market.get('marketId') or market.get('_id') or ''
+                        
+                        # If still no ID, check if 'id' is actually a string
+                        if not market_id:
+                            raw_id = market.get('id')
+                            if raw_id:
+                                market_id = str(raw_id)
                         
                         market_data = {
                             'slug': market.get('slug', ''),
@@ -1009,7 +1015,7 @@ class PolymarketClient:
                             token_id = token.get('token_id') or token.get('tokenId', '')
                             if token_id:
                                 self._market_cache[token_id] = market_data
-                        print(f"[CACHE] Added market {market_id} for condition {condition_id[:20]}...", flush=True)
+                        print(f"[CACHE] Added market {market_id} (slug={market.get('slug', '')[:30]}) for condition {condition_id[:20]}...", flush=True)
                         return market_data
         except Exception as e:
             print(f"[CACHE] Error fetching market for {condition_id[:20]}: {e}", flush=True)

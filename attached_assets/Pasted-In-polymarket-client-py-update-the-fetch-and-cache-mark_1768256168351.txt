@@ -1,0 +1,47 @@
+In polymarket_client.py, update the fetch_and_cache_market function to log the FULL market response (first 500 chars):
+python    async def fetch_and_cache_market(self, condition_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch a single market by condition ID and cache it."""
+        if not condition_id:
+            return None
+        
+        await self.ensure_session()
+        try:
+            async with self.session.get(
+                f"{self.GAMMA_BASE_URL}/markets",
+                params={"condition_id": condition_id}
+            ) as resp:
+                if resp.status == 200:
+                    markets = await resp.json()
+                    if markets and len(markets) > 0:
+                        market = markets[0]
+                        # DEBUG: Log FULL market response
+                        import json
+                        print(f"[CACHE DEBUG FULL] {json.dumps(market)[:800]}", flush=True)
+                        
+                        # Try multiple possible field names for the ID
+                        market_id = market.get('market_id') or market.get('marketId') or market.get('_id') or ''
+                        
+                        # If still no ID, check if 'id' is actually a string (not the weird "12")
+                        if not market_id:
+                            raw_id = market.get('id')
+                            if raw_id and str(raw_id) != '12':
+                                market_id = str(raw_id)
+                        
+                        market_data = {
+                            'slug': market.get('slug', ''),
+                            'title': market.get('question', market.get('title', '')),
+                            'tags': market.get('tags', []),
+                            'groupSlug': market.get('groupSlug', ''),
+                            'eventSlug': '',
+                            'marketId': market_id,
+                        }
+                        self._market_cache[condition_id] = market_data
+                        for token in market.get('tokens', []):
+                            token_id = token.get('token_id') or token.get('tokenId', '')
+                            if token_id:
+                                self._market_cache[token_id] = market_data
+                        print(f"[CACHE] Added market {market_id} (slug={market.get('slug', '')[:30]}) for condition {condition_id[:20]}...", flush=True)
+                        return market_data
+        except Exception as e:
+            print(f"[CACHE] Error fetching market for {condition_id[:20]}: {e}", flush=True)
+        return None
