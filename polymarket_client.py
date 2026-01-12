@@ -151,6 +151,7 @@ class PolymarketClient:
         self.session: Optional[aiohttp.ClientSession] = None
         self._known_wallets: set = set()
         self._sports_tag_ids: set = set()
+        self._sports_team_names: set = set()  # Team names from /teams API
         self._market_cache: Dict[str, Dict[str, Any]] = {}
         self._cache_last_updated: Optional[datetime] = None
         self._wallet_stats_cache: Dict[str, Dict[str, Any]] = {}
@@ -235,6 +236,10 @@ class PolymarketClient:
             return []
     
     async def fetch_sports_tags(self) -> set:
+        """
+        Fetch sports tag IDs from Polymarket's /sports endpoint.
+        These tags are used to identify sports markets reliably via API data.
+        """
         await self.ensure_session()
         try:
             async with self.session.get(f"{self.GAMMA_BASE_URL}/sports") as resp:
@@ -247,9 +252,37 @@ class PolymarketClient:
                             for tag_id in tags_str.split(','):
                                 tag_ids.add(tag_id.strip())
                     self._sports_tag_ids = tag_ids
+                    print(f"[API] Loaded {len(tag_ids)} sports tag IDs from Polymarket API", flush=True)
                     return tag_ids
         except Exception as e:
-            print(f"Error fetching sports tags: {e}")
+            print(f"[API] Error fetching sports tags: {e}", flush=True)
+        return set()
+    
+    async def fetch_sports_teams(self) -> set:
+        """
+        Fetch team names from Polymarket's /teams endpoint.
+        Returns a set of team names (lowercase) for keyword matching.
+        """
+        await self.ensure_session()
+        try:
+            async with self.session.get(f"{self.GAMMA_BASE_URL}/teams?limit=1000") as resp:
+                if resp.status == 200:
+                    teams_data = await resp.json()
+                    team_names = set()
+                    for team in teams_data:
+                        name = team.get('name') or ''
+                        alias = team.get('alias') or ''
+                        name = name.lower().strip() if name else ''
+                        alias = alias.lower().strip() if alias else ''
+                        if name:
+                            team_names.add(name)
+                        if alias:
+                            team_names.add(alias)
+                    self._sports_team_names = team_names
+                    print(f"[API] Loaded {len(team_names)} sports team names from Polymarket API", flush=True)
+                    return team_names
+        except Exception as e:
+            print(f"[API] Error fetching sports teams: {e}", flush=True)
         return set()
     
     async def refresh_market_cache(self, force: bool = False) -> None:
@@ -329,22 +362,26 @@ class PolymarketClient:
         """
         Get the top-level Polymarket categories for a market.
         Returns set of category slugs like {'sports', 'politics', 'crypto'}
-        Uses both tag matching AND keyword matching for comprehensive detection.
         
-        Args:
-            asset_id: The market asset ID to look up in cache
-            fallback_title: Title to use for keyword matching if cache lookup fails
-            fallback_slug: Slug to use for keyword matching if cache lookup fails
+        Detection priority:
+        1. API-provided sports tag IDs (from /sports endpoint) - most reliable
+        2. Tag slug matching via CATEGORY_TAG_MAP
+        3. API team names (from /teams endpoint)
+        4. Keyword matching as fallback
         """
         market_info = self._market_cache.get(asset_id, {})
         tags = market_info.get('tags', [])
         
         market_tag_slugs = set()
+        market_tag_ids = set()
         for tag in tags:
             if isinstance(tag, dict):
                 slug = tag.get('slug', '').lower()
+                tag_id = str(tag.get('id', ''))
                 if slug:
                     market_tag_slugs.add(slug)
+                if tag_id:
+                    market_tag_ids.add(tag_id)
             elif isinstance(tag, str):
                 market_tag_slugs.add(tag.lower())
         
@@ -357,6 +394,14 @@ class PolymarketClient:
             if market_tag_slugs & related_tags:
                 categories.add(category)
         
+        if 'sports' not in categories and self._sports_tag_ids:
+            if market_tag_ids & self._sports_tag_ids:
+                categories.add('sports')
+        
+        if 'sports' not in categories:
+            if group_slug in self.SPORTS_SLUGS:
+                categories.add('sports')
+        
         title = market_info.get('title', '').lower() or fallback_title.lower()
         slug = market_info.get('slug', '').lower() or fallback_slug.lower()
         text = f"{title} {slug}"
@@ -364,6 +409,12 @@ class PolymarketClient:
         if 'sports' not in categories:
             for kw in self.SPORTS_KEYWORDS:
                 if keyword_matches(kw, text):
+                    categories.add('sports')
+                    break
+        
+        if 'sports' not in categories and self._sports_team_names:
+            for team in self._sports_team_names:
+                if len(team) > 3 and team in text:
                     categories.add('sports')
                     break
         
@@ -383,8 +434,7 @@ class PolymarketClient:
                     break
         
         if 'economy' not in categories:
-            economy_keywords = ['economy', 'economic', 'unemployment', 'jobs report', 
-                               'gdp growth']
+            economy_keywords = ['economy', 'economic', 'unemployment', 'jobs report', 'gdp growth']
             for kw in economy_keywords:
                 if keyword_matches(kw, text):
                     categories.add('economy')

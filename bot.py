@@ -447,7 +447,8 @@ class PolymarketBot(commands.Bot):
             print("Cleanup loop started")
         
         await polymarket_client.fetch_sports_tags()
-        print("Sports tags loaded")
+        await polymarket_client.fetch_sports_teams()
+        print("Sports tags and teams loaded from API")
         
         if not self.websocket_started:
             self.websocket_started = True
