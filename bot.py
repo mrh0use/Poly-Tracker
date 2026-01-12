@@ -195,6 +195,16 @@ class VWAPVolatilityTracker:
         if price <= 0 or volume_usd <= 0:
             return
         
+        if price <= 0.01 or price >= 0.99:
+            return
+        
+        last_price = self.get_last_price(asset_id)
+        if last_price is not None:
+            price_jump = abs(price - last_price)
+            if price_jump > 0.25:
+                print(f"[VOLATILITY] Rejected suspicious trade price: {title[:30] if title else asset_id[:20]}... {last_price*100:.1f}%→{price*100:.1f}%", flush=True)
+                return
+        
         self._ensure_asset(asset_id)
         minute_key = self._get_minute_key()
         bucket = self._get_or_create_bucket(asset_id, minute_key)
@@ -287,6 +297,23 @@ class VWAPVolatilityTracker:
             return 0
         
         return sum(history) / len(history)
+    
+    def get_last_price(self, asset_id: str) -> Optional[float]:
+        """Get the most recent recorded price for an asset."""
+        if asset_id not in self._assets:
+            return None
+        
+        buckets = self._assets[asset_id]['buckets']
+        if not buckets:
+            return None
+        
+        sorted_keys = sorted(buckets.keys(), reverse=True)
+        for key in sorted_keys:
+            last_price = buckets[key].get('last_price', 0)
+            if last_price > 0:
+                return last_price
+        
+        return None
     
     def check_volatility(self, asset_id: str, guild_id: int, 
                          threshold_pct: float = 5.0) -> Optional[dict]:
