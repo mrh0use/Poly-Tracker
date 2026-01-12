@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, String, BigInteger, Float, Boolean, DateTime, ForeignKey, Text, Index
+from sqlalchemy import create_engine, Column, String, BigInteger, Float, Boolean, DateTime, ForeignKey, Text, Index, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -121,3 +121,21 @@ def get_db():
 
 def get_session():
     return SessionLocal()
+
+
+def lookup_slug_from_short_id(short_id: str) -> str | None:
+    """Look up the full market slug from a short ID.
+    
+    Used by Telegram bot to resolve m_xxxxxxxx short IDs to full slugs.
+    """
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT full_slug FROM market_slug_mappings WHERE short_id = :sid"),
+                {"sid": short_id}
+            )
+            row = result.fetchone()
+            return row[0] if row else None
+    except Exception as e:
+        print(f"[DB] Error looking up short ID {short_id}: {e}")
+        return None
