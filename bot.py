@@ -129,6 +129,8 @@ def should_skip_volatility_category(asset_id: str, blacklist_str: str, fallback_
     else:
         if market_categories:
             print(f"[VOLATILITY] ✓ Allowed: {display_title[:50]}... | detected={market_categories} | blacklist={blacklist}", flush=True)
+        else:
+            print(f"[VOLATILITY] ⚠ No categories detected: {display_title[:50]}... | blacklist={blacklist}", flush=True)
         return False
 
 
