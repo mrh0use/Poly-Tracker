@@ -974,11 +974,25 @@ class PolymarketClient:
     
     def get_market_id(self, trade_or_activity: Dict[str, Any]) -> str:
         """Get the numeric market ID for Telegram deep links."""
+        # Try from cache first
         market_info = self.get_market_info(trade_or_activity)
         if market_info:
             market_id = market_info.get('marketId', '')
             if market_id:
+                print(f"[MARKET_ID] Found in cache: {market_id}", flush=True)
                 return str(market_id)
+        
+        # Try from trade data directly (some responses include it)
+        market_id = trade_or_activity.get('marketId') or trade_or_activity.get('market_id') or trade_or_activity.get('id')
+        if market_id:
+            print(f"[MARKET_ID] Found in trade data: {market_id}", flush=True)
+            return str(market_id)
+        
+        # Log what we have for debugging
+        asset = trade_or_activity.get('asset', '')
+        condition_id = trade_or_activity.get('conditionId', '')
+        print(f"[MARKET_ID] Not found. asset={asset[:20] if asset else 'None'}, conditionId={condition_id[:20] if condition_id else 'None'}, cache_size={len(self._market_cache)}", flush=True)
+        
         return ''
     
     def get_unique_activity_id(self, activity: Dict[str, Any]) -> str:

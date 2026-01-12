@@ -472,6 +472,10 @@ class PolymarketBot(commands.Bot):
         await polymarket_client.fetch_sports_teams()
         print("Sports tags and teams loaded from API")
         
+        # Ensure market cache is populated for Telegram links
+        await polymarket_client.refresh_market_cache(force=True)
+        print(f"[STARTUP] Market cache populated with {len(polymarket_client._market_cache)} entries")
+        
         if not self.websocket_started:
             self.websocket_started = True
             asyncio.create_task(start_websocket())
