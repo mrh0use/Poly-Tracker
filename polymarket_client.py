@@ -981,7 +981,7 @@ class PolymarketClient:
         try:
             async with self.session.get(
                 f"{self.GAMMA_BASE_URL}/markets",
-                params={"condition_id": condition_id}
+                params={"condition_ids": condition_id}
             ) as resp:
                 if resp.status == 200:
                     markets = await resp.json()
