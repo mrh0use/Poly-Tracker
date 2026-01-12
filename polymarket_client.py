@@ -1032,16 +1032,13 @@ class PolymarketClient:
 
     async def get_market_id_async(self, trade_or_activity: Dict[str, Any]) -> str:
         """Get the market slug for Telegram deep links."""
-        # Get slug from trade data or cache
         slug = trade_or_activity.get('slug') or trade_or_activity.get('marketSlug')
         if slug:
             return slug
         
         market_info = self.get_market_info(trade_or_activity)
         if market_info:
-            slug = market_info.get('slug', '')
-            if slug:
-                return slug
+            return market_info.get('slug', '')
         
         return ''
     

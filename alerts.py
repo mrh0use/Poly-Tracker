@@ -42,31 +42,21 @@ def generate_short_id(slug: str) -> str:
     return f"m_{hash_digest}"
 
 
-def get_or_create_slug_mapping(event_slug: str) -> str:
-    """Get existing short ID for a slug, or create a new mapping.
-    
-    Returns the short ID to use in Telegram deep links.
-    This is stored in the database so the Telegram bot can look it up.
-    """
-    if not event_slug:
+def get_or_create_slug_mapping(market_slug: str) -> str:
+    """Get existing short ID for a slug, or create a new mapping."""
+    if not market_slug:
         return ''
     
-    # Clean the slug
-    clean_slug = event_slug.split('?')[0].strip('/')
-    
-    # Generate deterministic short ID
+    clean_slug = market_slug.split('?')[0].strip('/')
     short_id = generate_short_id(clean_slug)
     
     session = get_session()
     try:
-        # Check if mapping already exists
         existing = session.query(MarketSlugMapping).filter_by(short_id=short_id).first()
         
         if existing:
-            # Mapping exists, return the short ID
             return short_id
         
-        # Create new mapping
         mapping = MarketSlugMapping(
             short_id=short_id,
             full_slug=clean_slug
@@ -78,11 +68,8 @@ def get_or_create_slug_mapping(event_slug: str) -> str:
         
     except Exception as e:
         session.rollback()
-        print(f"[SLUG ERROR] Failed to create mapping for {clean_slug[:30]}: {e}", flush=True)
-        # Fall back to truncated slug if database fails
-        underscore_slug = clean_slug.replace('-', '_')
-        fallback = f"event_{underscore_slug}"
-        return fallback[:64]
+        print(f"[SLUG ERROR] Failed to create mapping: {e}", flush=True)
+        return ''
     finally:
         session.close()
 
@@ -98,14 +85,17 @@ def extract_slug_from_url(market_url: str) -> str:
 
 
 def encode_onsight_param(slug: str) -> str:
-    """Encode slug for Onsight Telegram bot deep link."""
+    """Encode slug for Onsight Telegram bot deep link.
+    
+    Always uses short ID mapping stored in database.
+    Telegram bot looks up the short ID to get the full slug.
+    """
     if not slug:
         return ''
-    # Clean and convert to underscore format
+    
     clean_slug = slug.split('?')[0].strip('/')
-    underscore_slug = clean_slug.replace('-', '_')
-    # Use event_ prefix (this format worked with NHL market)
-    return f"event_{underscore_slug}"
+    short_id = get_or_create_slug_mapping(clean_slug)
+    return short_id
 
 
 def create_trade_button_view(slug: str, market_url: str) -> View:
