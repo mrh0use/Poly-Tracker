@@ -321,6 +321,7 @@ class PolymarketClient:
                                 'tags': market.get('tags', []),
                                 'groupSlug': market.get('groupSlug', ''),
                                 'eventSlug': event_slug,
+                                'marketId': market.get('id', ''),
                             }
                         tokens = market.get('tokens', [])
                         for token in tokens:
@@ -332,6 +333,7 @@ class PolymarketClient:
                                     'tags': market.get('tags', []),
                                     'groupSlug': market.get('groupSlug', ''),
                                     'eventSlug': event_slug,
+                                    'marketId': market.get('id', ''),
                                 }
                         
                         clob_token_ids_raw = market.get('clobTokenIds', [])
@@ -351,6 +353,7 @@ class PolymarketClient:
                                     'tags': market.get('tags', []),
                                     'groupSlug': market.get('groupSlug', ''),
                                     'eventSlug': event_slug,
+                                    'marketId': market.get('id', ''),
                                 }
                     self._cache_last_updated = now
                     print(f"Market cache refreshed: {len(self._market_cache)} entries")
@@ -967,6 +970,15 @@ class PolymarketClient:
         if fallback_slug:
             return fallback_slug.split('?')[0].strip('/')
         
+        return ''
+    
+    def get_market_id(self, trade_or_activity: Dict[str, Any]) -> str:
+        """Get the numeric market ID for Telegram deep links."""
+        market_info = self.get_market_info(trade_or_activity)
+        if market_info:
+            market_id = market_info.get('marketId', '')
+            if market_id:
+                return str(market_id)
         return ''
     
     def get_unique_activity_id(self, activity: Dict[str, Any]) -> str:
