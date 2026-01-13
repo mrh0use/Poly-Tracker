@@ -735,11 +735,11 @@ class PolymarketClient:
         try:
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/activity",
-                params={"user": wallet_address, "limit": 1}
+                params={"user": wallet_address, "limit": 2}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    has_history = isinstance(data, list) and len(data) > 0
+                    has_history = isinstance(data, list) and len(data) > 1
                     self._wallet_history_cache[wallet_lower] = has_history
                     self._wallet_history_updated[wallet_lower] = now
                     return has_history
