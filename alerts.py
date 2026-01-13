@@ -719,8 +719,8 @@ def create_settings_embed(
     )
     
     embed.add_field(
-        name="Fallback Channel",
-        value=f"#{channel_name}" if channel_name else "Not configured",
+        name="\u200b",
+        value="\u200b",
         inline=True
     )
     
@@ -762,6 +762,25 @@ def create_settings_embed(
         value=f"#{sports_channel_name} (${sports_threshold:,.0f}+)" if sports_channel_name else "Not configured",
         inline=True
     )
+    
+    embed.add_field(
+        name="Top Trader Alerts",
+        value=f"#{top_trader_channel_name} (${top_trader_threshold:,.0f}+)" if top_trader_channel_name else "Not configured",
+        inline=True
+    )
+    
+    embed.add_field(
+        name="Bonds Alerts",
+        value=f"#{bonds_channel_name}" if bonds_channel_name else "Not configured",
+        inline=True
+    )
+    
+    if volatility_blacklist:
+        embed.add_field(
+            name="Volatility Blacklist",
+            value=volatility_blacklist,
+            inline=True
+        )
     
     embed.add_field(
         name="\u200b",
