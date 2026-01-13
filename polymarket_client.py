@@ -723,6 +723,7 @@ class PolymarketClient:
         return all_closed
     
     async def has_prior_activity(self, wallet_address: str) -> Optional[bool]:
+        """Check if wallet has prior TRADES (not just activity like deposits/approvals)."""
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
@@ -730,25 +731,25 @@ class PolymarketClient:
             last_updated = self._wallet_history_updated.get(wallet_lower)
             if last_updated and (now - last_updated).total_seconds() < 3600:
                 cached = self._wallet_history_cache[wallet_lower]
-                print(f"[ACTIVITY] Cache hit for {wallet_address[:10]}...: {cached}", flush=True)
+                print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_trades={cached}", flush=True)
                 return cached
         
         await self.ensure_session()
         try:
             async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/activity",
+                f"{self.DATA_API_BASE_URL}/trades",
                 params={"user": wallet_address, "limit": 1}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    has_history = isinstance(data, list) and len(data) > 0
-                    self._wallet_history_cache[wallet_lower] = has_history
+                    has_trades = isinstance(data, list) and len(data) > 0
+                    self._wallet_history_cache[wallet_lower] = has_trades
                     self._wallet_history_updated[wallet_lower] = now
-                    print(f"[ACTIVITY] API check for {wallet_address[:10]}...: has_history={has_history} (data_len={len(data) if isinstance(data, list) else 'N/A'})", flush=True)
-                    return has_history
-                print(f"[ACTIVITY] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
+                    print(f"[FRESH CHECK] /trades API for {wallet_address[:10]}...: has_trades={has_trades} (count={len(data) if isinstance(data, list) else 'N/A'})", flush=True)
+                    return has_trades
+                print(f"[FRESH CHECK] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
         except Exception as e:
-            print(f"[ACTIVITY] Exception for {wallet_address[:10]}...: {e}", flush=True)
+            print(f"[FRESH CHECK] Exception for {wallet_address[:10]}...: {e}", flush=True)
         return None
     
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
