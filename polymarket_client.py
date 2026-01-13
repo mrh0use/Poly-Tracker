@@ -741,6 +741,7 @@ class PolymarketClient:
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
+                    print(f"[FRESH API] Raw response for {wallet_address[:10]}...: {data[:2] if isinstance(data, list) else data}", flush=True)
                     activity_count = len(data) if isinstance(data, list) else 0
                     has_history = activity_count > 1
                     print(f"[FRESH API] {wallet_address[:10]}...: {activity_count} activities, has_history={has_history}", flush=True)
