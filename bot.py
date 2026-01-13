@@ -1605,11 +1605,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="Thresholds",
         value=(
-            "`/threshold` - Whale alerts ($10k)\n"
-            "`/sports_threshold` - Sports ($5k)\n"
-            "`/fresh_wallet_threshold` - Fresh wallets ($10k)\n"
-            "`/top_trader_threshold` - Top 25 ($2.5k)\n"
-            "`/volatility_threshold` - Price swing (5pts)\n"
+            "`/threshold` - Whale alerts\n"
+            "`/sports_threshold` - Sports alerts\n"
+            "`/fresh_wallet_threshold` - Fresh wallets\n"
+            "`/top_trader_threshold` - Top 25 alerts\n"
+            "`/volatility_threshold` - Price swing %\n"
             "`/volatility_blacklist` - Exclude categories"
         ),
         inline=False
