@@ -1,0 +1,1052 @@
+2026-01-13T03:23:13.148723548Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,937, attempting channel 1458465707414261821
+2026-01-13T03:23:13.335634895Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,937 to channel 1458465707414261821, msg_id=1460474240544542826
+2026-01-13T03:23:13.335642168Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,937, attempting channel 1457798756152905900
+2026-01-13T03:23:13.496920631Z [inf]  [WS] Processing $8,261 trade from 0xb3ae8034...
+2026-01-13T03:23:13.604097686Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,937 to channel 1457798756152905900, msg_id=1460474241416695955
+2026-01-13T03:23:13.604103227Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,937, attempting channel 1458905878198489366
+2026-01-13T03:23:13.918410238Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,937 to channel 1458905878198489366, msg_id=1460474242528186496
+2026-01-13T03:23:13.925407774Z [inf]  [WS] Processing $8,261 trade from 0xb3ae8034...
+2026-01-13T03:23:17.812139266Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:23:17.812148319Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:23:17.812155912Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:23:17.812162848Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:23:17.812169442Z [inf]  [VOLATILITY] Stats: 617 assets, 1490 buckets, 40 cooldowns, min_vol=$2000
+2026-01-13T03:23:18.067987099Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:23:18.067990589Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:23:18.067994448Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:23:18.107074820Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:23:18.712334466Z [inf]  [WS] Trades processed: 36000
+2026-01-13T03:23:26.614114825Z [inf]  [WS] Trades processed: 33000
+2026-01-13T03:23:27.192443398Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,380, attempting channel 1457798756152905900
+2026-01-13T03:23:27.498786751Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,380 to channel 1457798756152905900, msg_id=1460474299696807977
+2026-01-13T03:23:27.810187194Z [inf]  [CACHE DEBUG FULL] {"id": "1164475", "question": "Ethereum Up or Down - January 12, 10:15PM-10:30PM ET", "conditionId": "0x6a12a9730276ac539466d19bda352e0fc1600a59d48f3da357bbfe8e78a36e86", "slug": "eth-updown-15m-1768274100", "resolutionSource": "https://data.chain.link/streams/eth-usd", "endDate": "2026-01-13T03:30:00Z", "liquidity": "17490.1779", "startDate": "2026-01-12T03:17:18.269624Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "description": "This market will resolve to \"Up\" if the Ethereum price at the end of the time range specified in the title is greater than or equal to the price at the beginning of that range. Otherwise, it will resolve to \"Down\".\nThe resolution source fo
+2026-01-13T03:23:27.810191880Z [inf]  [CACHE] Added market 1164475 (slug=eth-updown-15m-1768274100) for condition 0x6a12a9730276ac5394...
+2026-01-13T03:23:27.810196735Z [inf]  [WS] ALERT TRIGGERED: Whale $1,094 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:23:27.810201425Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:23:28.023356488Z [inf]  [WS] ✓ ALERT SENT: Whale $1,094 to channel 1457781977905365230, msg_id=1460474302125314238
+2026-01-13T03:23:28.217361351Z [inf]  [CACHE DEBUG FULL] {"id": "1164604", "question": "Bitcoin Up or Down - January 12, 10:30PM-10:45PM ET", "conditionId": "0xef1cd728fd8ff5c8ae488ea7abc3f786d3acfaaca303f62717fa1f34a05c7672", "slug": "btc-updown-15m-1768275000", "resolutionSource": "https://data.chain.link/streams/btc-usd", "endDate": "2026-01-13T03:45:00Z", "liquidity": "23891.2952", "startDate": "2026-01-12T03:32:36.566347Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will resolve to \"Up\" if the Bitcoin price at the end of the time range specified in the title is greater than or equal to the price at the beginning of that range. Otherwise, it will resolve to \"Down\".\nThe resolution source for 
+2026-01-13T03:23:28.217369732Z [inf]  [CACHE] Added market 1164604 (slug=btc-updown-15m-1768275000) for condition 0xef1cd728fd8ff5c8ae...
+2026-01-13T03:23:28.217375878Z [inf]  [WS] ALERT TRIGGERED: Whale $2,115 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:23:28.217381603Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:23:28.450044550Z [inf]  [WS] ✓ ALERT SENT: Whale $2,115 to channel 1457781977905365230, msg_id=1460474303920476293
+2026-01-13T03:23:32.665221231Z [inf]  Top traders cache refreshed: 25 entries
+2026-01-13T03:23:32.665227991Z [inf]    Top #1: 0x56687bf4... (Theo4) - $22,053,934 PnL
+2026-01-13T03:23:32.665234079Z [inf]    Top #2: 0x1f2dd6d4... (Fredi9999) - $16,620,028 PnL
+2026-01-13T03:23:32.665240727Z [inf]    Top #3: 0x78b9ac44... (Len9311238) - $8,709,973 PnL
+2026-01-13T03:23:32.665247594Z [inf]    Top #4: 0xd2359732... (zxgngl) - $7,807,266 PnL
+2026-01-13T03:23:32.665252333Z [inf]    Top #5: 0x863134d0... (RepTrump) - $7,532,410 PnL
+2026-01-13T03:23:32.665256014Z [inf]  [TOP TRADERS] Loaded 25 top traders
+2026-01-13T03:23:32.834942825Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:23:32.834950131Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:23:32.834955122Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:23:32.834984715Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:23:34.226789777Z [inf]  [VOLATILITY] 🚨 15min: XRP Up or Down - January 12, 10:15PM-10:... +13.3 pts (82%→95%) | $2,012, 174 trades
+2026-01-13T03:23:34.226797723Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:23:34.226804107Z [inf]  [VOLATILITY] ✗ Blocked: XRP Up or Down - January 12, 10:15PM-10:30PM ET... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:23:36.016612861Z [inf]  [CACHE DEBUG FULL] {"id": "1156647", "question": "Bitcoin Up or Down - January 12, 9PM ET", "conditionId": "0x2cd7183099326c275da127c95360441ebb0489fb7bb144d3fe9365bd3efe1893", "slug": "bitcoin-up-or-down-january-12-9pm-et", "resolutionSource": "https://www.binance.com/en/trade/BTC_USDT", "endDate": "2026-01-13T03:00:00Z", "liquidity": "749560.88873", "startDate": "2026-01-11T02:00:55.438698Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will resolve to \"Up\" if the close price is greater than or equal to the open price for the BTC/USDT 1 hour candle that begins on the time and date specified in the title. Otherwise, this market will resolve to \"Down\".\n\nThe r
+2026-01-13T03:23:36.016622183Z [inf]  [CACHE] Added market 1156647 (slug=bitcoin-up-or-down-january-12-) for condition 0x2cd7183099326c275d...
+2026-01-13T03:23:36.217551879Z [inf]  [VOLATILITY] 🚨 60min: XRP Up or Down - January 12, 10:15PM-10:... +13.0 pts (82%→95%) | $2,064, 175 trades
+2026-01-13T03:23:36.217556742Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:23:36.217561967Z [inf]  [VOLATILITY] ✗ Blocked: XRP Up or Down - January 12, 10:15PM-10:30PM ET... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:23:38.719334769Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:23:38.719338679Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:23:38.719342589Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:23:38.719346249Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:23:38.719349949Z [inf]  [WS] Trades processed: 37000
+2026-01-13T03:23:38.719355478Z [inf]  [VOLATILITY] 🚨 15min: XRP Up or Down - January 12, 10:15PM-10:... +13.3 pts (82%→95%) | $2,012, 174 trades
+2026-01-13T03:23:38.719358438Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:23:38.719361678Z [inf]  [VOLATILITY] ✗ Blocked: XRP Up or Down - January 12, 10:15PM-10:30PM ET... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:23:38.719364678Z [inf]  [VOLATILITY] 🚨 60min: XRP Up or Down - January 12, 10:15PM-10:... +13.0 pts (82%→95%) | $2,064, 175 trades
+2026-01-13T03:23:38.719367508Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:23:38.719371628Z [inf]  [VOLATILITY] ✗ Blocked: XRP Up or Down - January 12, 10:15PM-10:30PM ET... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:23:40.848627576Z [inf]  [WS] Trades processed: 34000
+2026-01-13T03:23:41.124709278Z [inf]  [CACHE DEBUG FULL] {"id": "1162741", "question": "Spread: Clippers (-5.5)", "conditionId": "0xdee0d648e876f039f7c0ec00b49e51eb0cd9d68b9506b0f39cfd01ffbef468e6", "slug": "nba-cha-lac-2026-01-12-spread-home-5pt5", "resolutionSource": "https://www.nba.com/", "endDate": "2026-01-13T03:30:00Z", "liquidity": "205946.3898", "startDate": "2026-01-11T20:11:55.7453Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "description": "In the upcoming NBA game, scheduled for January 12 at 10:30 PM ET:\n\nThis market will resolve to \"Clippers\" if the Clippers win the game by 6 or more points.\n\nOtherwise, this market will resolve to \"Hornets\". If th
+2026-01-13T03:23:41.124720346Z [inf]  [CACHE] Added market 1162741 (slug=nba-cha-lac-2026-01-12-spread-) for condition 0xdee0d648e876f039f7...
+2026-01-13T03:23:41.124727088Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,034, attempting channel 1457798756152905900
+2026-01-13T03:23:41.432731003Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,034 to channel 1457798756152905900, msg_id=1460474358098034699
+2026-01-13T03:23:41.595268614Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,398, attempting channel 1457798756152905900
+2026-01-13T03:23:41.852766549Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,398 to channel 1457798756152905900, msg_id=1460474359733948524
+2026-01-13T03:23:41.858228425Z [inf]  [WS] Processing $5,419 trade from 0xf59db7ef...
+2026-01-13T03:23:41.967820301Z [inf]  [LOOKUP] 0xf59db7ef... -> Rank #23703, kfkNBApro1
+2026-01-13T03:23:41.993103681Z [inf]  [CACHE DEBUG FULL] {"id": "1164035", "question": "Spread: Celtics (-6.5)", "conditionId": "0x273a3f674bb41631f7340ba22dbe7ed7d16999ba1171b40196e3fd7fb72e0fa2", "slug": "nba-bos-ind-2026-01-12-spread-away-6pt5", "resolutionSource": "https://www.nba.com/", "endDate": "2026-01-13T00:30:00Z", "liquidity": "81441.11033", "startDate": "2026-01-12T01:11:18.978438Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "description": "In the upcoming NBA game, scheduled for January 12 at 7:30 PM ET:\n\nThis market will resolve to \"Celtics\" if the Celtics win the game by 7 or more points.\n\nOtherwise, this market will resolve to \"Pacers\". If the g
+2026-01-13T03:23:41.993109013Z [inf]  [CACHE] Added market 1164035 (slug=nba-bos-ind-2026-01-12-spread-) for condition 0x273a3f674bb41631f7...
+2026-01-13T03:23:41.993113069Z [inf]  [WS] ALERT TRIGGERED: Sports whale $5,419, attempting channel 1458465707414261821
+2026-01-13T03:23:42.232976141Z [inf]  [WS] Processing $5,419 trade from 0xf59db7ef...
+2026-01-13T03:23:42.235545935Z [inf]  [WS] ✓ ALERT SENT: Sports whale $5,419 to channel 1458465707414261821, msg_id=1460474361730306231
+2026-01-13T03:23:42.235552133Z [inf]  [WS] ALERT TRIGGERED: Sports whale $5,419, attempting channel 1457798756152905900
+2026-01-13T03:23:42.495918518Z [inf]  [WS] ✓ ALERT SENT: Sports whale $5,419 to channel 1457798756152905900, msg_id=1460474362506510398
+2026-01-13T03:23:42.495928510Z [inf]  [WS] ALERT TRIGGERED: Sports whale $5,419, attempting channel 1458905878198489366
+2026-01-13T03:23:42.631635328Z [inf]  [WS] Processing $5,419 trade from 0xf59db7ef...
+2026-01-13T03:23:42.702335899Z [inf]  [WS] ✓ ALERT SENT: Sports whale $5,419 to channel 1458905878198489366, msg_id=1460474363248775316
+2026-01-13T03:23:42.702342265Z [inf]  [WS] Processing $5,419 trade from 0xf59db7ef...
+2026-01-13T03:23:47.179258980Z [inf]  [WS] Trades processed: 38000
+2026-01-13T03:23:47.889805375Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:23:47.889814151Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:23:47.889819916Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:23:47.889824993Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:23:47.889856282Z [inf]  Market cache refreshed: 1544 entries
+2026-01-13T03:23:48.053445735Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:23:48.053450205Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:23:48.053455595Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:23:48.115578571Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:23:50.462397839Z [inf]  [CACHE DEBUG FULL] {"id": "1160452", "question": "Bitcoin Up or Down on January 13?", "conditionId": "0x048648207605ce943a5bcf33ec324e8351a768619427819188a27c23eacb9ba9", "slug": "bitcoin-up-or-down-on-january-13", "resolutionSource": "https://www.binance.com/en/trade/BTC_USDT", "endDate": "2026-01-13T17:00:00Z", "liquidity": "38865.4746", "startDate": "2026-01-11T17:01:33.147943Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will resolve to \"Up\" if the \"Close\" price for the Binance 1 minute candle for BTC/USDT Jan 12 '26 12:00 in the ET timezone (noon) is lower than the final \"Close\" price for the Jan 13 '26 12:00 ET candle.\n\nThis market will resolve to \
+2026-01-13T03:23:50.462403426Z [inf]  [CACHE] Added market 1160452 (slug=bitcoin-up-or-down-on-january-) for condition 0x048648207605ce943a...
+2026-01-13T03:23:50.462408783Z [inf]  [WS] ALERT TRIGGERED: Whale $1,028 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:23:50.462413521Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:23:50.686919627Z [inf]  [WS] ✓ ALERT SENT: Whale $1,028 to channel 1457781977905365230, msg_id=1460474397155528868
+2026-01-13T03:23:54.932679073Z [inf]  [WS] Trades processed: 35000
+2026-01-13T03:23:55.089250741Z [inf]  [CACHE DEBUG FULL] {"id": "1151337", "question": "Hobart International: Peyton Stearns vs Barbora Krejcikova", "conditionId": "0xb984e0e36b4fa2bb492b0d34cfe177aaf2683b6215861e1c902998a7a7adbbd3", "slug": "wta-stearns-krejcik-2026-01-11", "resolutionSource": "https://www.wtatennis.com/scores", "endDate": "2026-01-18T23:00:00Z", "liquidity": "2309.4388", "startDate": "2026-01-10T11:05:58.754495Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/wta-logo-41f331bdf1.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/wta-logo-41f331bdf1.png", "description": "This market refers on the tennis match between Peyton Stearns and Barbora Krejcikova in the Hobart International, scheduled for January 11 at 6:00PM ET.\n\nThis market will resolve to 'Stearns' if Peyton Stearns advances agains
+2026-01-13T03:23:55.089257484Z [inf]  [CACHE] Added market 1151337 (slug=wta-stearns-krejcik-2026-01-11) for condition 0xb984e0e36b4fa2bb49...
+2026-01-13T03:23:55.089267225Z [inf]  [WS] ALERT TRIGGERED: Whale $1,067 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:23:55.089274251Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:23:55.353030935Z [inf]  [WS] ✓ ALERT SENT: Whale $1,067 to channel 1457781977905365230, msg_id=1460474416575025307
+2026-01-13T03:24:02.697447802Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:02.697456186Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:02.697464075Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:02.701969135Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:08.138985844Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:08.139001193Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:08.139008953Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:08.139010513Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:08.139021483Z [inf]  [WS] Trades processed: 39000
+2026-01-13T03:24:16.147646050Z [inf]  [WS] Processing $97,010 trade from 0x3585558d...
+2026-01-13T03:24:18.151452015Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:18.151456485Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:18.151460965Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:18.155007771Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:20.588520579Z [inf]  [WS] Processing $7,566 trade from 0x1d1ade62...
+2026-01-13T03:24:21.144073902Z [inf]  [WS] Processing $6,984 trade from 0x7d5c8d50...
+2026-01-13T03:24:22.696801255Z [inf]  [WS] Trades processed: 36000
+2026-01-13T03:24:22.696809957Z [inf]  [WS] Processing $97,010 trade from 0x3585558d...
+2026-01-13T03:24:22.696816969Z [inf]  [LOOKUP] 0x3585558d... -> Rank #41597, 0x3585558D59C5Ee4A53BB552C2dB9f5C518fE7c02-1768265321304
+2026-01-13T03:24:22.696823511Z [inf]  [WS] ALERT TRIGGERED: Bonds $97,010, attempting channel 1458465707414261821
+2026-01-13T03:24:22.696829185Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:22.696835541Z [inf]  [WS] ✓ ALERT SENT: Bonds $97,010 to channel 1458465707414261821, msg_id=1460474504609398837
+2026-01-13T03:24:22.696841477Z [inf]  [WS] ALERT TRIGGERED: Bonds $97,010, attempting channel 1458105704715128865
+2026-01-13T03:24:22.696847310Z [inf]  [WS] Channel fetch result: bond-alerts (type: TextChannel)
+2026-01-13T03:24:22.696853201Z [inf]  [WS] ✓ ALERT SENT: Bonds $97,010 to channel 1458105704715128865, msg_id=1460474505263841418
+2026-01-13T03:24:22.696859484Z [inf]  [WS] ALERT TRIGGERED: Bonds $97,010, attempting channel 1458905646144553151
+2026-01-13T03:24:22.696865503Z [inf]  [WS] Channel fetch result: 🏦︳bonds (type: TextChannel)
+2026-01-13T03:24:22.696871633Z [inf]  [WS] ✓ ALERT SENT: Bonds $97,010 to channel 1458905646144553151, msg_id=1460474506459086889
+2026-01-13T03:24:22.696877884Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,294, attempting channel 1457798756152905900
+2026-01-13T03:24:22.696884275Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,294 to channel 1457798756152905900, msg_id=1460474508216504483
+2026-01-13T03:24:22.696889745Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:22.696895172Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:22.696900636Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:22.697367673Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:22.697373527Z [inf]  [WS] Processing $7,566 trade from 0x1d1ade62...
+2026-01-13T03:24:22.697379122Z [inf]  [LOOKUP] 0x1d1ade62... -> Rank #607, Pwaddler
+2026-01-13T03:24:22.697384480Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,566, attempting channel 1458465707414261821
+2026-01-13T03:24:22.697389801Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,566 to channel 1458465707414261821, msg_id=1460474523680772147
+2026-01-13T03:24:22.697395049Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,566, attempting channel 1457798756152905900
+2026-01-13T03:24:22.697400304Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,566 to channel 1457798756152905900, msg_id=1460474524624621710
+2026-01-13T03:24:22.697406845Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,566, attempting channel 1458905878198489366
+2026-01-13T03:24:22.697412088Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,566 to channel 1458905878198489366, msg_id=1460474525266350322
+2026-01-13T03:24:22.697417574Z [inf]  [WS] Processing $6,984 trade from 0x7d5c8d50...
+2026-01-13T03:24:22.857191754Z [err]  2026-01-13 03:24:18.751 UTC [27] LOG:  checkpoint starting: time
+2026-01-13T03:24:24.185951649Z [inf]  [WS] Trades processed: 40000
+2026-01-13T03:24:25.575988223Z [inf]  [WS] Processing $7,424 trade from 0xc44f432b...
+2026-01-13T03:24:25.646071935Z [inf]  [WS] Processing $7,424 trade from 0xc44f432b...
+2026-01-13T03:24:25.677970456Z [inf]  [LOOKUP] 0xc44f432b... -> Rank #1853021, 0xC44f432B014f36679e13615F95996eAC32bbD49f-1767636206766
+2026-01-13T03:24:25.677981515Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,424, attempting channel 1458465707414261821
+2026-01-13T03:24:25.971500267Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,424 to channel 1458465707414261821, msg_id=1460474544585179362
+2026-01-13T03:24:25.971507625Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,424, attempting channel 1457798756152905900
+2026-01-13T03:24:26.168063412Z [inf]  [WS] ALERT TRIGGERED: Sports whale $7,424, attempting channel 1458905878198489366
+2026-01-13T03:24:26.168089598Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,424 to channel 1457798756152905900, msg_id=1460474545570975755
+2026-01-13T03:24:26.410836867Z [inf]  [WS] ✓ ALERT SENT: Sports whale $7,424 to channel 1458905878198489366, msg_id=1460474546921406599
+2026-01-13T03:24:31.626381364Z [err]  2026-01-13 03:24:31.212 UTC [27] LOG:  checkpoint complete: wrote 125 buffers (0.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.431 s, sync=0.007 s, total=12.461 s; sync files=7, longest=0.005 s, average=0.001 s; distance=745 kB, estimate=1088 kB; lsn=0/12BA82D0, redo lsn=0/12BA08C8
+2026-01-13T03:24:32.692908605Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:32.692912804Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:32.692918495Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:32.702538677Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:33.197905391Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:33.197918020Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:33.197924020Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:33.197929020Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:36.343644031Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,043, attempting channel 1457798756152905900
+2026-01-13T03:24:36.803009328Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,043 to channel 1457798756152905900, msg_id=1460474590005559307
+2026-01-13T03:24:38.211483665Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,361, attempting channel 1457798756152905900
+2026-01-13T03:24:38.487819234Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,361 to channel 1457798756152905900, msg_id=1460474597303652465
+2026-01-13T03:24:40.590803440Z [inf]  [CACHE DEBUG FULL] {"id": "1164474", "question": "Solana Up or Down - January 12, 10:15PM-10:30PM ET", "conditionId": "0x744555402c996195b20f035918b4fb593283b4aa1a10de2619db34f8933febd8", "slug": "sol-updown-15m-1768274100", "resolutionSource": "https://data.chain.link/streams/sol-usd", "endDate": "2026-01-13T03:30:00Z", "liquidity": "8366.3319", "startDate": "2026-01-12T03:17:18.526956Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL+fullsize.png", "description": "This market will resolve to \"Up\" if the Solana price at the end of the time range specified in the title is greater than or equal to the price at the beginning of that range. Otherwise, it will resolve to \"Down\".\nThe resolution source for thi
+2026-01-13T03:24:40.590811611Z [inf]  [CACHE] Added market 1164474 (slug=sol-updown-15m-1768274100) for condition 0x744555402c996195b2...
+2026-01-13T03:24:41.782962488Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,359, attempting channel 1457798756152905900
+2026-01-13T03:24:42.112020894Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,359 to channel 1457798756152905900, msg_id=1460474612528840730
+2026-01-13T03:24:42.286831647Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,128, attempting channel 1457798756152905900
+2026-01-13T03:24:42.503454080Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,128 to channel 1457798756152905900, msg_id=1460474614227537984
+2026-01-13T03:24:42.566375108Z [inf]  [WS] Trades processed: 37000
+2026-01-13T03:24:44.572897055Z [inf]  [WS] TOP TRADER DETECTED: 0x204f72f3... $1,486 - Rank #16 (swisstony)
+2026-01-13T03:24:44.572902619Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,486, attempting channel 1457798756152905900
+2026-01-13T03:24:44.751956999Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,486 to channel 1457798756152905900, msg_id=1460474623891345499
+2026-01-13T03:24:44.751963538Z [inf]  [WS] ALERT TRIGGERED: Sports top trader $1,486, attempting channel 1458910700016500767
+2026-01-13T03:24:44.751967314Z [inf]  [WS] Channel fetch result: 🚀︳top-traders (type: TextChannel)
+2026-01-13T03:24:44.751971439Z [inf]  [WebSocket] Error handling message #37040: create_top_trader_alert_embed() got an unexpected keyword argument 'trader_info'
+2026-01-13T03:24:47.696476574Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:47.696481812Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:47.696486794Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:47.704085090Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:52.365195017Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,450, attempting channel 1457798756152905900
+2026-01-13T03:24:52.706810732Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,450 to channel 1457798756152905900, msg_id=1460474656665632867
+2026-01-13T03:24:52.713566840Z [inf]  [WS] Processing $18,042 trade from 0xd6a3f0ec...
+2026-01-13T03:24:52.811392279Z [inf]  [LOOKUP] 0xd6a3f0ec... -> Rank #210, knedloveprovelo
+2026-01-13T03:24:52.811401283Z [inf]  [WS] ALERT TRIGGERED: Sports whale $18,042, attempting channel 1458465707414261821
+2026-01-13T03:24:52.982810028Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:24:52.982813658Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:24:52.982816958Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:24:52.982820528Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:24:52.982823708Z [inf]  [WS] Processing $18,042 trade from 0xd6a3f0ec...
+2026-01-13T03:24:53.010449163Z [inf]  [WS] ✓ ALERT SENT: Sports whale $18,042 to channel 1458465707414261821, msg_id=1460474658595012628
+2026-01-13T03:24:53.010458500Z [inf]  [WS] ALERT TRIGGERED: Sports whale $18,042, attempting channel 1457798756152905900
+2026-01-13T03:24:53.188482695Z [inf]  [WS] Processing $8,476 trade from 0xe6535d86...
+2026-01-13T03:24:53.288479973Z [inf]  [WS] ✓ ALERT SENT: Sports whale $18,042 to channel 1457798756152905900, msg_id=1460474659404386429
+2026-01-13T03:24:53.288487725Z [inf]  [WS] ALERT TRIGGERED: Sports whale $18,042, attempting channel 1458905878198489366
+2026-01-13T03:24:53.706918899Z [inf]  [WS] ✓ ALERT SENT: Sports whale $18,042 to channel 1458905878198489366, msg_id=1460474660788633864
+2026-01-13T03:24:53.706925326Z [inf]  [WS] Processing $8,476 trade from 0xe6535d86...
+2026-01-13T03:24:55.952644461Z [inf]  [WS] Trades processed: 41000
+2026-01-13T03:24:58.377211181Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,215, attempting channel 1457798756152905900
+2026-01-13T03:24:58.581115955Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,215 to channel 1457798756152905900, msg_id=1460474681672077480
+2026-01-13T03:24:59.843555457Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,954, attempting channel 1457798756152905900
+2026-01-13T03:25:00.147752217Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,954 to channel 1457798756152905900, msg_id=1460474687946625116
+2026-01-13T03:25:00.322010271Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,440, attempting channel 1457798756152905900
+2026-01-13T03:25:00.571855492Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,440 to channel 1457798756152905900, msg_id=1460474689930661921
+2026-01-13T03:25:01.899546072Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,571, attempting channel 1457798756152905900
+2026-01-13T03:25:02.185486055Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,571 to channel 1457798756152905900, msg_id=1460474696372846761
+2026-01-13T03:25:02.700521005Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:02.700530005Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:02.700536170Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:02.704802213Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:02.879340240Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,467, attempting channel 1457798756152905900
+2026-01-13T03:25:03.156093669Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,467 to channel 1457798756152905900, msg_id=1460474700831396048
+2026-01-13T03:25:03.374670626Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:03.374673476Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:03.374676126Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:03.455124752Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:06.893648087Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,320, attempting channel 1457798756152905900
+2026-01-13T03:25:07.158609744Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,320 to channel 1457798756152905900, msg_id=1460474717839560859
+2026-01-13T03:25:07.773319577Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,256, attempting channel 1457798756152905900
+2026-01-13T03:25:07.976777849Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,256 to channel 1457798756152905900, msg_id=1460474721199198239
+2026-01-13T03:25:08.372123594Z [inf]  [WS] Trades processed: 38000
+2026-01-13T03:25:17.695447309Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:17.695454591Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:17.695460284Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:17.700380317Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:22.204157316Z [inf]  [WS] Processing tracked wallet trade $25 from 0x72591f7d...
+2026-01-13T03:25:22.267976339Z [inf]  [WS] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:22.267981828Z [inf]  [WS] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:22.267986553Z [inf]  [WebSocket] Error handling message #38527: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:22.593849760Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,148, attempting channel 1457798756152905900
+2026-01-13T03:25:22.848238555Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,148 to channel 1457798756152905900, msg_id=1460474783631278284
+2026-01-13T03:25:23.453834983Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:23.453845833Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:23.453851183Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:23.453860023Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:23.453863883Z [inf]  [WS] Trades processed: 42000
+2026-01-13T03:25:23.453869713Z [inf]  [WS] Processing tracked wallet trade $25 from 0x72591f7d...
+2026-01-13T03:25:32.714123906Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:32.714127722Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:32.714131543Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:32.718208202Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:33.097830391Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:33.097835501Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:33.097842181Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:33.381459395Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:34.173073571Z [inf]  [WS] Trades processed: 39000
+2026-01-13T03:25:42.762746937Z [inf]  [CACHE DEBUG FULL] {"id": "1082749", "question": "Will Ethereum reach $6,000 in January?", "conditionId": "0x49c6ce5c8bb91c380e5bf9c5d495a40178ac10377aa7bb5bbf0d40a34830bb2f", "slug": "will-ethereum-reach-6000-in-january-2026", "endDate": "2026-02-01T05:00:00Z", "liquidity": "280666.54381", "startDate": "2026-01-01T19:38:40.630368Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "description": "This market will immediately resolve to \"Yes\" if any Binance 1 minute candle for ETH/USDT during the month specified in the title (from 00:00 AM ET on the first day to 11:59 PM ET on the last), has a final High price equal to or greater than the price specified in the title. Otherwise, this market wil
+2026-01-13T03:25:42.762750923Z [inf]  [CACHE] Added market 1082749 (slug=will-ethereum-reach-6000-in-ja) for condition 0x49c6ce5c8bb91c380e...
+2026-01-13T03:25:47.696102192Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:47.696109670Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:47.696116005Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:47.706901550Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:48.117825306Z [inf]  [CACHE DEBUG FULL] {"id": "666861", "question": "Trump out as President before 2027?", "conditionId": "0x48b0b0bca515f68fccf95af4793dbd0edbfec1f8ec6e8df2c0f69ba74f8c4722", "slug": "trump-out-as-president-before-2027", "resolutionSource": "", "endDate": "2026-12-31T00:00:00Z", "liquidity": "65193.3577", "startDate": "2025-11-05T21:57:19.399255Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/trump-out-as-president-by-march-31-c3SENQhH7Ao1.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/trump-out-as-president-by-march-31-c3SENQhH7Ao1.jpg", "description": "This market will resolve to \u201cYes\u201d if Donald Trump resigns or is removed as President or otherwise ceases to be the President of the United States for any period of time by December 31, 2026, 11:59 PM ET. Otherwis
+2026-01-13T03:25:48.117833495Z [inf]  [CACHE] Added market 666861 (slug=trump-out-as-president-before-) for condition 0x48b0b0bca515f68fcc...
+2026-01-13T03:25:48.117840429Z [inf]  [WS] ALERT TRIGGERED: Whale $1,722 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:25:48.117847028Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:25:48.414828862Z [inf]  [WS] ✓ ALERT SENT: Whale $1,722 to channel 1457781977905365230, msg_id=1460474890392961046
+2026-01-13T03:25:49.996469968Z [inf]  [CACHE DEBUG FULL] {"id": "1106713", "question": "Khamenei out as Supreme Leader of Iran by January 31?", "conditionId": "0xa8b744720006da3c08b4dc8a61a5ce930542f550fcf8d27380ae898de636799d", "slug": "khamenei-out-as-supreme-leader-of-iran-by-january-31", "resolutionSource": "", "endDate": "2026-01-31T00:00:00Z", "liquidity": "1321294.4618", "startDate": "2026-01-04T18:57:15.251Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/khamenei-out-as-supreme-leader-of-iran-in-2025-VNDMf5RqFLwB.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/khamenei-out-as-supreme-leader-of-iran-in-2025-VNDMf5RqFLwB.jpg", "description": "This market will resolve to \"Yes\" if Iran's Supreme Leader, Ali Khamenei, is removed from power for any length of time between this market's creation and Januar
+2026-01-13T03:25:49.996474632Z [inf]  [CACHE] Added market 1106713 (slug=khamenei-out-as-supreme-leader) for condition 0xa8b744720006da3c08...
+2026-01-13T03:25:49.996479431Z [inf]  [WS] ALERT TRIGGERED: Whale $3,739 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:25:49.996483167Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:25:50.276798080Z [inf]  [WS] ✓ ALERT SENT: Whale $3,739 to channel 1457781977905365230, msg_id=1460474898484035810
+2026-01-13T03:25:53.393232592Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:25:53.393239102Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:25:53.393243782Z [inf]  [WS] Trades processed: 43000
+2026-01-13T03:25:53.393288821Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:25:53.393293791Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:25:54.328833308Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,556, attempting channel 1457798756152905900
+2026-01-13T03:25:54.619823495Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,556 to channel 1457798756152905900, msg_id=1460474916737519719
+2026-01-13T03:25:54.619832178Z [inf]  [WS] Processing $17,884 trade from 0xead152b8...
+2026-01-13T03:25:54.707742617Z [inf]  [LOOKUP] 0xead152b8... -> Rank #1858747, elkmonkey
+2026-01-13T03:25:54.707750617Z [inf]  [WS] ALERT TRIGGERED: Sports whale $17,884, attempting channel 1458465707414261821
+2026-01-13T03:25:55.118441248Z [inf]  [WS] Processing $17,884 trade from 0xead152b8...
+2026-01-13T03:25:55.155033201Z [inf]  [WS] ✓ ALERT SENT: Sports whale $17,884 to channel 1458465707414261821, msg_id=1460474918578950187
+2026-01-13T03:25:55.155037865Z [inf]  [WS] ALERT TRIGGERED: Sports whale $17,884, attempting channel 1457798756152905900
+2026-01-13T03:25:55.347132122Z [inf]  [WS] ✓ ALERT SENT: Sports whale $17,884 to channel 1457798756152905900, msg_id=1460474920055083179
+2026-01-13T03:25:55.347138010Z [inf]  [WS] ALERT TRIGGERED: Sports whale $17,884, attempting channel 1458905878198489366
+2026-01-13T03:25:55.521689987Z [inf]  [WS] Processing $6,162 trade from 0x5350afcd...
+2026-01-13T03:25:55.612428624Z [inf]  [WS] ✓ ALERT SENT: Sports whale $17,884 to channel 1458905878198489366, msg_id=1460474920608993470
+2026-01-13T03:25:55.612440451Z [inf]  [WS] Processing $6,162 trade from 0x5350afcd...
+2026-01-13T03:26:00.871492157Z [inf]  [CACHE DEBUG FULL] {"id": "1161175", "question": "Set Handicap: Bolt (-1.5) vs Ymer (+1.5)", "conditionId": "0x8f7a30fa66f377a7cc77e69552a63d1c186c311dc4605ebe02feb238c8665223", "slug": "atp-bolt-ymer-2026-01-12-set-handicap-home-1pt5", "resolutionSource": "https://ausopen.com/", "endDate": "2026-01-26T23:00:00Z", "liquidity": "581.35946", "startDate": "2026-01-11T18:10:25.551433Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/atp-tour-b4390c4fb8.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/atp-tour-b4390c4fb8.jpg", "description": "This market refers to the tennis match between Alex Bolt and Elias Ymer in the Australian Open, Qualification ATP, scheduled for January 12 2026.\nThis market will resolve to \"Bolt\" if Alex Bolt wins by 2 or more sets than Elias Ymer, bas
+2026-01-13T03:26:00.871497529Z [inf]  [CACHE] Added market 1161175 (slug=atp-bolt-ymer-2026-01-12-set-h) for condition 0x8f7a30fa66f377a7cc...
+2026-01-13T03:26:02.718503051Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:02.718511978Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:02.718519652Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:02.718526689Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:03.107388912Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:03.107392592Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:03.107395513Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:03.419483887Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:04.106094395Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,589, attempting channel 1457798756152905900
+2026-01-13T03:26:04.514300995Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,589 to channel 1457798756152905900, msg_id=1460474958198345890
+2026-01-13T03:26:04.514306306Z [inf]  [WS] Trades processed: 40000
+2026-01-13T03:26:23.193160119Z [inf]  [WS] Trades processed: 44000
+2026-01-13T03:26:23.193165039Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:23.193169849Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:23.193174609Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:23.193179278Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:24.511983419Z [inf]  [CACHE DEBUG FULL] {"id": "1161167", "question": "Bolt vs. Ymer: Total Sets O/U 2.5", "conditionId": "0x25d2fb1ec7af63e552fe8452a58494ff88aa5b22356fce4cfa537d20d5007bad", "slug": "atp-bolt-ymer-2026-01-12-set-totals-2pt5", "resolutionSource": "https://ausopen.com/", "endDate": "2026-01-26T23:00:00Z", "liquidity": "604.85294", "startDate": "2026-01-11T18:10:23.775457Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/atp-tour-b4390c4fb8.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/atp-tour-b4390c4fb8.jpg", "description": "This market refers to the tennis match between Alex Bolt and Elias Ymer in the Australian Open, Qualification ATP, scheduled for January 12 2026.\nThis market will resolve to \"Over\" if the total number of sets completed equals or exceeds 3. Otherwise, 
+2026-01-13T03:26:24.511989073Z [inf]  [CACHE] Added market 1161167 (slug=atp-bolt-ymer-2026-01-12-set-t) for condition 0x25d2fb1ec7af63e552...
+2026-01-13T03:26:24.511993328Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:24.511997778Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:24.512001684Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:24.512005948Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:24.512009720Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,848, attempting channel 1457798756152905900
+2026-01-13T03:26:24.512013693Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,848 to channel 1457798756152905900, msg_id=1460475032894701628
+2026-01-13T03:26:30.297251038Z [inf]  [WS] Trades processed: 41000
+2026-01-13T03:26:32.697983997Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:32.697997846Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:32.698009338Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:32.698574775Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:33.106736809Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:33.106739539Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:33.106743199Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:33.184985022Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:33.943864467Z [inf]  [CACHE DEBUG FULL] {"id": "1163019", "question": "Spread: Clippers (-4.5)", "conditionId": "0xd125c2973b2449931eebd625993329ec9ccc7eb4aa217c86477f634626059bae", "slug": "nba-cha-lac-2026-01-12-spread-home-4pt5", "resolutionSource": "https://www.nba.com/", "endDate": "2026-01-13T03:30:00Z", "liquidity": "637559.9605", "startDate": "2026-01-11T21:11:38.108273Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "description": "In the upcoming NBA game, scheduled for January 12 at 10:30 PM ET:\n\nThis market will resolve to \"Clippers\" if the Clippers win the game by 5 or more points.\n\nOtherwise, this market will resolve to \"Hornets\". If 
+2026-01-13T03:26:33.943870452Z [inf]  [CACHE] Added market 1163019 (slug=nba-cha-lac-2026-01-12-spread-) for condition 0xd125c2973b2449931e...
+2026-01-13T03:26:33.943875209Z [inf]  [WS] ALERT TRIGGERED: Sports whale $4,366, attempting channel 1457798756152905900
+2026-01-13T03:26:34.208886242Z [inf]  [WS] ✓ ALERT SENT: Sports whale $4,366 to channel 1457798756152905900, msg_id=1460475082832085066
+2026-01-13T03:26:34.325940198Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,440, attempting channel 1457798756152905900
+2026-01-13T03:26:34.625575123Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,440 to channel 1457798756152905900, msg_id=1460475084555681874
+2026-01-13T03:26:36.318684469Z [inf]  [CACHE DEBUG FULL] {"id": "666494", "question": "EdgeX FDV above $1B one day after launch?", "conditionId": "0xd98bd71f9e730990d3737e8bcd6c1b5cad3c4975ae359c031fea49ccff228521", "slug": "edgex-fdv-above-1b-one-day-after-launch", "endDate": "2027-01-01T05:00:00Z", "liquidity": "50344.8485", "startDate": "2025-11-05T15:52:15.254931Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-edgex-launch-a-token-in-2025-HYxLQtBesCT8.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-edgex-launch-a-token-in-2025-HYxLQtBesCT8.jpg", "description": "This market will resolve to \"Yes\" if the Fully Diluted Valuation of EdgeX's token is greater than the value specified in the title 1 day after launch. Otherwise, the market will resolve to \"No.\"\n\nThe token must be actively, publicl
+2026-01-13T03:26:36.318691604Z [inf]  [CACHE] Added market 666494 (slug=edgex-fdv-above-1b-one-day-aft) for condition 0xd98bd71f9e730990d3...
+2026-01-13T03:26:36.318696648Z [inf]  [WS] ALERT TRIGGERED: Whale $1,507 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:26:36.318702059Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:26:36.554981906Z [inf]  [WS] ✓ ALERT SENT: Whale $1,507 to channel 1457781977905365230, msg_id=1460475092789100742
+2026-01-13T03:26:39.112695969Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,533, attempting channel 1457798756152905900
+2026-01-13T03:26:39.336031841Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,533 to channel 1457798756152905900, msg_id=1460475104478761082
+2026-01-13T03:26:40.147130121Z [inf]  [WS] ALERT TRIGGERED: Sports whale $4,896, attempting channel 1457798756152905900
+2026-01-13T03:26:40.377580999Z [inf]  [WS] ✓ ALERT SENT: Sports whale $4,896 to channel 1457798756152905900, msg_id=1460475108773728429
+2026-01-13T03:26:41.695323843Z [inf]  [WS] Processing $86,240 trade from 0xa09f09a4...
+2026-01-13T03:26:41.729867351Z [inf]  [WS] Processing $86,240 trade from 0xa09f09a4...
+2026-01-13T03:26:41.856827149Z [inf]  [LOOKUP] 0xa09f09a4... -> Rank #327929, xunyu253
+2026-01-13T03:26:41.856833959Z [inf]  [WS] ALERT TRIGGERED: Bonds $86,240, attempting channel 1458465707414261821
+2026-01-13T03:26:41.856840822Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:42.026163237Z [inf]  [WS] ✓ ALERT SENT: Bonds $86,240 to channel 1458465707414261821, msg_id=1460475115803377819
+2026-01-13T03:26:42.026187586Z [inf]  [WS] ALERT TRIGGERED: Bonds $86,240, attempting channel 1458105704715128865
+2026-01-13T03:26:42.026198032Z [inf]  [WS] Channel fetch result: bond-alerts (type: TextChannel)
+2026-01-13T03:26:42.416733712Z [inf]  [WS] ✓ ALERT SENT: Bonds $86,240 to channel 1458105704715128865, msg_id=1460475117078581319
+2026-01-13T03:26:42.416738411Z [inf]  [WS] ALERT TRIGGERED: Bonds $86,240, attempting channel 1458905646144553151
+2026-01-13T03:26:42.416742550Z [inf]  [WS] Channel fetch result: 🏦︳bonds (type: TextChannel)
+2026-01-13T03:26:43.885856902Z [inf]  [WS] ✓ ALERT SENT: Bonds $86,240 to channel 1458905646144553151, msg_id=1460475118269501481
+2026-01-13T03:26:46.500337236Z [inf]  [WS] Trades processed: 45000
+2026-01-13T03:26:47.737527366Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:47.737538682Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:47.737599938Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:47.737606982Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:48.100297049Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:26:48.100300689Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:26:48.100303539Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:26:48.179386173Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:26:48.419977845Z [inf]  [CACHE DEBUG FULL] {"id": "704339", "question": "Russia x Ukraine ceasefire by January 31, 2026?", "conditionId": "0xb8c1bd306a8a4cedfb280e114e655c5092b3f37edccae05cd877d7f21a5774ce", "slug": "russia-x-ukraine-ceasefire-by-january-31-2026", "resolutionSource": "", "endDate": "2026-01-31T00:00:00Z", "liquidity": "720418.65786", "startDate": "2025-11-26T12:31:27.051721Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/russia-x-ukraine-ceasefire-in-2025-w2voYOygx80B.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/russia-x-ukraine-ceasefire-in-2025-w2voYOygx80B.jpg", "description": "This market will resolve to \"Yes\" if there is an official ceasefire agreement, defined as a publicly announced and mutually agreed halt in military engagement, between Russia and Ukraine by Janua
+2026-01-13T03:26:48.419983123Z [inf]  [CACHE] Added market 704339 (slug=russia-x-ukraine-ceasefire-by-) for condition 0xb8c1bd306a8a4cedfb...
+2026-01-13T03:26:51.930086805Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,702, attempting channel 1457798756152905900
+2026-01-13T03:26:52.089625319Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,702 to channel 1457798756152905900, msg_id=1460475157976973527
+2026-01-13T03:26:54.224119602Z [inf]  [CACHE DEBUG FULL] {"id": "1137191", "question": "Will the price of Bitcoin be above $86,000 on January 15?", "conditionId": "0xdc6cb560e372c6f3628f1b9ec9fda9391262ea3a0d0a16bf1bada691197df397", "slug": "bitcoin-above-86k-on-january-15", "endDate": "2026-01-15T17:00:00Z", "liquidity": "18886.33856", "startDate": "2026-01-08T17:20:34.113416Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will resolve to \"Yes\" if the Binance 1 minute candle for BTC/USDT 12:00 in the ET timezone (noon) on the date specified in the title has a final \"Close\" price higher than the price specified in the title. Otherwise, this market will resolve to \"No\".\n\nThe resolution source fo
+2026-01-13T03:26:54.224123783Z [inf]  [CACHE] Added market 1137191 (slug=bitcoin-above-86k-on-january-1) for condition 0xdc6cb560e372c6f362...
+2026-01-13T03:26:59.964851493Z [inf]  [WS] Processing $10,384 trade from 0xa365d8d2...
+2026-01-13T03:27:00.148135417Z [inf]  [LOOKUP] 0xa365d8d2... -> Rank #53835, aneziz
+2026-01-13T03:27:00.148143051Z [inf]  [WS] ALERT TRIGGERED: Whale $10,384 >= threshold $10,000, attempting channel 1458465707414261821
+2026-01-13T03:27:00.148149217Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:00.408072853Z [inf]  [WS] ✓ ALERT SENT: Whale $10,384 to channel 1458465707414261821, msg_id=1460475192764792876
+2026-01-13T03:27:00.408078405Z [inf]  [WS] ALERT TRIGGERED: Whale $10,384 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:27:00.408085757Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:27:00.598163568Z [inf]  [WS] ✓ ALERT SENT: Whale $10,384 to channel 1457781977905365230, msg_id=1460475193737744528
+2026-01-13T03:27:00.598170339Z [inf]  [WS] ALERT TRIGGERED: Whale $10,384 >= threshold $10,000, attempting channel 1458878958341984480
+2026-01-13T03:27:00.598176598Z [inf]  [WS] Channel fetch result: 🐳︳whale-tracker (type: TextChannel)
+2026-01-13T03:27:00.818441256Z [inf]  [WS] ✓ ALERT SENT: Whale $10,384 to channel 1458878958341984480, msg_id=1460475194564022477
+2026-01-13T03:27:00.818447467Z [inf]  [WS] Processing $35,805 trade from 0x7744bfd7...
+2026-01-13T03:27:00.981838139Z [inf]  [WS] Processing $5,730 trade from 0x7744bfd7...
+2026-01-13T03:27:02.699636628Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:02.699644161Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:27:02.699648440Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:02.700322578Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:04.186009745Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,250, attempting channel 1457798756152905900
+2026-01-13T03:27:04.425432515Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,250 to channel 1457798756152905900, msg_id=1460475209751597225
+2026-01-13T03:27:04.425439437Z [inf]  [WS] Trades processed: 42000
+2026-01-13T03:27:04.538257695Z [inf]  [CACHE DEBUG FULL] {"id": "1161172", "question": "Bolt vs. Ymer: Match O/U 22.5", "conditionId": "0xc32d40a37643be0f65142fd447b94b109663d8c23df64efea45ed18316a602b0", "slug": "atp-bolt-ymer-2026-01-12-match-total-22pt5", "resolutionSource": "https://ausopen.com/", "endDate": "2026-01-26T23:00:00Z", "liquidity": "579.32157", "startDate": "2026-01-11T18:10:24.791034Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/atp-tour-b4390c4fb8.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/atp-tour-b4390c4fb8.jpg", "description": "This market refers to the tennis match between Alex Bolt and Elias Ymer in the Australian Open, Qualification ATP, scheduled for January 12 2026.\nThis market will resolve to \"Over\" if the total number of games completed across all sets equals or exceeds
+2026-01-13T03:27:04.538265419Z [inf]  [CACHE] Added market 1161172 (slug=atp-bolt-ymer-2026-01-12-match) for condition 0xc32d40a37643be0f65...
+2026-01-13T03:27:07.868520874Z [inf]  [VOLATILITY] 🚨 5min: Hobart International: Peyton Stearns vs ... +16.4 pts (59%→75%) | $2,273, 48 trades
+2026-01-13T03:27:07.868528255Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:27:07.868535648Z [inf]  [VOLATILITY] ✗ Blocked: Hobart International: Peyton Stearns vs Barbora Kr... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:27:08.108383934Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,410, attempting channel 1457798756152905900
+2026-01-13T03:27:08.179757072Z [inf]  [WS] Processing $35,805 trade from 0x7744bfd7...
+2026-01-13T03:27:08.179762732Z [inf]  [WS] Processing $10,384 trade from 0xa365d8d2...
+2026-01-13T03:27:08.179767242Z [inf]  [WS] Processing $5,730 trade from 0x7744bfd7...
+2026-01-13T03:27:08.179771442Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:08.179775762Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:27:08.179780802Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:08.179784752Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:08.179789442Z [inf]  [VOLATILITY] 🚨 5min: Hobart International: Peyton Stearns vs ... +16.3 pts (59%→75%) | $2,275, 48 trades
+2026-01-13T03:27:08.179793191Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:27:08.179797011Z [inf]  [VOLATILITY] ✗ Blocked: Hobart International: Peyton Stearns vs Barbora Kr... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:27:08.352080770Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,410 to channel 1457798756152905900, msg_id=1460475226025496637
+2026-01-13T03:27:10.212882237Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,661, attempting channel 1457798756152905900
+2026-01-13T03:27:10.460107776Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,661 to channel 1457798756152905900, msg_id=1460475235047309445
+2026-01-13T03:27:17.678931265Z [inf]  [VOLATILITY] Stats: 801 assets, 2227 buckets, 50 cooldowns, min_vol=$2000
+2026-01-13T03:27:17.703225937Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:17.703238295Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:27:17.703246695Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:17.713693016Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:17.857010169Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,338, attempting channel 1457798756152905900
+2026-01-13T03:27:18.113796089Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:18.113801709Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:27:18.113805149Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:18.137531228Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,338 to channel 1457798756152905900, msg_id=1460475267100311707
+2026-01-13T03:27:18.193040670Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:19.925676371Z [inf]  [WS] Processing $9,990 trade from 0xdf1b7006...
+2026-01-13T03:27:19.974386277Z [inf]  [WS] Processing $9,990 trade from 0xdf1b7006...
+2026-01-13T03:27:20.111654417Z [inf]  [LOOKUP] 0xdf1b7006... -> Rank #1846040, BoringPunter
+2026-01-13T03:27:20.111662543Z [inf]  [WS] ALERT TRIGGERED: Sports whale $9,990, attempting channel 1458465707414261821
+2026-01-13T03:27:20.272397416Z [inf]  [WS] ✓ ALERT SENT: Sports whale $9,990 to channel 1458465707414261821, msg_id=1460475276138909706
+2026-01-13T03:27:20.272403953Z [inf]  [WS] ALERT TRIGGERED: Sports whale $9,990, attempting channel 1457798756152905900
+2026-01-13T03:27:20.490767601Z [inf]  [WS] ✓ ALERT SENT: Sports whale $9,990 to channel 1457798756152905900, msg_id=1460475277133217855
+2026-01-13T03:27:20.490776767Z [inf]  [WS] ALERT TRIGGERED: Sports whale $9,990, attempting channel 1458905878198489366
+2026-01-13T03:27:20.521796432Z [inf]  [WS] Trades processed: 46000
+2026-01-13T03:27:20.678987541Z [inf]  [WS] ✓ ALERT SENT: Sports whale $9,990 to channel 1458905878198489366, msg_id=1460475277980340275
+2026-01-13T03:27:20.757315240Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,949, attempting channel 1457798756152905900
+2026-01-13T03:27:20.883380091Z [inf]  [WebSocket] Error handling message #46021: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "seen_transactions_pkey"
+2026-01-13T03:27:20.883383741Z [inf]  DETAIL:  Key (tx_hash)=(0xf4181b10b6a8400cba0a656b15b741922a9ee0dfc69feccfea9d0a80ccb7c72a) already exists.
+2026-01-13T03:27:20.883387691Z [inf]  
+2026-01-13T03:27:20.883391151Z [inf]  [SQL: INSERT INTO seen_transactions (tx_hash, seen_at) VALUES (%(tx_hash)s, %(seen_at)s)]
+2026-01-13T03:27:20.883394891Z [inf]  [parameters: {'tx_hash': '0xf4181b10b6a8400cba0a656b15b741922a9ee0dfc69feccfea9d0a80ccb7c72a', 'seen_at': datetime.datetime(2026, 1, 13, 3, 27, 20, 719415)}]
+2026-01-13T03:27:20.883398371Z [inf]  (Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-01-13T03:27:21.119112691Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,949 to channel 1457798756152905900, msg_id=1460475279041368097
+2026-01-13T03:27:21.966367708Z [err]  2026-01-13 03:27:20.757 UTC [535] ERROR:  duplicate key value violates unique constraint "seen_transactions_pkey"
+2026-01-13T03:27:21.966375557Z [err]  2026-01-13 03:27:20.757 UTC [535] DETAIL:  Key (tx_hash)=(0xf4181b10b6a8400cba0a656b15b741922a9ee0dfc69feccfea9d0a80ccb7c72a) already exists.
+2026-01-13T03:27:21.966380449Z [err]  2026-01-13 03:27:20.757 UTC [535] STATEMENT:  INSERT INTO seen_transactions (tx_hash, seen_at) VALUES ('0xf4181b10b6a8400cba0a656b15b741922a9ee0dfc69feccfea9d0a80ccb7c72a', '2026-01-13T03:27:20.719415'::timestamp)
+2026-01-13T03:27:23.587963508Z [inf]  [WS MONITOR] Connection age 903s > 900s - proactive reconnect
+2026-01-13T03:27:23.587970058Z [inf]  [WS SWITCH] ✓ Switched to backup connection
+2026-01-13T03:27:23.680835596Z [inf]  [WS] Connection closed (1000), attempting recovery...
+2026-01-13T03:27:23.680839716Z [inf]  [WS SWITCH] No backup available - creating new primary...
+2026-01-13T03:27:24.763073286Z [inf]  [CACHE DEBUG FULL] {"id": "1137221", "question": "Will the price of Solana be above $190 on January 15?", "conditionId": "0x58074761e991e2dadfeb668aaf7b9c64581e5df23ba2c46a3e6427bd23bd2e81", "slug": "solana-above-190-on-january-15", "endDate": "2026-01-15T17:00:00Z", "liquidity": "11482.35135", "startDate": "2026-01-08T17:20:42.673372Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL-logo.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/SOL-logo.png", "description": "This market will resolve to \"Yes\" if the Binance 1 minute candle for SOL/USDT 12:00 in the ET timezone (noon) on the date specified in the title has a final \"Close\" price higher than the price specified in the title. Otherwise, this market will resolve to \"No\".\n\nThe resolution source for this market
+2026-01-13T03:27:24.763083994Z [inf]  [CACHE] Added market 1137221 (slug=solana-above-190-on-january-15) for condition 0x58074761e991e2dadf...
+2026-01-13T03:27:32.900718494Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:32.900730613Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:27:32.900739030Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:32.905351676Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:33.114070817Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:33.114074627Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:27:33.114077197Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:33.194687350Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:33.689557002Z [inf]  [WS PRIMARY] Attempting connection...
+2026-01-13T03:27:34.124169270Z [inf]  [WS PRIMARY] ✓ Connected and verified (received data)
+2026-01-13T03:27:34.124172349Z [inf]  [WS SWITCH] ✓ New primary connection established (attempt 1)
+2026-01-13T03:27:34.124175999Z [inf]  [WS] Connection was switched, continuing with new connection...
+2026-01-13T03:27:35.636338095Z [inf]  [WebSocket] ✓ Receiving messages...
+2026-01-13T03:27:36.923909086Z [inf]  [WS] Processing $16,819 trade from 0x1117eade...
+2026-01-13T03:27:38.621811409Z [inf]  [LOOKUP] 0x1117eade... -> Rank #1858719, benwyatt
+2026-01-13T03:27:38.621814988Z [inf]  [WS] ALERT TRIGGERED: Sports whale $16,819, attempting channel 1458465707414261821
+2026-01-13T03:27:38.903245836Z [inf]  [WS] ✓ ALERT SENT: Sports whale $16,819 to channel 1458465707414261821, msg_id=1460475354140381208
+2026-01-13T03:27:38.903250506Z [inf]  [WS] ALERT TRIGGERED: Sports whale $16,819, attempting channel 1457798756152905900
+2026-01-13T03:27:39.134001052Z [inf]  [WS] ✓ ALERT SENT: Sports whale $16,819 to channel 1457798756152905900, msg_id=1460475355105198286
+2026-01-13T03:27:39.134004172Z [inf]  [WS] ALERT TRIGGERED: Sports whale $16,819, attempting channel 1458905878198489366
+2026-01-13T03:27:39.250753527Z [inf]  [WS] ✓ ALERT SENT: Sports whale $16,819 to channel 1458905878198489366, msg_id=1460475355864236148
+2026-01-13T03:27:39.655946634Z [inf]  [WS] Processing $9,450 trade from 0x14ac84b6...
+2026-01-13T03:27:40.057883848Z [inf]  [WS] Processing $8,492 trade from 0xf68a2819...
+2026-01-13T03:27:43.086265493Z [inf]  [CACHE DEBUG FULL] {"id": "1116492", "question": "Texans vs. Steelers", "conditionId": "0xbfa2065aca0ad40d731bb8d249e14bbffd54a57fe5bbeb6b438f714bf7a564eb", "slug": "nfl-hou-pit-2026-01-12", "resolutionSource": "https://www.nfl.com/scores", "endDate": "2026-01-13T01:15:00Z", "liquidity": "67928.3479", "startDate": "2026-01-05T21:22:33.206945Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/nfl.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/nfl.png", "description": "In the upcoming NFL game, scheduled for January 12 at 8:15PM ET:\nIf Texans wins, the market will resolve to \"Texans\".\nIf Steelers wins, the market will resolve to \"Steelers\".\nIf the game is postponed, this market will remain open until the game has been completed.\nIf the game is canceled entirely or en
+2026-01-13T03:27:43.086269253Z [inf]  [CACHE] Added market 1116492 (slug=nfl-hou-pit-2026-01-12) for condition 0xbfa2065aca0ad40d73...
+2026-01-13T03:27:43.086272483Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,889, attempting channel 1457798756152905900
+2026-01-13T03:27:43.616496353Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,889 to channel 1457798756152905900, msg_id=1460475373295894539
+2026-01-13T03:27:43.616501483Z [inf]  [WS] Processing $28,076 trade from 0x35bbbad2...
+2026-01-13T03:27:44.566077347Z [inf]  [LOOKUP] 0x35bbbad2... -> Rank #96702, MisTKy
+2026-01-13T03:27:44.672056855Z [inf]  [CACHE DEBUG FULL] {"id": "1106713", "question": "Khamenei out as Supreme Leader of Iran by January 31?", "conditionId": "0xa8b744720006da3c08b4dc8a61a5ce930542f550fcf8d27380ae898de636799d", "slug": "khamenei-out-as-supreme-leader-of-iran-by-january-31", "resolutionSource": "", "endDate": "2026-01-31T00:00:00Z", "liquidity": "1321294.4618", "startDate": "2026-01-04T18:57:15.251Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/khamenei-out-as-supreme-leader-of-iran-in-2025-VNDMf5RqFLwB.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/khamenei-out-as-supreme-leader-of-iran-in-2025-VNDMf5RqFLwB.jpg", "description": "This market will resolve to \"Yes\" if Iran's Supreme Leader, Ali Khamenei, is removed from power for any length of time between this market's creation and Januar
+2026-01-13T03:27:44.672060914Z [inf]  [CACHE] Added market 1106713 (slug=khamenei-out-as-supreme-leader) for condition 0xa8b744720006da3c08...
+2026-01-13T03:27:44.672065204Z [inf]  [WS] ALERT TRIGGERED: Whale $28,076 >= threshold $10,000, attempting channel 1458465707414261821
+2026-01-13T03:27:44.672068254Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:44.874629284Z [inf]  [WS] ✓ ALERT SENT: Whale $28,076 to channel 1458465707414261821, msg_id=1460475379205800078
+2026-01-13T03:27:44.874633694Z [inf]  [WS] ALERT TRIGGERED: Whale $28,076 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:27:44.874639944Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:27:45.059423890Z [inf]  [WS] ✓ ALERT SENT: Whale $28,076 to channel 1457781977905365230, msg_id=1460475380275216414
+2026-01-13T03:27:45.059428810Z [inf]  [WS] ALERT TRIGGERED: Whale $28,076 >= threshold $10,000, attempting channel 1458878958341984480
+2026-01-13T03:27:45.059433040Z [inf]  [WS] Channel fetch result: 🐳︳whale-tracker (type: TextChannel)
+2026-01-13T03:27:45.167207570Z [inf]  [WS] ✓ ALERT SENT: Whale $28,076 to channel 1458878958341984480, msg_id=1460475380879327367
+2026-01-13T03:27:47.996915785Z [inf]  Market cache refreshed: 1515 entries
+2026-01-13T03:27:48.669408071Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:48.669411181Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:27:48.669413721Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:48.750629692Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:51.601486840Z [inf]  [WS BACKUP] Attempting connection...
+2026-01-13T03:27:51.989306015Z [inf]  [WS BACKUP] ✓ Connected and verified (received data)
+2026-01-13T03:27:51.989312035Z [inf]  [WS BACKUP] ✓ Backup connection ready
+2026-01-13T03:27:52.886920418Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:27:52.886930371Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:27:52.887013286Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:27:52.887021533Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:02.703397731Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:02.703410695Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:02.703419462Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:02.707755592Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:11.993101349Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:11.993107838Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:11.993114078Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:11.993118928Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:11.993127458Z [inf]  [WS] Trades processed: 47000
+2026-01-13T03:28:11.993132398Z [inf]  [CACHE DEBUG FULL] {"id": "1122780", "question": "Will the price of Ethereum be above $3,300 on January 13?", "conditionId": "0xe1c35ffcc1632f6d775afed67e0c169f4aec8b67f2dc898a5680f2654242578e", "slug": "ethereum-above-3300-on-january-13", "endDate": "2026-01-13T17:00:00Z", "liquidity": "14121.03058", "startDate": "2026-01-06T17:10:02.529755Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "description": "This market will resolve to \"Yes\" if the Binance 1 minute candle for ETH/USDT 12:00 in the ET timezone (noon) on the date specified in the title has a final \"Close\" price higher than the price specified in the title. Otherwise, this market will resolve to \"No\".\n\nThe resolution source 
+2026-01-13T03:28:11.993136568Z [inf]  [CACHE] Added market 1122780 (slug=ethereum-above-3300-on-january) for condition 0xe1c35ffcc1632f6d77...
+2026-01-13T03:28:18.106008210Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:18.106012210Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:18.106016500Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:18.186192930Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:22.703841906Z [inf]  [VOLATILITY] Stats: 770 assets, 2086 buckets, 46 cooldowns, min_vol=$2000
+2026-01-13T03:28:22.703849585Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:22.703854647Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:22.703860273Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:22.703864968Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:22.703870183Z [inf]  [WS MONITOR] Connection age 900s > 900s - proactive reconnect
+2026-01-13T03:28:22.703874202Z [inf]  [WS SWITCH] ✓ Switched to backup connection
+2026-01-13T03:28:22.703878461Z [inf]  [WS] Connection closed (1000), attempting recovery...
+2026-01-13T03:28:22.703883051Z [inf]  [WS SWITCH] No backup available - creating new primary...
+2026-01-13T03:28:22.703887922Z [inf]  [WS BACKUP] Attempting connection...
+2026-01-13T03:28:22.703892503Z [inf]  [WS BACKUP] ✓ Connected and verified (received data)
+2026-01-13T03:28:22.703896877Z [inf]  [WS BACKUP] ✓ Backup connection ready
+2026-01-13T03:28:24.980135930Z [inf]  [CACHE DEBUG FULL] {"id": "994616", "question": "Will a Black Spoon win season 2 of Culinary Class Wars?", "conditionId": "0x17779edd0a1022075d4ec8ebdb394ef387af87300b88e854414186393d29a7a9", "slug": "will-a-black-spoon-win-season-2-of-culinary-class-wars", "resolutionSource": "", "endDate": "2026-01-13T00:00:00Z", "liquidity": "17541.94386", "startDate": "2025-12-22T19:48:36.973883Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/culinary-class-wars-season-2-winner-4IFmRixl7AKo.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/culinary-class-wars-season-2-winner-4IFmRixl7AKo.jpg", "description": "In Culinary Class Wars, 20 contestants are renowned chefs known as \"White Spoons\" competing under their real names, with 80 contestants known as \"Black Spoons\" competing under
+2026-01-13T03:28:24.980142379Z [inf]  [CACHE] Added market 994616 (slug=will-a-black-spoon-win-season-) for condition 0x17779edd0a1022075d...
+2026-01-13T03:28:26.803972563Z [inf]  [CACHE DEBUG FULL] {"id": "1161552", "question": "Set Handicap: Snigur (-1.5) vs Kawa (+1.5)", "conditionId": "0xe210c609346f2cdecb86d60e28b958bb156419f3776ba509c9efae2ca32786be", "slug": "wta-snigur-kawa-2026-01-12-set-handicap-home-1pt5", "resolutionSource": "https://ausopen.com/", "endDate": "2026-01-26T23:00:00Z", "liquidity": "598.86694", "startDate": "2026-01-11T18:20:18.854773Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/wta-logo-41f331bdf1.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/wta-logo-41f331bdf1.png", "description": "This market refers to the tennis match between Daria Snigur and Katarzyna Kawa in the Australian Open, Qualification WTA, scheduled for January 12 2026.\nThis market will resolve to \"Snigur\" if Daria Snigur wins by 2 or more sets than
+2026-01-13T03:28:26.803976213Z [inf]  [CACHE] Added market 1161552 (slug=wta-snigur-kawa-2026-01-12-set) for condition 0xe210c609346f2cdecb...
+2026-01-13T03:28:27.981011809Z [inf]  [CACHE DEBUG FULL] {"id": "690214", "question": "Will the Fed\u2019s lower bound reach 2.5% or lower before 2027?", "conditionId": "0xaa6145fb75147c5dda9bda894ed80353b14f23149b285893dd41e1edc8c0d4c2", "slug": "will-the-feds-lower-bound-reach-2pt5-or-lower-before-2027-289-849-151-768", "resolutionSource": "", "endDate": "2026-12-31T00:00:00Z", "liquidity": "25452.1787", "startDate": "2025-11-18T20:38:11.547276Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/fed-rate-cut-in-2025-8aDiUiuri3_D.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/fed-rate-cut-in-2025-8aDiUiuri3_D.jpg", "description": "The FED interest rates are defined in this market by the lower or the upper bound of the target federal funds range. The decisions on the target federal fund range are made by the Fe
+2026-01-13T03:28:27.981016768Z [inf]  [CACHE] Added market 690214 (slug=will-the-feds-lower-bound-reac) for condition 0xaa6145fb75147c5dda...
+2026-01-13T03:28:27.981020208Z [inf]  [WS] ALERT TRIGGERED: Whale $1,240 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:28:27.981023178Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:28:28.208137849Z [inf]  [WS] ✓ ALERT SENT: Whale $1,240 to channel 1457781977905365230, msg_id=1460475560944996376
+2026-01-13T03:28:28.223131029Z [inf]  [WS] Processing $87,120 trade from 0xad889df0...
+2026-01-13T03:28:28.433899484Z [inf]  [WS PRIMARY] Attempting connection...
+2026-01-13T03:28:28.565936638Z [inf]  [WS PRIMARY] ✓ Connected and verified (received data)
+2026-01-13T03:28:28.565944935Z [inf]  [WS SWITCH] ✓ New primary connection established (attempt 1)
+2026-01-13T03:28:28.565951046Z [inf]  [WS] Connection was switched, continuing with new connection...
+2026-01-13T03:28:28.695208695Z [inf]  [WebSocket] ✓ Receiving messages...
+2026-01-13T03:28:29.230745190Z [inf]  [LOOKUP] 0xad889df0... -> Rank #1257597, kongzi9903
+2026-01-13T03:28:29.332166351Z [inf]  [CACHE DEBUG FULL] {"id": "1164475", "question": "Ethereum Up or Down - January 12, 10:15PM-10:30PM ET", "conditionId": "0x6a12a9730276ac539466d19bda352e0fc1600a59d48f3da357bbfe8e78a36e86", "slug": "eth-updown-15m-1768274100", "resolutionSource": "https://data.chain.link/streams/eth-usd", "endDate": "2026-01-13T03:30:00Z", "liquidity": "17490.1779", "startDate": "2026-01-12T03:17:18.269624Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "description": "This market will resolve to \"Up\" if the Ethereum price at the end of the time range specified in the title is greater than or equal to the price at the beginning of that range. Otherwise, it will resolve to \"Down\".\nThe resolution source fo
+2026-01-13T03:28:29.332170521Z [inf]  [CACHE] Added market 1164475 (slug=eth-updown-15m-1768274100) for condition 0x6a12a9730276ac5394...
+2026-01-13T03:28:29.332173801Z [inf]  [WS] ALERT TRIGGERED: Bonds $87,120, attempting channel 1458465707414261821
+2026-01-13T03:28:29.332176851Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:29.697665689Z [inf]  [WS] ✓ ALERT SENT: Bonds $87,120 to channel 1458465707414261821, msg_id=1460475567005503630
+2026-01-13T03:28:29.697668689Z [inf]  [WS] ALERT TRIGGERED: Bonds $87,120, attempting channel 1458105704715128865
+2026-01-13T03:28:29.697672009Z [inf]  [WS] Channel fetch result: bond-alerts (type: TextChannel)
+2026-01-13T03:28:29.772291975Z [inf]  [WS] ✓ ALERT SENT: Bonds $87,120 to channel 1458105704715128865, msg_id=1460475567852752998
+2026-01-13T03:28:29.772296045Z [inf]  [WS] ALERT TRIGGERED: Bonds $87,120, attempting channel 1458905646144553151
+2026-01-13T03:28:29.772299965Z [inf]  [WS] Channel fetch result: 🏦︳bonds (type: TextChannel)
+2026-01-13T03:28:29.798189410Z [inf]  [VOLATILITY] 🚨 5min: Nets vs. Mavericks... -10.9 pts (30%→19%) | $13,814, 132 trades
+2026-01-13T03:28:29.798195010Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:28:29.798199100Z [inf]  [VOLATILITY] ✗ Blocked: Nets vs. Mavericks... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:28:29.975994180Z [inf]  [WS] ✓ ALERT SENT: Bonds $87,120 to channel 1458905646144553151, msg_id=1460475568523837565
+2026-01-13T03:28:30.481927863Z [inf]  [VOLATILITY] 🚨 15min: Nets vs. Mavericks... -10.4 pts (30%→20%) | $44,854, 746 trades
+2026-01-13T03:28:30.481933856Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:28:30.481937983Z [inf]  [VOLATILITY] ✗ Blocked: Nets vs. Mavericks... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:28:30.907256154Z [inf]  [CACHE DEBUG FULL] {"id": "1160635", "question": "Australian Open Men's: Li Tu vs Rafael Jodar", "conditionId": "0xd33c34d141c8d671ae267fb0db7593c2707bafcaf394c9b00ee86948cf220a01", "slug": "atp-tu-jodar-2026-01-12", "resolutionSource": "https://ausopen.com/", "endDate": "2026-01-26T23:00:00Z", "liquidity": "9326.03636", "startDate": "2026-01-11T17:12:30.915504Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/australian-open-f3747f3ad1.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/australian-open-f3747f3ad1.png", "description": "This market refers on the tennis match between Li Tu and Rafael Jodar in the Australian Open, Qualification ATP, scheduled for January 12 at 6:00PM ET.\n\nThis market will resolve to 'Tu' if Li Tu advances against Rafael Jodar.\n\nThis market wi
+2026-01-13T03:28:30.907264584Z [inf]  [CACHE] Added market 1160635 (slug=atp-tu-jodar-2026-01-12) for condition 0xd33c34d141c8d671ae...
+2026-01-13T03:28:30.907270927Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,271, attempting channel 1457798756152905900
+2026-01-13T03:28:31.205325249Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,271 to channel 1457798756152905900, msg_id=1460475573725036686
+2026-01-13T03:28:31.890798107Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,185, attempting channel 1457798756152905900
+2026-01-13T03:28:32.092283962Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,185 to channel 1457798756152905900, msg_id=1460475577311039670
+2026-01-13T03:28:32.207524075Z [inf]  [VOLATILITY] 🚨 60min: Nets vs. Mavericks... -11.2 pts (30%→19%) | $45,209, 777 trades
+2026-01-13T03:28:32.207536292Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:28:32.207544780Z [inf]  [VOLATILITY] ✗ Blocked: Nets vs. Mavericks... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:28:32.294302483Z [inf]  [WS] Processing $5,174 trade from 0x3e6ebfe3...
+2026-01-13T03:28:32.364862032Z [inf]  [WS] Processing $5,174 trade from 0x3e6ebfe3...
+2026-01-13T03:28:32.495103024Z [inf]  [LOOKUP] 0x3e6ebfe3... -> Rank #1706124, Fripon
+2026-01-13T03:28:32.533534097Z [inf]  [CACHE DEBUG FULL] {"id": "1082754", "question": "Will Ethereum reach $4,600 in January?", "conditionId": "0x8efcf9fdc4ba0dfe894087a9ff94c68679e2ec65e9cfae66868ff5b8a6494709", "slug": "will-ethereum-reach-4600-in-january-2026", "endDate": "2026-02-01T05:00:00Z", "liquidity": "115508.97817", "startDate": "2026-01-01T19:38:42.557829Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/ETH+fullsize.jpg", "description": "This market will immediately resolve to \"Yes\" if any Binance 1 minute candle for ETH/USDT during the month specified in the title (from 00:00 AM ET on the first day to 11:59 PM ET on the last), has a final High price equal to or greater than the price specified in the title. Otherwise, this market wil
+2026-01-13T03:28:32.533538276Z [inf]  [CACHE] Added market 1082754 (slug=will-ethereum-reach-4600-in-ja) for condition 0x8efcf9fdc4ba0dfe89...
+2026-01-13T03:28:32.533543196Z [inf]  [WS] ALERT TRIGGERED: Bonds $5,174, attempting channel 1458465707414261821
+2026-01-13T03:28:32.533548409Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:32.701724981Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:32.701731024Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:32.701736528Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:32.701930392Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:32.833494827Z [inf]  [WS] ALERT TRIGGERED: Bonds $5,174, attempting channel 1458105704715128865
+2026-01-13T03:28:32.833504462Z [inf]  [WS] Channel fetch result: bond-alerts (type: TextChannel)
+2026-01-13T03:28:32.833560738Z [inf]  [WS] ✓ ALERT SENT: Bonds $5,174 to channel 1458465707414261821, msg_id=1460475580448247921
+2026-01-13T03:28:33.006071885Z [inf]  [WS] Processing $6,916 trade from 0xeed80d52...
+2026-01-13T03:28:33.251259133Z [inf]  [WS] ✓ ALERT SENT: Bonds $5,174 to channel 1458105704715128865, msg_id=1460475581866180750
+2026-01-13T03:28:33.251267954Z [inf]  [WS] ALERT TRIGGERED: Bonds $5,174, attempting channel 1458905646144553151
+2026-01-13T03:28:33.251274569Z [inf]  [WS] Channel fetch result: 🏦︳bonds (type: TextChannel)
+2026-01-13T03:28:33.541549637Z [inf]  [WS] ✓ ALERT SENT: Bonds $5,174 to channel 1458905646144553151, msg_id=1460475583174803655
+2026-01-13T03:28:33.541556622Z [inf]  [WS] Processing $6,916 trade from 0xeed80d52...
+2026-01-13T03:28:33.736259556Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:33.736264466Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:33.736268676Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:33.809550104Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,000, attempting channel 1457798756152905900
+2026-01-13T03:28:33.813565007Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:34.085967907Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,000 to channel 1457798756152905900, msg_id=1460475585724940460
+2026-01-13T03:28:34.283579512Z [inf]  [CACHE DEBUG FULL] {"id": "1164473", "question": "XRP Up or Down - January 12, 10:15PM-10:30PM ET", "conditionId": "0x4cc74dab4494d77a7de64d3dbffac7c9d0f2938879eff08b5d83f376d4d75f01", "slug": "xrp-updown-15m-1768274100", "resolutionSource": "https://data.chain.link/streams/xrp-usd", "endDate": "2026-01-13T03:30:00Z", "liquidity": "4388.3182", "startDate": "2026-01-12T03:17:16.120521Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png", "description": "This market will resolve to \"Up\" if the XRP price at the end of the time range specified in the title is greater than or equal to the price at the beginning of that range. Otherwise, it will resolve to \"Down\".\nThe resolution source for this market is in
+2026-01-13T03:28:34.283588768Z [inf]  [CACHE] Added market 1164473 (slug=xrp-updown-15m-1768274100) for condition 0x4cc74dab4494d77a7d...
+2026-01-13T03:28:35.258644356Z [inf]  [VOLATILITY] 🚨 15min: Nets vs. Mavericks... -10.1 pts (30%→20%) | $45,168, 790 trades
+2026-01-13T03:28:35.258651396Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:28:35.258655596Z [inf]  [VOLATILITY] ✗ Blocked: Nets vs. Mavericks... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:28:35.711815940Z [inf]  [VOLATILITY] 🚨 60min: Nets vs. Mavericks... -10.1 pts (30%→20%) | $47,091, 864 trades
+2026-01-13T03:28:35.711820410Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:28:35.711825170Z [inf]  [VOLATILITY] ✗ Blocked: Nets vs. Mavericks... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:28:39.965736151Z [inf]  [WS] Trades processed: 48000
+2026-01-13T03:28:43.981701498Z [inf]  [WS] Trades processed: 43000
+2026-01-13T03:28:47.806344108Z [inf]  Market cache refreshed: 1561 entries
+2026-01-13T03:28:47.871554528Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:47.871560997Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:47.871567558Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:47.876943296Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:48.106395327Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:28:48.106400297Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:28:48.106403627Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:28:48.187010459Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:28:48.843795780Z [inf]  [CACHE DEBUG FULL] {"id": "569426", "question": "Will Andr\u00e9 Ventura win the 2026 Portugal presidential election?", "conditionId": "0xbcb33ad98c8141b10f2350ef687eddf0660484ecc15be42ecdae64339e64dce1", "slug": "will-andr-ventura-win-the-2026-portugal-presidential-election", "endDate": "2026-01-25T14:00:00Z", "liquidity": "338900.08829", "startDate": "2025-08-29T19:08:43.046312Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-andr-ventura-win-the-2026-portugal-presidential-election-ijMH0Z3qmCMK.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-andr-ventura-win-the-2026-portugal-presidential-election-ijMH0Z3qmCMK.jpg", "description": "Presidential elections are scheduled to be held in Portugal on 18 or 25 January 2026, with a possible second round on 8 or 15 Febr
+2026-01-13T03:28:48.843802721Z [inf]  [CACHE] Added market 569426 (slug=will-andr-ventura-win-the-2026) for condition 0xbcb33ad98c8141b10f...
+2026-01-13T03:28:48.843808915Z [inf]  [WS] ALERT TRIGGERED: Whale $1,197 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:28:48.843814340Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:28:49.237083843Z [inf]  [WS] ✓ ALERT SENT: Whale $1,197 to channel 1457781977905365230, msg_id=1460475648924450827
+2026-01-13T03:28:50.097815531Z [inf]  [VOLATILITY] 🚨 5min: Nets vs. Mavericks... -10.2 pts (30%→19%) | $14,778, 192 trades
+2026-01-13T03:28:50.097818021Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:28:50.097820841Z [inf]  [VOLATILITY] ✗ Blocked: Nets vs. Mavericks... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:28:58.300206526Z [inf]  [WS] ALERT TRIGGERED: Whale $3,468 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:28:58.300212316Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:28:58.671030168Z [inf]  [WS] ✓ ALERT SENT: Whale $3,468 to channel 1457781977905365230, msg_id=1460475688296644753
+2026-01-13T03:29:02.030283583Z [inf]  [CACHE DEBUG FULL] {"id": "1151326", "question": "Hobart International: Iva Jovic vs Janice Tjen", "conditionId": "0xcfc64681f83eeafb2f7df801ac4b98c64b36db4bf70c177a0beeb3338e0bf093", "slug": "wta-jovic-tjen-2026-01-11", "resolutionSource": "https://www.wtatennis.com/scores", "endDate": "2026-01-18T23:00:00Z", "liquidity": "5130.29254", "startDate": "2026-01-10T11:12:44.800213Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/wta-logo-41f331bdf1.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/wta-logo-41f331bdf1.png", "description": "This market refers on the tennis match between Iva Jovic and Janice Tjen in the Hobart International, scheduled for January 11 at 6:00PM ET.\n\nThis market will resolve to 'Jovic' if Iva Jovic advances against Janice Tjen.\n\nThis market will 
+2026-01-13T03:29:02.030289820Z [inf]  [CACHE] Added market 1151326 (slug=wta-jovic-tjen-2026-01-11) for condition 0xcfc64681f83eeafb2f...
+2026-01-13T03:29:02.696689604Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:02.696698347Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:02.696705893Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:02.706656269Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:08.221813215Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,258, attempting channel 1457798756152905900
+2026-01-13T03:29:08.424235447Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,258 to channel 1457798756152905900, msg_id=1460475729681842383
+2026-01-13T03:29:08.675899036Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,002, attempting channel 1457798756152905900
+2026-01-13T03:29:08.899383834Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,002 to channel 1457798756152905900, msg_id=1460475731451711685
+2026-01-13T03:29:10.097626922Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:10.097638292Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:10.097644122Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:10.097653482Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:12.207337846Z [inf]  [WS] Trades processed: 49000
+2026-01-13T03:29:13.171257671Z [inf]  [CACHE DEBUG FULL] {"id": "1157239", "question": "Bitcoin Up or Down - January 13, 12AM ET", "conditionId": "0xfa9ba78dfe8aad5db35e359101b16fd99935619fdd8307568f273fb262e4eb45", "slug": "bitcoin-up-or-down-january-13-12am-et", "resolutionSource": "https://www.binance.com/en/trade/BTC_USDT", "endDate": "2026-01-13T06:00:00Z", "liquidity": "9272.9926", "startDate": "2026-01-11T05:01:11.412291Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will resolve to \"Up\" if the close price is greater than or equal to the open price for the BTC/USDT 1 hour candle that begins on the time and date specified in the title. Otherwise, this market will resolve to \"Down\".\n\nThe re
+2026-01-13T03:29:13.171261884Z [inf]  [CACHE] Added market 1157239 (slug=bitcoin-up-or-down-january-13-) for condition 0xfa9ba78dfe8aad5db3...
+2026-01-13T03:29:13.171265588Z [inf]  [WS] ALERT TRIGGERED: Whale $1,856 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:29:13.171270300Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:29:13.610802985Z [inf]  [WS] ✓ ALERT SENT: Whale $1,856 to channel 1457781977905365230, msg_id=1460475750984450121
+2026-01-13T03:29:13.827067270Z [inf]  [WS] Processing $40,000 trade from 0xaba06aaf...
+2026-01-13T03:29:13.981732370Z [inf]  [WS] Trades processed: 44000
+2026-01-13T03:29:15.670158426Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,000, attempting channel 1457798756152905900
+2026-01-13T03:29:16.044638089Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,000 to channel 1457798756152905900, msg_id=1460475761587916844
+2026-01-13T03:29:16.045282794Z [inf]  [WS] Processing $5,857 trade from 0x49dd109f...
+2026-01-13T03:29:17.726928079Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:17.726934331Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:17.726940353Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:17.726946994Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:18.646736955Z [inf]  [CACHE DEBUG FULL] {"id": "1119646", "question": "New \"Stranger Things\" episode released by January 31? ", "conditionId": "0x3d109c1fe77572356951368f363ea16c6d8fd0fe78bd0ef2a51af572ae9a4c67", "slug": "new-stranger-things-episode-released-by-january-31", "resolutionSource": "", "endDate": "2026-01-07T00:00:00Z", "liquidity": "326041.32423", "startDate": "2026-01-06T05:23:37.25504Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/new-stranger-things-episode-released-by-wednesday-4NShFZwCps4u.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/new-stranger-things-episode-released-by-wednesday-4NShFZwCps4u.jpg", "description": "This market will resolve to \"Yes\" if Netflix officially releases a new episode of Stranger Things (i.e., an episode that was not previously available t
+2026-01-13T03:29:18.646742551Z [inf]  [CACHE] Added market 1119646 (slug=new-stranger-things-episode-re) for condition 0x3d109c1fe775723569...
+2026-01-13T03:29:19.013363391Z [inf]  [WS] Processing $40,000 trade from 0xaba06aaf...
+2026-01-13T03:29:19.737564626Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:19.737569305Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:19.737574125Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:19.814883806Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:20.782248199Z [inf]  [WS] Processing $5,857 trade from 0x49dd109f...
+2026-01-13T03:29:25.660444945Z [err]  2026-01-13 03:29:18.311 UTC [27] LOG:  checkpoint starting: time
+2026-01-13T03:29:28.271923555Z [inf]  [WS] ALERT TRIGGERED: Whale $3,036 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:29:28.271934126Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:29:28.499168376Z [inf]  [WS] ✓ ALERT SENT: Whale $3,036 to channel 1457781977905365230, msg_id=1460475814083563733
+2026-01-13T03:29:28.688624404Z [inf]  [WS] Processing $42,500 trade from 0x051b9809...
+2026-01-13T03:29:31.555835433Z [err]  2026-01-13 03:29:31.311 UTC [27] LOG:  checkpoint complete: wrote 130 buffers (0.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.959 s, sync=0.009 s, total=13.000 s; sync files=6, longest=0.005 s, average=0.002 s; distance=771 kB, estimate=1056 kB; lsn=0/12C6C448, redo lsn=0/12C61758
+2026-01-13T03:29:32.730020286Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:32.730023876Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:32.730027544Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:32.730032142Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:34.727789532Z [inf]  [CACHE DEBUG FULL] {"id": "1157511", "question": "US strikes Iran by January 12, 2026?", "conditionId": "0xebb6eccd872f55e23da6aaf653a3460299237ebdd0a71bdb58681685fd95eb05", "slug": "us-strikes-iran-by-january-12-2026-314", "resolutionSource": "", "endDate": "2026-01-31T00:00:00Z", "liquidity": "49231.67659", "startDate": "2026-01-11T05:31:01.849603Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-strikes-iran-by-october-3-2sVnIHq3sjqF.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/us-strikes-iran-by-october-3-2sVnIHq3sjqF.jpg", "description": "This market will resolve to \"Yes\" if the US initiates a drone, missile, or air strike on Iranian soil or any official Iranian embassy or consulate between the time of this market's creation and the listed date (ET). Otherwise
+2026-01-13T03:29:34.727797148Z [inf]  [CACHE] Added market 1157511 (slug=us-strikes-iran-by-january-12-) for condition 0xebb6eccd872f55e23d...
+2026-01-13T03:29:40.499844857Z [inf]  [WS] Trades processed: 45000
+2026-01-13T03:29:40.855028728Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:40.855033028Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:40.855040428Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:40.855044387Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:41.994378042Z [inf]  [WS] TOP TRADER DETECTED: 0x2005d16a... $1,159 - Rank #19 (RN1)
+2026-01-13T03:29:41.994386095Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,159, attempting channel 1457798756152905900
+2026-01-13T03:29:42.282557100Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,159 to channel 1457798756152905900, msg_id=1460475871629672529
+2026-01-13T03:29:42.282569442Z [inf]  [WS] ALERT TRIGGERED: Sports top trader $1,159, attempting channel 1458910700016500767
+2026-01-13T03:29:42.282583443Z [inf]  [WS] Channel fetch result: 🚀︳top-traders (type: TextChannel)
+2026-01-13T03:29:42.282594340Z [inf]  [WebSocket] Error handling message #45016: create_top_trader_alert_embed() got an unexpected keyword argument 'trader_info'
+2026-01-13T03:29:44.263680727Z [inf]  [CACHE DEBUG FULL] {"id": "1082763", "question": "Will Bitcoin reach $120,000 in January?", "conditionId": "0xdddfa2562bb9eb994c6d0a6e02f086f3ae821db1e00c58cb515ccb07052679e6", "slug": "will-bitcoin-reach-120k-in-january-2026", "endDate": "2026-02-01T05:00:00Z", "liquidity": "136282.12393", "startDate": "2026-01-01T19:23:01.285916Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will immediately resolve to \"Yes\" if any Binance 1 minute candle for BTC/USDT during the month specified in the title (from 00:00 AM ET on the first day to 11:59 PM ET on the last), has a final High price equal to or greater than the price specified in the title. Otherwise, this market wil
+2026-01-13T03:29:44.263690422Z [inf]  [CACHE] Added market 1082763 (slug=will-bitcoin-reach-120k-in-jan) for condition 0xdddfa2562bb9eb994c...
+2026-01-13T03:29:46.339958178Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:29:46.340046407Z [inf]  [WS] ALERT TRIGGERED: Whale $2,515 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:29:46.579926358Z [inf]  [WS] ✓ ALERT SENT: Whale $2,515 to channel 1457781977905365230, msg_id=1460475889883025452
+2026-01-13T03:29:46.715770112Z [inf]  [CACHE DEBUG FULL] {"id": "1160604", "question": "Australian Open Men's: Elmer Moeller vs Marc Polmans", "conditionId": "0xa68f0fe5ab55d2c6aee1b0c20f7f568a07bee8de657c78ff033250f501b18c61", "slug": "atp-moeller-polmans-2026-01-12", "resolutionSource": "https://ausopen.com/", "endDate": "2026-01-26T23:00:00Z", "liquidity": "2777.92554", "startDate": "2026-01-11T17:12:18.833797Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/australian-open-f3747f3ad1.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/australian-open-f3747f3ad1.png", "description": "This market refers on the tennis match between Elmer Moeller and Marc Polmans in the Australian Open, Qualification ATP, scheduled for January 12 at 6:00PM ET.\n\nThis market will resolve to 'Moeller' if Elmer Moeller advances aga
+2026-01-13T03:29:46.715780377Z [inf]  [CACHE] Added market 1160604 (slug=atp-moeller-polmans-2026-01-12) for condition 0xa68f0fe5ab55d2c6ae...
+2026-01-13T03:29:46.715789842Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,997, attempting channel 1457798756152905900
+2026-01-13T03:29:47.036177032Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,997 to channel 1457798756152905900, msg_id=1460475891669930086
+2026-01-13T03:29:47.591823422Z [inf]  [WS] Processing $50,000 trade from 0x16a6d240...
+2026-01-13T03:29:47.890851319Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:47.890859726Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:47.890867463Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:47.890875129Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:48.118324713Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:29:48.118435961Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:29:48.118441780Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:29:48.202571320Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:29:52.288267139Z [inf]  [WS] TOP TRADER DETECTED: 0xe90bec87... $2,049 - Rank #12 (gmanas)
+2026-01-13T03:29:52.288270989Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,049, attempting channel 1457798756152905900
+2026-01-13T03:29:52.579452883Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,049 to channel 1457798756152905900, msg_id=1460475914780676261
+2026-01-13T03:29:52.579458169Z [inf]  [WS] ALERT TRIGGERED: Sports top trader $2,049, attempting channel 1458910700016500767
+2026-01-13T03:29:52.579462341Z [inf]  [WS] Channel fetch result: 🚀︳top-traders (type: TextChannel)
+2026-01-13T03:29:52.579466013Z [inf]  [WebSocket] Error handling message #45442: create_top_trader_alert_embed() got an unexpected keyword argument 'trader_info'
+2026-01-13T03:29:58.329022802Z [inf]  [CACHE DEBUG FULL] {"id": "1137243", "question": "Will the price of XRP be above $2.60 on January 15?", "conditionId": "0xee21d20b3da8d7f5b52fb39963f90f7f4eaaf6536a7e1978baa92928bf2bfe0c", "slug": "xrp-above-2pt6-on-january-15", "endDate": "2026-01-15T17:00:00Z", "liquidity": "11573.96678", "startDate": "2026-01-08T17:20:46.411356Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png", "description": "This market will resolve to \"Yes\" if the Binance 1 minute candle for XRP/USDT 12:00 in the ET timezone (noon) on the date specified in the title has a final \"Close\" price higher than the price specified in the title. Otherwise, this market will resolve to \"No\".\n\nThe resolution source for this market is 
+2026-01-13T03:29:58.329031310Z [inf]  [CACHE] Added market 1137243 (slug=xrp-above-2pt6-on-january-15) for condition 0xee21d20b3da8d7f5b5...
+2026-01-13T03:30:00.428510506Z [inf]  [VOLATILITY] 🚨 15min: Spread: Texans (-3.5)... +15.6 pts (40%→56%) | $10,410, 363 trades
+2026-01-13T03:30:00.428514076Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:30:00.428518059Z [inf]  [VOLATILITY] ✗ Blocked: Spread: Texans (-3.5)... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:30:02.721951393Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:02.721958228Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:02.721965050Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:02.721970881Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:04.276678959Z [inf]  [WS] Processing $6,713 trade from 0x7c592216...
+2026-01-13T03:30:06.800199524Z [inf]  [WS] Processing $5,110 trade from 0x7c592216...
+2026-01-13T03:30:06.986198339Z [inf]  [LOOKUP] 0x7c592216... -> Rank #6694, WizestWizard
+2026-01-13T03:30:06.986204832Z [inf]  [WS] ALERT TRIGGERED: Bonds $5,110, attempting channel 1458465707414261821
+2026-01-13T03:30:06.986216902Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:07.205850216Z [inf]  [WS] ✓ ALERT SENT: Bonds $5,110 to channel 1458465707414261821, msg_id=1460475976369836176
+2026-01-13T03:30:07.205857715Z [inf]  [WS] ALERT TRIGGERED: Bonds $5,110, attempting channel 1458105704715128865
+2026-01-13T03:30:07.205862954Z [inf]  [WS] Channel fetch result: bond-alerts (type: TextChannel)
+2026-01-13T03:30:07.453613267Z [inf]  [WS] ✓ ALERT SENT: Bonds $5,110 to channel 1458105704715128865, msg_id=1460475977258766509
+2026-01-13T03:30:07.453625576Z [inf]  [WS] ALERT TRIGGERED: Bonds $5,110, attempting channel 1458905646144553151
+2026-01-13T03:30:07.453635289Z [inf]  [WS] Channel fetch result: 🏦︳bonds (type: TextChannel)
+2026-01-13T03:30:07.715920143Z [inf]  [WS] ✓ ALERT SENT: Bonds $5,110 to channel 1458905646144553151, msg_id=1460475978479439932
+2026-01-13T03:30:07.717829768Z [inf]  [WS] Processing $5,124 trade from 0x8ef6526e...
+2026-01-13T03:30:07.774907244Z [inf]  [WS] Processing $5,372 trade from 0xd189664c...
+2026-01-13T03:30:08.000830210Z [inf]  [VOLATILITY] 🚨 60min: Spread: Texans (-3.5)... +15.6 pts (40%→56%) | $10,411, 364 trades
+2026-01-13T03:30:08.000836930Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:30:08.000842035Z [inf]  [VOLATILITY] ✗ Blocked: Spread: Texans (-3.5)... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:30:08.199937581Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:08.199940611Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:08.199943771Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:08.199946781Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:08.655711609Z [inf]  [WS] Trades processed: 46000
+2026-01-13T03:30:17.703917041Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:17.703922651Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:17.703937693Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:17.708913972Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:18.179074927Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:18.179078857Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:18.179082776Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:18.257860676Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:23.137781370Z [inf]  [WS] Trades processed: 47000
+2026-01-13T03:30:23.848327333Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,073, attempting channel 1457798756152905900
+2026-01-13T03:30:24.144141720Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,073 to channel 1457798756152905900, msg_id=1460476047387787517
+2026-01-13T03:30:24.667302197Z [inf]  [WS] Processing $6,503 trade from 0x20ad75e1...
+2026-01-13T03:30:27.235599006Z [inf]  [WS] Processing $12,495 trade from 0x33615155...
+2026-01-13T03:30:27.336011625Z [inf]  [LOOKUP] 0x33615155... -> Rank #1034, 0x336151559E8C8b048DE5231dC8313E196B31436
+2026-01-13T03:30:27.336018974Z [inf]  [WS] ALERT TRIGGERED: Bonds $12,495, attempting channel 1458465707414261821
+2026-01-13T03:30:27.336025374Z [inf]  [WS] Channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:27.589821550Z [inf]  [WS] ✓ ALERT SENT: Bonds $12,495 to channel 1458465707414261821, msg_id=1460476061778182177
+2026-01-13T03:30:27.589827779Z [inf]  [WS] ALERT TRIGGERED: Bonds $12,495, attempting channel 1458105704715128865
+2026-01-13T03:30:27.589834267Z [inf]  [WS] Channel fetch result: bond-alerts (type: TextChannel)
+2026-01-13T03:30:27.793552609Z [inf]  [WS] ✓ ALERT SENT: Bonds $12,495 to channel 1458105704715128865, msg_id=1460476062764105946
+2026-01-13T03:30:27.793563162Z [inf]  [WS] ALERT TRIGGERED: Bonds $12,495, attempting channel 1458905646144553151
+2026-01-13T03:30:27.793571369Z [inf]  [WS] Channel fetch result: 🏦︳bonds (type: TextChannel)
+2026-01-13T03:30:28.072808779Z [inf]  [WS] ✓ ALERT SENT: Bonds $12,495 to channel 1458905646144553151, msg_id=1460476063636262954
+2026-01-13T03:30:32.712633577Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:32.712637839Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:32.712644239Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:32.712649191Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:36.234546483Z [inf]  [CACHE DEBUG FULL] {"id": "601697", "question": "Fed decreases interest rates by 50+ bps after January 2026 meeting?", "conditionId": "0x17815081230e3b9c78b098162c33b1ffa68c4ec29c123d3d14989599e0c2e113", "slug": "fed-decreases-interest-rates-by-50-bps-after-january-2026-meeting", "resolutionSource": "", "endDate": "2026-01-28T00:00:00Z", "liquidity": "3385098.06508", "startDate": "2025-09-17T19:03:50.012988Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/jerome+powell+glasses1.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/jerome+powell+glasses1.png", "description": "The FED interest rates are defined in this market by the upper bound of the target federal funds range. The decisions on the target federal fund range are made by the Federal Open Market Committee (FOMC) me
+2026-01-13T03:30:36.234556209Z [inf]  [CACHE] Added market 601697 (slug=fed-decreases-interest-rates-b) for condition 0x17815081230e3b9c78...
+2026-01-13T03:30:38.257410423Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:38.257422143Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:38.257605719Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:38.257610229Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:44.735591364Z [inf]  [WS] ALERT TRIGGERED: Whale $1,729 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:30:44.735597173Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:30:44.983351187Z [inf]  [WS] ✓ ALERT SENT: Whale $1,729 to channel 1457781977905365230, msg_id=1460476134637572278
+2026-01-13T03:30:45.219789405Z [inf]  [WS] Trades processed: 48000
+2026-01-13T03:30:47.699190023Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:47.699196267Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:47.699202438Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:47.699208731Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:47.765503673Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,120, attempting channel 1457798756152905900
+2026-01-13T03:30:47.950564710Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,120 to channel 1457798756152905900, msg_id=1460476147333730468
+2026-01-13T03:30:48.117392506Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:30:48.117397646Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:30:48.117400596Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:30:48.174053320Z [inf]  [WS] ALERT TRIGGERED: Whale $1,182 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:30:48.174056815Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:30:48.198006648Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:30:48.470553786Z [inf]  [WS] ✓ ALERT SENT: Whale $1,182 to channel 1457781977905365230, msg_id=1460476149238075504
+2026-01-13T03:30:48.574754641Z [inf]  [WS] ALERT TRIGGERED: Whale $1,134 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:30:48.574760788Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:30:48.922719290Z [inf]  [WS] ✓ ALERT SENT: Whale $1,134 to channel 1457781977905365230, msg_id=1460476150995222619
+2026-01-13T03:30:50.566525975Z [inf]  [WS] ALERT TRIGGERED: Whale $2,132 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:30:50.566530520Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:30:50.825593391Z [inf]  [WS] ✓ ALERT SENT: Whale $2,132 to channel 1457781977905365230, msg_id=1460476159086039274
+2026-01-13T03:30:53.326870541Z [inf]  [WS] ALERT TRIGGERED: Whale $1,448 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:30:53.326874637Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:30:53.627047036Z [inf]  [WS] ✓ ALERT SENT: Whale $1,448 to channel 1457781977905365230, msg_id=1460476170524033128
+2026-01-13T03:30:55.578730731Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,001, attempting channel 1457798756152905900
+2026-01-13T03:30:55.844759610Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,001 to channel 1457798756152905900, msg_id=1460476180359811266
+2026-01-13T03:31:02.032226727Z [inf]  [WS] Trades processed: 49000
+2026-01-13T03:31:02.350751254Z [inf]  [VOLATILITY] 🚨 5min: Maple Leafs vs. Avalanche... +10.7 pts (37%→48%) | $12,770, 137 trades
+2026-01-13T03:31:02.350755779Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:31:02.350760327Z [inf]  [VOLATILITY] ✗ Blocked: Maple Leafs vs. Avalanche... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:31:02.703754806Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:02.703760416Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:02.703766571Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:02.708289928Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:07.148359266Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,623, attempting channel 1457798756152905900
+2026-01-13T03:31:07.421174375Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,623 to channel 1457798756152905900, msg_id=1460476228678189136
+2026-01-13T03:31:08.197638654Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:08.197641964Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:08.197644994Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:08.197648364Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:08.456854465Z [inf]  [WS] ALERT TRIGGERED: Sports whale $2,609, attempting channel 1457798756152905900
+2026-01-13T03:31:08.711605393Z [inf]  [WS] ✓ ALERT SENT: Sports whale $2,609 to channel 1457798756152905900, msg_id=1460476234264743978
+2026-01-13T03:31:09.202670212Z [inf]  [CACHE DEBUG FULL] {"id": "1129085", "question": "Trail Blazers vs. Warriors", "conditionId": "0xf585de755a3c676f1efc9a94fb40f27b6b6ef3c5941a4971a838e919b40c22f8", "slug": "nba-por-gsw-2026-01-13", "resolutionSource": "https://www.nba.com/", "endDate": "2026-01-14T04:00:00Z", "liquidity": "71108.9321", "startDate": "2026-01-07T15:19:18.290984Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/super+cool+basketball+in+red+and+blue+wow.png", "description": "In the upcoming NBA game, scheduled for January 13 at 11:00PM ET:\nIf the Trail Blazers win, the market will resolve to \"Trail Blazers\".\nIf the Warriors win, the market will resolve to \"Warriors\".\nIf the game is postponed, this 
+2026-01-13T03:31:09.202678348Z [inf]  [CACHE] Added market 1129085 (slug=nba-por-gsw-2026-01-13) for condition 0xf585de755a3c676f1e...
+2026-01-13T03:31:09.202684672Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,100, attempting channel 1457798756152905900
+2026-01-13T03:31:09.452028119Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,100 to channel 1457798756152905900, msg_id=1460476237234569372
+2026-01-13T03:31:13.452137265Z [inf]  [WS] ALERT TRIGGERED: Whale $2,346 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:31:13.452143712Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:31:13.716173616Z [inf]  [WS] ✓ ALERT SENT: Whale $2,346 to channel 1457781977905365230, msg_id=1460476255202840680
+2026-01-13T03:31:13.815613582Z [inf]  [WS] Processing $26,000 trade from 0xaba06aaf...
+2026-01-13T03:31:13.971410213Z [inf]  [WS] Processing $6,012 trade from 0x8ea939ec...
+2026-01-13T03:31:15.935755245Z [inf]  [WS] Trades processed: 50000
+2026-01-13T03:31:17.702943968Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:17.702954627Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:17.702962539Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:17.703661408Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:18.111288379Z [inf]  [CACHE DEBUG FULL] {"id": "1082753", "question": "Will Bitcoin reach $130,000 in January?", "conditionId": "0x615fa45b6d689d701c549190f9f3b0908ee58440ae3726fbfb62bbd7c5143693", "slug": "will-bitcoin-reach-130k-in-january-2026", "endDate": "2026-02-01T05:00:00Z", "liquidity": "124454.61632", "startDate": "2026-01-01T19:22:58.99683Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will immediately resolve to \"Yes\" if any Binance 1 minute candle for BTC/USDT during the month specified in the title (from 00:00 AM ET on the first day to 11:59 PM ET on the last), has a final High price equal to or greater than the price specified in the title. Otherwise, this market will
+2026-01-13T03:31:18.111297118Z [inf]  [CACHE] Added market 1082753 (slug=will-bitcoin-reach-130k-in-jan) for condition 0x615fa45b6d689d701c...
+2026-01-13T03:31:22.897835922Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,400, attempting channel 1457798756152905900
+2026-01-13T03:31:23.170261364Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,400 to channel 1457798756152905900, msg_id=1460476294847402183
+2026-01-13T03:31:23.275343935Z [inf]  [WS] ALERT TRIGGERED: Whale $1,203 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:31:23.275355454Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:31:23.632319557Z [inf]  [WS] ✓ ALERT SENT: Whale $1,203 to channel 1457781977905365230, msg_id=1460476296969847010
+2026-01-13T03:31:23.736956599Z [inf]  [WS] Processing $23,039 trade from 0xaba06aaf...
+2026-01-13T03:31:24.245078619Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,974, attempting channel 1457798756152905900
+2026-01-13T03:31:24.554564434Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,974 to channel 1457798756152905900, msg_id=1460476300580884674
+2026-01-13T03:31:25.891635850Z [inf]  [WS] ALERT TRIGGERED: Whale $1,005 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:31:25.891646358Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:31:25.963922151Z [inf]  [WS] ✓ ALERT SENT: Whale $1,005 to channel 1457781977905365230, msg_id=1460476306725539912
+2026-01-13T03:31:28.199428306Z [inf]  [WS] Processing $6,916 trade from 0xeed80d52...
+2026-01-13T03:31:28.199434166Z [inf]  [WS] Trades processed: 51000
+2026-01-13T03:31:28.199440546Z [inf]  [WS BACKUP] Attempting connection...
+2026-01-13T03:31:28.199442216Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:28.199445986Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:28.199448676Z [inf]  [WS] Trades processed: 50000
+2026-01-13T03:31:28.199449206Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:28.199453786Z [inf]  [WS BACKUP] ✓ Connected and verified (received data)
+2026-01-13T03:31:28.199453826Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:28.199457986Z [inf]  [WS] Connection closed (1006), attempting recovery...
+2026-01-13T03:31:28.199458436Z [inf]  [WS BACKUP] ✓ Backup connection ready
+2026-01-13T03:31:28.199461206Z [inf]  [WS SWITCH] ✓ Switched to backup connection
+2026-01-13T03:31:28.199463826Z [inf]  [WS] Processing $87,120 trade from 0xad889df0...
+2026-01-13T03:31:28.199465426Z [inf]  [WS] Connection was switched, continuing with new connection...
+2026-01-13T03:31:28.199468586Z [inf]  [WebSocket] ✓ Receiving messages...
+2026-01-13T03:31:28.199468906Z [inf]  [WS] Processing $5,174 trade from 0x3e6ebfe3...
+2026-01-13T03:31:30.206929019Z [inf]  [WS] Trades processed: 51000
+2026-01-13T03:31:32.698971758Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:32.698975818Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:32.698979738Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:32.704526705Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:33.575370521Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:33.575375751Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:33.575379091Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:34.010769562Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,098, attempting channel 1457798756152905900
+2026-01-13T03:31:34.131582008Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:34.334201879Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,098 to channel 1457798756152905900, msg_id=1460476341622407219
+2026-01-13T03:31:36.128966579Z [inf]  [WS] Processing $40,000 trade from 0xaba06aaf...
+2026-01-13T03:31:36.591179032Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,380, attempting channel 1457798756152905900
+2026-01-13T03:31:36.807069381Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,380 to channel 1457798756152905900, msg_id=1460476351847858208
+2026-01-13T03:31:37.083703059Z [inf]  [WS] Processing $5,857 trade from 0x49dd109f...
+2026-01-13T03:31:38.157079603Z [inf]  [WS] Trades processed: 52000
+2026-01-13T03:31:38.632669929Z [inf]  [CACHE DEBUG FULL] {"id": "1122769", "question": "Will the price of Bitcoin be between $84,000 and $86,000 on January 13?", "conditionId": "0xa7adbf85fad759fe19649b403b2063c8037b06b27270d9bd5317cc8f75de4bb8", "slug": "will-the-price-of-bitcoin-be-between-84000-86000-on-january-13", "endDate": "2026-01-13T17:00:00Z", "liquidity": "17089.49729", "startDate": "2026-01-06T17:10:33.241943Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will resolve according to the final \"Close\" price of the Binance 1 minute candle for BTC/USDT 12:00 in the ET timezone (noon) on the date specified in the title. Otherwise, this market will resolve to \"No\".\n\nThe resolution source fo
+2026-01-13T03:31:38.632678084Z [inf]  [CACHE] Added market 1122769 (slug=will-the-price-of-bitcoin-be-b) for condition 0xa7adbf85fad759fe19...
+2026-01-13T03:31:39.447085268Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,165, attempting channel 1457798756152905900
+2026-01-13T03:31:39.686917170Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,165 to channel 1457798756152905900, msg_id=1460476364309401724
+2026-01-13T03:31:40.641668150Z [inf]  [WS] Processing $42,500 trade from 0x051b9809...
+2026-01-13T03:31:41.453089109Z [inf]  [CACHE] Added market 964900 (slug=will-microsoft-be-the-largest-) for condition 0xd947403a5eae117d6f...
+2026-01-13T03:31:41.453139040Z [inf]  [CACHE DEBUG FULL] {"id": "964900", "question": "Will Microsoft be the largest company in the world by market cap on January 31?", "conditionId": "0xd947403a5eae117d6fe0bf737f2d279c89dddc495dc7d2eb198accd1ecd07cc9", "slug": "will-microsoft-be-the-largest-company-in-the-world-by-market-cap-on-january-31-115", "endDate": "2026-01-31T00:00:00Z", "liquidity": "76862.22198", "startDate": "2025-12-18T21:03:13.644278Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-microsoft-be-the-largest-company-in-the-world-by-market-cap-on-december-31-C8B3xdggFH2U.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-microsoft-be-the-largest-company-in-the-world-by-market-cap-on-december-31-C8B3xdggFH2U.png", "description": "This market will resolve to the largest company in the world by
+2026-01-13T03:31:44.404117595Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,154, attempting channel 1457798756152905900
+2026-01-13T03:31:44.652256611Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,154 to channel 1457798756152905900, msg_id=1460476385108820018
+2026-01-13T03:31:44.653281637Z [inf]  [WS] Trades processed: 52000
+2026-01-13T03:31:46.088577094Z [inf]  [CACHE DEBUG FULL] {"id": "1164949", "question": "Will XRP reach $2.80 January 12-18?", "conditionId": "0x2498287870e64e0a143c656d214b303260d8e8a20bca74948713e2da276bbb60", "slug": "will-xrp-reach-2pt8-january-12-18", "endDate": "2026-01-19T05:00:00Z", "liquidity": "9375.466", "startDate": "2026-01-12T05:16:30.486011Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/XRP-logo.png", "description": "This market will immediately resolve to \"Yes\" if any Binance 1-minute candle for XRP/USDT during the date range specified in the title (from 12:00 AM ET on the first date to 11:59 PM ET on the last) has a final \"High\" price equal to or greater than the price specified in the title. Otherwise, this market will resolve to 
+2026-01-13T03:31:46.088582323Z [inf]  [CACHE] Added market 1164949 (slug=will-xrp-reach-2pt8-january-12) for condition 0x2498287870e64e0a14...
+2026-01-13T03:31:47.698869991Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:47.698878783Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:47.698886796Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:47.703361677Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:48.583119423Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:31:48.583124693Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:31:48.583128103Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:31:48.662865342Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:31:57.522623498Z [inf]  [WS] Processing $50,000 trade from 0x16a6d240...
+2026-01-13T03:31:58.334340777Z [inf]  [WS] Trades processed: 53000
+2026-01-13T03:32:00.284786137Z [inf]  [VOLATILITY] 🚨 15min: Spread: Texans (-3.5)... +15.6 pts (40%→56%) | $9,752, 380 trades
+2026-01-13T03:32:00.284791897Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:32:00.284794677Z [inf]  [VOLATILITY] ✗ Blocked: Spread: Texans (-3.5)... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:32:00.540865327Z [inf]  [VOLATILITY] 🚨 60min: Spread: Texans (-3.5)... +15.6 pts (40%→56%) | $10,454, 388 trades
+2026-01-13T03:32:00.540872286Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:32:00.540876146Z [inf]  [VOLATILITY] ✗ Blocked: Spread: Texans (-3.5)... | detected={'sports'} | blocked_by={'sports'}
+2026-01-13T03:32:01.383045285Z [inf]  [WS] Processing $6,713 trade from 0x7c592216...
+2026-01-13T03:32:02.226810102Z [inf]  [WS] Processing $5,110 trade from 0x7c592216...
+2026-01-13T03:32:02.866298696Z [inf]  [WS] Processing $5,124 trade from 0x8ef6526e...
+2026-01-13T03:32:03.591180412Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:03.591185142Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:03.591188822Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:03.670563098Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:04.151155432Z [inf]  [WS] Processing $5,372 trade from 0xd189664c...
+2026-01-13T03:32:04.783442285Z [inf]  [WS] Trades processed: 54000
+2026-01-13T03:32:05.917630240Z [inf]  [WS] Processing $6,503 trade from 0x20ad75e1...
+2026-01-13T03:32:06.758003926Z [inf]  [WS] Trades processed: 55000
+2026-01-13T03:32:06.781378002Z [inf]  [WS] Processing $12,495 trade from 0x33615155...
+2026-01-13T03:32:07.770177711Z [inf]  [WS] Trades processed: 53000
+2026-01-13T03:32:07.770183141Z [inf]  [VOLATILITY] 🚨 5min: Hobart International: Peyton Stearns vs ... -23.1 pts (57%→34%) | $2,024, 76 trades
+2026-01-13T03:32:07.770188727Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:32:07.770194710Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:07.770199776Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:07.770204979Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:07.770210275Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:07.770217004Z [inf]  [CACHE DEBUG FULL] {"id": "566156", "question": "Will Eintracht Frankfurt win the 2025\u201326 Champions League?", "conditionId": "0x5dac59c04086e3921abc98c1f3b4a1e6a3f4962d8d8869a5e91b58df46b081a1", "slug": "will-eintracht-frankfurt-win-the-202526-champions-league", "resolutionSource": "", "endDate": "2026-05-31T00:00:00Z", "liquidity": "652153.63851", "startDate": "2025-07-28T16:37:27.278648Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/uefa-champions-league-2025-26-which-teams-qualify-StbSIjaEx2St.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/uefa-champions-league-2025-26-which-teams-qualify-StbSIjaEx2St.png", "description": "This is a polymarket on whether the listed team will win the 2025\u201326 UEFA Champions League.\n\nThis market will resolve to \"Yes\" if t
+2026-01-13T03:32:07.770222416Z [inf]  [CACHE] Added market 566156 (slug=will-eintracht-frankfurt-win-t) for condition 0x5dac59c04086e3921a...
+2026-01-13T03:32:07.770227623Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,100, attempting channel 1457798756152905900
+2026-01-13T03:32:07.770232886Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,100 to channel 1457798756152905900, msg_id=1460476470567633010
+2026-01-13T03:32:08.051017966Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,012, attempting channel 1457798756152905900
+2026-01-13T03:32:08.310822857Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,012 to channel 1457798756152905900, msg_id=1460476484169760820
+2026-01-13T03:32:10.493611368Z [inf]  [WS] Processing $8,100 trade from 0xd5ccdf77...
+2026-01-13T03:32:10.640113440Z [inf]  [LOOKUP] 0xd5ccdf77... -> Rank #563, tsybka
+2026-01-13T03:32:10.640136141Z [inf]  [WS] ALERT TRIGGERED: Whale $8,100 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:32:10.640143292Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:32:10.982643992Z [inf]  [WS] ✓ ALERT SENT: Whale $8,100 to channel 1457781977905365230, msg_id=1460476495293055193
+2026-01-13T03:32:11.847359486Z [inf]  [WS] Trades processed: 56000
+2026-01-13T03:32:14.208677292Z [inf]  [WS] Trades processed: 57000
+2026-01-13T03:32:15.920141811Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,175, attempting channel 1457798756152905900
+2026-01-13T03:32:16.170622504Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,175 to channel 1457798756152905900, msg_id=1460476517191647345
+2026-01-13T03:32:17.220652840Z [inf]  [WS] Processing $26,000 trade from 0xaba06aaf...
+2026-01-13T03:32:17.710555055Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:17.710559070Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:17.710563252Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:17.720774332Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:17.800566886Z [inf]  [VOLATILITY] Stats: 878 assets, 2858 buckets, 60 cooldowns, min_vol=$2000
+2026-01-13T03:32:17.861459938Z [inf]  [WS] Trades processed: 54000
+2026-01-13T03:32:18.522984254Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:18.522989064Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:18.522992144Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:18.601226924Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:19.816680567Z [inf]  [WS] Processing $6,012 trade from 0x8ea939ec...
+2026-01-13T03:32:19.919845514Z [inf]  [WS] ALERT TRIGGERED: Whale $2,995 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:32:19.919852644Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:32:20.225654320Z [inf]  [WS] ✓ ALERT SENT: Whale $2,995 to channel 1457781977905365230, msg_id=1460476533658488844
+2026-01-13T03:32:20.225669919Z [inf]  [WS] Processing $5,496 trade from 0x50cd7339...
+2026-01-13T03:32:20.464546477Z [inf]  [WS] Processing $33,000 trade from 0x16a6d240...
+2026-01-13T03:32:20.789985852Z [inf]  [WS] Trades processed: 58000
+2026-01-13T03:32:23.216064506Z [inf]  [WS] Processing $23,039 trade from 0xaba06aaf...
+2026-01-13T03:32:27.881518098Z [inf]  [WS] Trades processed: 59000
+2026-01-13T03:32:28.441002829Z [inf]  [WS] ALERT TRIGGERED: Whale $2,714 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:32:28.441012164Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:32:28.696445633Z [inf]  [WS] ✓ ALERT SENT: Whale $2,714 to channel 1457781977905365230, msg_id=1460476569767247922
+2026-01-13T03:32:28.933921009Z [inf]  [WS] Processing $23,124 trade from 0xaba06aaf...
+2026-01-13T03:32:29.279953780Z [inf]  [CACHE DEBUG FULL] {"id": "949260", "question": "Kraken vs. Rangers", "conditionId": "0xb0f311bdbda623489a459bfbadfb7e51486afeb68da7a7187656338bc1a82990", "slug": "nhl-sea-nyr-2026-01-12", "resolutionSource": "https://www.nhl.com/scores", "endDate": "2026-01-13T00:00:00Z", "liquidity": "548983.03912", "startDate": "2025-12-16T16:31:10.711122Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/nhl.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/nhl.png", "description": "In the upcoming NHL game, scheduled for January 12 at 7:00PM ET:\nIf the Kraken win, the market will resolve to \"Kraken\".\nIf the Rangers win, the market will resolve to \"Rangers\".\nIf the game is postponed, this market will remain open until the game has been completed.\nIf the game is canceled entirely, 
+2026-01-13T03:32:29.279962005Z [inf]  [CACHE] Added market 949260 (slug=nhl-sea-nyr-2026-01-12) for condition 0xb0f311bdbda623489a...
+2026-01-13T03:32:29.279968785Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,498, attempting channel 1457798756152905900
+2026-01-13T03:32:29.594428038Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,498 to channel 1457798756152905900, msg_id=1460476573428875553
+2026-01-13T03:32:31.457265146Z [inf]  [WS] Trades processed: 60000
+2026-01-13T03:32:32.243828005Z [inf]  [WS] Trades processed: 61000
+2026-01-13T03:32:32.614191246Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,015, attempting channel 1457798756152905900
+2026-01-13T03:32:32.714356741Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:32.714364447Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:32.714369570Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:32.718474759Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:32.955676397Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,015 to channel 1457798756152905900, msg_id=1460476587420946640
+2026-01-13T03:32:33.309262799Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,300, attempting channel 1457798756152905900
+2026-01-13T03:32:33.589712701Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,300 to channel 1457798756152905900, msg_id=1460476590256423045
+2026-01-13T03:32:33.632991252Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:33.632994512Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:33.632997122Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:33.706761354Z [inf]  [CACHE DEBUG FULL] {"id": "1082757", "question": "Will Bitcoin reach $125,000 in January?", "conditionId": "0xddf42243d621feb727bd250e913fdaaa5fd9fa3a6b73ac0d25113472a8bf5689", "slug": "will-bitcoin-reach-125k-in-january-2026", "endDate": "2026-02-01T05:00:00Z", "liquidity": "141757.87063", "startDate": "2026-01-01T19:23:09.354069Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/BTC+fullsize.png", "description": "This market will immediately resolve to \"Yes\" if any Binance 1 minute candle for BTC/USDT during the month specified in the title (from 00:00 AM ET on the first day to 11:59 PM ET on the last), has a final High price equal to or greater than the price specified in the title. Otherwise, this market wil
+2026-01-13T03:32:33.706770267Z [inf]  [CACHE] Added market 1082757 (slug=will-bitcoin-reach-125k-in-jan) for condition 0xddf42243d621feb727...
+2026-01-13T03:32:33.711458698Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:34.238060648Z [inf]  [WS] Processing $8,100 trade from 0xd5ccdf77...
+2026-01-13T03:32:36.235638691Z [inf]  [WS] Processing $5,496 trade from 0x50cd7339...
+2026-01-13T03:32:40.337121866Z [inf]  [WS] Processing $33,000 trade from 0x16a6d240...
+2026-01-13T03:32:40.799058795Z [inf]  [WS] Trades processed: 62000
+2026-01-13T03:32:42.031326425Z [inf]  [CACHE DEBUG FULL] {"id": "680392", "question": "Will there be another US government shutdown by January 31?", "conditionId": "0x43ec78527bd98a0588dd9455685b2cc82f5743140cb3a154603dc03c02b57de5", "slug": "will-there-be-another-us-government-shutdown-by-january-31", "resolutionSource": "", "endDate": "2026-01-31T00:00:00Z", "liquidity": "37286.4528", "startDate": "2025-11-13T14:59:43.611954Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/govt+shutdown.jpeg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/govt+shutdown.jpeg", "description": "This market will resolve to \u201cYes\u201d if the U.S. Office of Personnel Management (OPM) announces another federal government shutdown due to a lapse in appropriations by January 31, 2026, 11:59 PM ET. Otherwise, this market will resolv
+2026-01-13T03:32:42.031335818Z [inf]  [CACHE] Added market 680392 (slug=will-there-be-another-us-gover) for condition 0x43ec78527bd98a0588...
+2026-01-13T03:32:42.031342722Z [inf]  [WS] ALERT TRIGGERED: Whale $1,096 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:32:42.031349639Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:32:42.322492952Z [inf]  [WS] ✓ ALERT SENT: Whale $1,096 to channel 1457781977905365230, msg_id=1460476626952523970
+2026-01-13T03:32:42.753160962Z [inf]  [WS] Trades processed: 55000
+2026-01-13T03:32:44.504460878Z [inf]  [WS] Processing $23,124 trade from 0xaba06aaf...
+2026-01-13T03:32:47.703923414Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:47.703930909Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:47.703938476Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:47.708555198Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:47.973570831Z [inf]  Market cache refreshed: 1520 entries
+2026-01-13T03:32:48.286249598Z [inf]  Top traders cache refreshed: 25 entries
+2026-01-13T03:32:48.286263318Z [inf]    Top #1: 0x56687bf4... (Theo4) - $22,053,934 PnL
+2026-01-13T03:32:48.286270308Z [inf]    Top #2: 0x1f2dd6d4... (Fredi9999) - $16,620,028 PnL
+2026-01-13T03:32:48.286274608Z [inf]    Top #3: 0x78b9ac44... (Len9311238) - $8,709,973 PnL
+2026-01-13T03:32:48.286288748Z [inf]    Top #4: 0xd2359732... (zxgngl) - $7,807,266 PnL
+2026-01-13T03:32:48.286297927Z [inf]    Top #5: 0x863134d0... (RepTrump) - $7,532,410 PnL
+2026-01-13T03:32:48.286311997Z [inf]  [TOP TRADERS] Loaded 25 top traders
+2026-01-13T03:32:48.740576245Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:32:48.740582254Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:32:48.740585684Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:32:48.913831708Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:32:52.101204305Z [inf]  [WS] ALERT TRIGGERED: Sports whale $1,000, attempting channel 1457798756152905900
+2026-01-13T03:32:52.301641622Z [inf]  [WS] ✓ ALERT SENT: Sports whale $1,000 to channel 1457798756152905900, msg_id=1460476668920467602
+2026-01-13T03:32:52.435228516Z [inf]  [CACHE DEBUG FULL] {"id": "997488", "question": "Will Trump acquire Greenland before 2027?", "conditionId": "0xd595eb9b81885ff018738300c79047e3ec89e87294424f57a29a7fa9162bf116", "slug": "will-trump-acquire-greenland-before-2027", "resolutionSource": "", "endDate": "2026-12-31T00:00:00Z", "liquidity": "1010744.5093", "startDate": "2025-12-23T00:58:12.158211Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-trump-acquire-greenland-in-2025-5ZDkcIGhdBMW.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/will-trump-acquire-greenland-in-2025-5ZDkcIGhdBMW.jpg", "description": "This market will resolve to \"Yes\" if the United States officially announces that Greenland will come under US sovereignty by December 31, 2026, 11:59 PM ET. Otherwise this market will resolve to \"No\".
+2026-01-13T03:32:52.435236275Z [inf]  [CACHE] Added market 997488 (slug=will-trump-acquire-greenland-b) for condition 0xd595eb9b81885ff018...
+2026-01-13T03:32:52.435244101Z [inf]  [WS] ALERT TRIGGERED: Whale $1,694 >= threshold $500, attempting channel 1457781977905365230
+2026-01-13T03:32:52.435252546Z [inf]  [WS] Channel fetch result: whale-alerts (type: TextChannel)
+2026-01-13T03:32:52.676848482Z [inf]  [WS] ✓ ALERT SENT: Whale $1,694 to channel 1457781977905365230, msg_id=1460476670292000851
+2026-01-13T03:32:55.933008599Z [inf]  [WS] TOP TRADER DETECTED: 0x6a72f618... $3,384 - Rank #6 (kch123)
+2026-01-13T03:32:55.933016073Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,384, attempting channel 1457798756152905900
+2026-01-13T03:32:56.249527426Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,384 to channel 1457798756152905900, msg_id=1460476685177716941
+2026-01-13T03:32:56.249537326Z [inf]  [WS] ALERT TRIGGERED: Sports top trader $3,384, attempting channel 1458910700016500767
+2026-01-13T03:32:56.249543433Z [inf]  [WS] Channel fetch result: 🚀︳top-traders (type: TextChannel)
+2026-01-13T03:32:56.249550515Z [inf]  [WebSocket] Error handling message #55628: create_top_trader_alert_embed() got an unexpected keyword argument 'trader_info'
+2026-01-13T03:33:00.282128108Z [inf]  [VOLATILITY] 🚨 5min: Ethereum Up or Down - January 12, 10:30P... -11.1 pts (48%→37%) | $11,293, 955 trades
+2026-01-13T03:33:00.282133768Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:33:00.282137665Z [inf]  [VOLATILITY] ✗ Blocked: Ethereum Up or Down - January 12, 10:30PM-10:45PM ... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:33:01.217875851Z [inf]  [VOLATILITY] 🚨 15min: Ethereum Up or Down - January 12, 10:30P... -11.8 pts (48%→36%) | $11,736, 1034 trades
+2026-01-13T03:33:01.217881289Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:33:01.217884862Z [inf]  [VOLATILITY] ✗ Blocked: Ethereum Up or Down - January 12, 10:30PM-10:45PM ... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:33:01.833208523Z [inf]  [VOLATILITY] 🚨 60min: Ethereum Up or Down - January 12, 10:30P... -12.0 pts (48%→36%) | $11,769, 1040 trades
+2026-01-13T03:33:01.833222826Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:33:01.833229313Z [inf]  [VOLATILITY] ✗ Blocked: Ethereum Up or Down - January 12, 10:30PM-10:45PM ... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:33:01.961657843Z [inf]  [WS] Trades processed: 56000
+2026-01-13T03:33:02.153902559Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,978, attempting channel 1457798756152905900
+2026-01-13T03:33:02.341873715Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,978 to channel 1457798756152905900, msg_id=1460476710892994762
+2026-01-13T03:33:02.704432068Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:33:02.704438155Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:33:02.704442073Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:33:02.709888140Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:33:06.722451502Z [inf]  [VOLATILITY] 🚨 15min: XRP Up or Down - January 12, 10PM ET... -10.7 pts (70%→59%) | $2,214, 304 trades
+2026-01-13T03:33:06.722458954Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:33:06.722464018Z [inf]  [VOLATILITY] ✗ Blocked: XRP Up or Down - January 12, 10PM ET... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:33:07.350608778Z [inf]  [VOLATILITY] 🚨 60min: XRP Up or Down - January 12, 10PM ET... -10.5 pts (70%→59%) | $2,785, 402 trades
+2026-01-13T03:33:07.350612770Z [inf]  [VOLATILITY] Error: create_volatility_alert_embed() got an unexpected keyword argument 'volume_usd'
+2026-01-13T03:33:07.350617298Z [inf]  [VOLATILITY] ✗ Blocked: XRP Up or Down - January 12, 10PM ET... | detected={'crypto'} | blocked_by={'crypto'}
+2026-01-13T03:33:08.314067786Z [inf]  [WS] ALERT TRIGGERED: Sports whale $3,978, attempting channel 1457798756152905900
+2026-01-13T03:33:08.540843187Z [inf]  [WS] ✓ ALERT SENT: Sports whale $3,978 to channel 1457798756152905900, msg_id=1460476736926908531
+2026-01-13T03:33:08.914228628Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:33:08.914231328Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:33:08.914233937Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:33:08.914236697Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:33:17.656124969Z [inf]  [VOLATILITY] Stats: 880 assets, 2754 buckets, 69 cooldowns, min_vol=$2000
+2026-01-13T03:33:17.732632875Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:33:17.732642051Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:33:17.732649727Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:33:17.737815566Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:33:18.288634433Z [inf]  [MONITOR] Sports channel fetch result: maries-alerts (type: TextChannel)
+2026-01-13T03:33:18.288643663Z [inf]  [MONITOR] ALERT TRIGGERED: Tracked wallet $25, attempting channel 1457841527773597706
+2026-01-13T03:33:18.288648633Z [inf]  [MONITOR] Channel fetch result: tracked-wallet-alerts (type: TextChannel)
+2026-01-13T03:33:18.288652443Z [inf]  Error in monitor loop: create_custom_wallet_alert_embed() got an unexpected keyword argument 'volume'
+2026-01-13T03:33:20.223652534Z [inf]  [WS] Trades processed: 57000
