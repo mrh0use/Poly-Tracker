@@ -535,16 +535,6 @@ class PolymarketClient:
         outcome = trade_or_event.get('outcome', '').lower()
         all_text = f"{slug} {title} {outcome}"
         
-        finance_economy_keywords = [
-            'inflation', 'gdp', 'unemployment', 'recession', 'federal reserve', 'fed rate',
-            'interest rate', 'treasury', 'bonds', 'stock', 'stocks', 'earnings',
-            'tariff', 'trade war', 'trade deal', 'trade policy', 'economic', 'economy',
-            'jobs report', 'cpi', 'ppi', 'housing', 'retail sales', 'consumer confidence'
-        ]
-        for kw in finance_economy_keywords:
-            if keyword_matches(kw, all_text):
-                return False
-        
         ambiguous_terms = {'trade', 'trading'}
         for term in self.SPORTS_KEYWORDS:
             term_base = term.split()[0] if ' ' in term else term
