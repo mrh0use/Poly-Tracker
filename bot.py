@@ -2350,6 +2350,7 @@ async def handle_websocket_trade(trade: dict):
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
         if wallet_activity is None:
+            print(f"[WS] New wallet detected: {wallet[:10]}... checking for prior activity", flush=True)
             try:
                 has_history = await asyncio.wait_for(
                     polymarket_client.has_prior_activity(wallet),
@@ -2358,6 +2359,7 @@ async def handle_websocket_trade(trade: dict):
             except asyncio.TimeoutError:
                 has_history = True  # Assume not fresh if timeout
                 print(f"[WS] Activity check timeout for {wallet[:10]}...", flush=True)
+            print(f"[WS] Prior activity check for {wallet[:10]}...: has_history={has_history}", flush=True)
             if has_history is False:
                 is_fresh = True
             session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
