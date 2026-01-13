@@ -1171,24 +1171,6 @@ async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: f
         session.close()
 
 
-@bot.tree.command(name="clear_wallet_cache", description="Clear wallet activity cache to reset fresh wallet detection")
-@app_commands.checks.has_permissions(administrator=True)
-async def clear_wallet_cache(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    session = get_session()
-    try:
-        from sqlalchemy import text
-        result = session.execute(text("DELETE FROM wallet_activity"))
-        count = result.rowcount
-        session.commit()
-        await interaction.followup.send(f"Cleared {count} entries from wallet activity cache. Fresh wallet detection has been reset.", ephemeral=True)
-    except Exception as e:
-        session.rollback()
-        await interaction.followup.send(f"Error: {e}", ephemeral=True)
-    finally:
-        session.close()
-
-
 @bot.tree.command(name="volatility_threshold", description="Set the minimum percentage swing for volatility alerts")
 @app_commands.describe(percentage="Minimum percentage swing for volatility alerts (e.g., 20 for 20%)")
 @app_commands.checks.has_permissions(administrator=True)
@@ -1623,11 +1605,11 @@ async def help_command(interaction: discord.Interaction):
     embed.add_field(
         name="Thresholds",
         value=(
-            "`/threshold` - Whale alerts\n"
-            "`/sports_threshold` - Sports alerts\n"
-            "`/fresh_wallet_threshold` - Fresh wallets\n"
-            "`/top_trader_threshold` - Top 25 alerts\n"
-            "`/volatility_threshold` - Price swing %\n"
+            "`/threshold` - Whale alerts ($10k)\n"
+            "`/sports_threshold` - Sports ($5k)\n"
+            "`/fresh_wallet_threshold` - Fresh wallets ($10k)\n"
+            "`/top_trader_threshold` - Top 25 ($2.5k)\n"
+            "`/volatility_threshold` - Price swing (5pts)\n"
             "`/volatility_blacklist` - Exclude categories"
         ),
         inline=False
@@ -2367,31 +2349,17 @@ async def handle_websocket_trade(trade: dict):
         
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
-
-        if value >= 1000:
-            print(f"[FRESH DEBUG] Wallet {wallet[:10]}... | value=${value:,.0f} | in_db={wallet_activity is not None}", flush=True)
-
         if wallet_activity is None:
-            print(f"[FRESH DEBUG] New wallet {wallet[:10]}... - calling API", flush=True)
             try:
                 has_history = await asyncio.wait_for(
                     polymarket_client.has_prior_activity(wallet),
                     timeout=2.0
                 )
-                print(f"[FRESH DEBUG] API returned has_history={has_history} for {wallet[:10]}...", flush=True)
             except asyncio.TimeoutError:
-                has_history = True
-                print(f"[FRESH DEBUG] API TIMEOUT for {wallet[:10]}...", flush=True)
-            except Exception as e:
-                has_history = True
-                print(f"[FRESH DEBUG] API ERROR for {wallet[:10]}...: {e}", flush=True)
-            
+                has_history = True  # Assume not fresh if timeout
+                print(f"[WS] Activity check timeout for {wallet[:10]}...", flush=True)
             if has_history is False:
                 is_fresh = True
-                print(f"[FRESH DEBUG] ✓ FRESH WALLET CONFIRMED: {wallet[:10]}... ${value:,.0f}", flush=True)
-            else:
-                print(f"[FRESH DEBUG] ✗ Not fresh (has history): {wallet[:10]}...", flush=True)
-            
             session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
             session.commit()
         else:
