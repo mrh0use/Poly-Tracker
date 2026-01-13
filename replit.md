@@ -6,7 +6,7 @@ This project is a Discord bot designed to monitor Polymarket activity and delive
 ## User Preferences
 - Keep Discord interface simple
 - Real-time alerts only (no summaries)
-- Default thresholds: $10k for whale and fresh wallet alerts, $5k for sports alerts
+- Default thresholds: $10k for whale alerts, $1k for fresh wallet alerts, $5k for sports alerts
 
 ## System Architecture
 The bot is built around a modular architecture comprising a main Discord bot handling slash commands and a monitoring loop, a dedicated Polymarket API client, a database layer for persistence, and an alerting module for formatting Discord embeds.
@@ -15,7 +15,7 @@ The bot is built around a modular architecture comprising a main Discord bot han
 - **Real-time Monitoring:** Utilizes Polymarket's RTDS WebSocket for instant trade alerts, with a polling mechanism as a backup.
 - **Alert Types:**
     - **Whale Alerts:** Configurable threshold for large transactions (default $10k+).
-    - **Fresh Wallet Alerts:** Identifies new wallets making their first trades (default $10k+).
+    - **Fresh Wallet Alerts:** Identifies new wallets making their first trades (default $1k+).
     - **Custom Wallet Tracking:** Monitors activity for specific user-defined wallet addresses.
     - **Volatility Alerts:** VWAP-based (Volume-Weighted Average Price) detection with volume confirmation. Multi-timeframe (5/15/60-minute windows), alerts on shortest triggering timeframe. Requirements: minimum $2,000 volume, 3+ trades, 1.3x relative volume. Urgency formatting: 🚨 RAPID (5min), ⚡ Fast (15min), 📊 Swing (60min). Per-timeframe cooldowns (15min). 5-minute warm-up period after restart. Tracks both BUYs and SELLs for accurate VWAP calculation. **Category Blacklist:** `/volatility_blacklist` command allows excluding specific categories (Politics, Sports, Crypto, Finance, Geopolitics, Earnings, Tech, Culture, World, Economy, Climate & Science, Elections, Mentions) from triggering volatility alerts.
     - **Top Trader Alerts:** Tracks trades from Polymarket's top 25 all-time profit leaders (triggers at $2.5k+, uses on-demand leaderboard lookups with 24-hour negative result caching).
