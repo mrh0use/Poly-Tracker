@@ -488,7 +488,7 @@ class PolymarketBot(commands.Bot):
             all_configs = session.query(ServerConfig).all()
             print(f"[STARTUP] Found {len(all_configs)} server configs:", flush=True)
             for c in all_configs:
-                print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 10000:,.0f}, sports=${c.sports_threshold or 5000:,.0f}, paused={c.is_paused}", flush=True)
+                print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 1000:,.0f}, sports=${c.sports_threshold or 5000:,.0f}, paused={c.is_paused}", flush=True)
         finally:
             session.close()
     
@@ -1134,7 +1134,7 @@ async def sports_threshold(interaction: discord.Interaction, amount: float):
 
 
 @bot.tree.command(name="fresh_wallet_threshold", description="Set the minimum USD value for fresh wallet alerts")
-@app_commands.describe(amount="Minimum USD value for fresh wallet alerts (e.g., 10000)")
+@app_commands.describe(amount="Minimum USD value for fresh wallet alerts (e.g., 1000)")
 @app_commands.checks.has_permissions(administrator=True)
 async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: float):
     if amount < 100:
@@ -1607,7 +1607,7 @@ async def help_command(interaction: discord.Interaction):
         value=(
             "`/threshold` - Whale alerts ($10k)\n"
             "`/sports_threshold` - Sports ($5k)\n"
-            "`/fresh_wallet_threshold` - Fresh wallets ($10k)\n"
+            "`/fresh_wallet_threshold` - Fresh wallets ($1k)\n"
             "`/top_trader_threshold` - Top 25 ($2.5k)\n"
             "`/volatility_threshold` - Price swing (5pts)\n"
             "`/volatility_blacklist` - Exclude categories"
@@ -2049,7 +2049,7 @@ async def monitor_loop():
                             else:
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                         
-                        elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
+                        elif is_fresh and value >= (config.fresh_wallet_threshold or 1000.0) and not is_bond:
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             print(f"[MONITOR] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                             fresh_channel = await get_or_fetch_channel(fresh_channel_id)
@@ -2622,7 +2622,7 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                 
-                if is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
+                if is_fresh and value >= (config.fresh_wallet_threshold or 1000.0) and not is_bond:
                     fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                     print(f"[WS] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                     fresh_channel = await get_or_fetch_channel(fresh_channel_id)
