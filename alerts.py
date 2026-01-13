@@ -91,9 +91,13 @@ def encode_onsight_param(market_id: str) -> str:
     return f"m_{market_id}"
 
 
-def create_trade_button_view(market_id: str, market_url: str) -> View:
+def create_trade_button_view(market_id: str, market_url: str, slug: str = "") -> View:
     view = View()
     encoded_param = encode_onsight_param(market_id)
+    
+    if not encoded_param and slug:
+        encoded_param = f"s_{slug[:50]}"
+    
     if encoded_param:
         onsight_url = f"{ONSIGHT_BOT_URL}?start={encoded_param}"
     else:

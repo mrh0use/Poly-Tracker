@@ -2352,7 +2352,7 @@ async def handle_websocket_trade(trade: dict):
                                 )
                                 
                                 market_id = await polymarket_client.get_market_id_async({'asset': asset_id, 'conditionId': asset_id})
-                                button_view = create_trade_button_view(market_id, market_url)
+                                button_view = create_trade_button_view(market_id, market_url, alert['slug'])
                                 
                                 try:
                                     await channel.send(embed=embed, view=button_view)
