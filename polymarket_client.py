@@ -738,15 +738,17 @@ class PolymarketClient:
         try:
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/trades",
-                params={"user": wallet_address, "limit": 1}
+                params={"user": wallet_address, "limit": 2}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    has_trades = isinstance(data, list) and len(data) > 0
-                    self._wallet_history_cache[wallet_lower] = has_trades
+                    # If 2+ trades exist, wallet has prior history (not fresh)
+                    # If 0-1 trades, this could be their first trade (fresh)
+                    has_prior_trades = isinstance(data, list) and len(data) >= 2
+                    self._wallet_history_cache[wallet_lower] = has_prior_trades
                     self._wallet_history_updated[wallet_lower] = now
-                    print(f"[FRESH CHECK] /trades API for {wallet_address[:10]}...: has_trades={has_trades} (count={len(data) if isinstance(data, list) else 'N/A'})", flush=True)
-                    return has_trades
+                    print(f"[FRESH CHECK] /trades API for {wallet_address[:10]}...: has_prior_trades={has_prior_trades} (count={len(data) if isinstance(data, list) else 'N/A'})", flush=True)
+                    return has_prior_trades
                 print(f"[FRESH CHECK] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
         except Exception as e:
             print(f"[FRESH CHECK] Exception for {wallet_address[:10]}...: {e}", flush=True)
