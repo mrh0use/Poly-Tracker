@@ -36,6 +36,7 @@ class ServerConfig(Base):
     volatility_threshold = Column(Float, default=20.0)
     volatility_window_minutes = Column(BigInteger, default=60)
     volatility_blacklist = Column(Text, nullable=True)
+    fresh_wallet_blacklist = Column(Text, nullable=True)
     top_trader_threshold = Column(Float, default=2500.0)
     is_paused = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)

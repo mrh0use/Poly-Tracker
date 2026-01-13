@@ -1,0 +1,29 @@
+Add a category blacklist feature for fresh wallet alerts, similar to how volatility blacklist works.
+1. In database.py, add a new column to the ServerConfig class (around line 20, with the other columns):
+pythonfresh_wallet_blacklist = Column(Text, nullable=True)
+2. In bot.py, update the /setup command to add a fresh wallet blacklist dropdown. Find the SetupModal class and add a new Select for fresh wallet blacklist. After the volatility_blacklist_select definition (around line 850), add:
+pythonfresh_wallet_blacklist_select = discord.ui.Select(
+    placeholder="Fresh Wallet Blacklist (optional)",
+    min_values=0,
+    max_values=len(POLYMARKET_CATEGORIES),
+    options=[
+        discord.SelectOption(label=name, value=slug) 
+        for name, slug in POLYMARKET_CATEGORIES
+    ],
+    row=3
+)
+3. In the setup command's callback, save the fresh wallet blacklist selection. Find where volatility_blacklist is saved and add similar logic:
+pythonfresh_wallet_blacklist = ",".join(fresh_wallet_blacklist_select.values) if fresh_wallet_blacklist_select.values else None
+And update the config save:
+pythonconfig.fresh_wallet_blacklist = fresh_wallet_blacklist
+4. In bot.py, update the handle_websocket_trade function to check the blacklist before sending fresh wallet alerts. Find the fresh wallet alert section (around line 2600, where it says if is_fresh and value >= fresh_threshold). Before sending the alert, add this check:
+python# Check fresh wallet blacklist
+if config.fresh_wallet_blacklist:
+    asset_id = trade.get('asset', '')
+    if should_skip_volatility_category(asset_id, config.fresh_wallet_blacklist, market_title, slug):
+        print(f"[WS] Fresh wallet alert blocked by category blacklist", flush=True)
+        continue
+5. Update the /list command to show the fresh wallet blacklist setting. Find where volatility_blacklist is displayed and add:
+pythonif config.fresh_wallet_blacklist:
+    embed.add_field(name="Fresh Wallet Blacklist", value=config.fresh_wallet_blacklist, inline=False)
+This allows users to filter out categories like crypto or sports from fresh wallet alerts, just like they can with volatility alerts.

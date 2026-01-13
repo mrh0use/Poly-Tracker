@@ -700,7 +700,8 @@ def create_settings_embed(
     top_trader_channel_name: Optional[str] = None,
     top_trader_threshold: float = 2500.0,
     bonds_channel_name: Optional[str] = None,
-    volatility_blacklist: str = ""
+    volatility_blacklist: str = "",
+    fresh_wallet_blacklist: str = ""
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -779,6 +780,13 @@ def create_settings_embed(
         embed.add_field(
             name="Volatility Blacklist",
             value=volatility_blacklist,
+            inline=True
+        )
+    
+    if fresh_wallet_blacklist:
+        embed.add_field(
+            name="Fresh Wallet Blacklist",
+            value=fresh_wallet_blacklist,
             inline=True
         )
     
