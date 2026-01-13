@@ -1171,6 +1171,24 @@ async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: f
         session.close()
 
 
+@bot.tree.command(name="clear_wallet_cache", description="Clear wallet activity cache to reset fresh wallet detection")
+@app_commands.checks.has_permissions(administrator=True)
+async def clear_wallet_cache(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    session = get_session()
+    try:
+        from sqlalchemy import text
+        result = session.execute(text("DELETE FROM wallet_activity"))
+        count = result.rowcount
+        session.commit()
+        await interaction.followup.send(f"Cleared {count} entries from wallet activity cache. Fresh wallet detection has been reset.", ephemeral=True)
+    except Exception as e:
+        session.rollback()
+        await interaction.followup.send(f"Error: {e}", ephemeral=True)
+    finally:
+        session.close()
+
+
 @bot.tree.command(name="volatility_threshold", description="Set the minimum percentage swing for volatility alerts")
 @app_commands.describe(percentage="Minimum percentage swing for volatility alerts (e.g., 20 for 20%)")
 @app_commands.checks.has_permissions(administrator=True)
