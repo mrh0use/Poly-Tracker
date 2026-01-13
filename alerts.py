@@ -696,7 +696,11 @@ def create_settings_embed(
     wallet_stats: Optional[Dict[str, Any]] = None,
     whale_channel_name: Optional[str] = None,
     fresh_wallet_channel_name: Optional[str] = None,
-    tracked_wallet_channel_name: Optional[str] = None
+    tracked_wallet_channel_name: Optional[str] = None,
+    top_trader_channel_name: Optional[str] = None,
+    top_trader_threshold: float = 2500.0,
+    bonds_channel_name: Optional[str] = None,
+    volatility_blacklist: str = ""
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
