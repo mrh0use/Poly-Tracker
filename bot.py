@@ -2143,11 +2143,15 @@ async def monitor_loop():
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                         
                         elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
+                            # Check blacklist ONLY if configured
                             if config.fresh_wallet_blacklist:
-                                asset_id = trade.get('asset', '')
-                                if should_skip_volatility_category(asset_id, config.fresh_wallet_blacklist, market_title, slug):
-                                    print(f"[MONITOR] Fresh wallet alert blocked by category blacklist", flush=True)
-                                    continue
+                                try:
+                                    asset_id = trade.get('asset', '')
+                                    if should_skip_volatility_category(asset_id, config.fresh_wallet_blacklist, market_title, slug):
+                                        print(f"[MONITOR] Fresh wallet alert blocked by category blacklist for guild {config.guild_id}", flush=True)
+                                        continue
+                                except Exception as e:
+                                    print(f"[MONITOR] Error checking fresh wallet blacklist: {e}", flush=True)
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             print(f"[MONITOR] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                             fresh_channel = await get_or_fetch_channel(fresh_channel_id)
@@ -2715,12 +2719,21 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                 
-                if is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
+                # Debug: Log fresh wallet evaluation
+                fresh_threshold = config.fresh_wallet_threshold or 10000.0
+                if is_fresh:
+                    print(f"[WS] Fresh wallet candidate: ${value:,.0f} vs threshold ${fresh_threshold:,.0f}, is_bond={is_bond}", flush=True)
+                
+                if is_fresh and value >= fresh_threshold and not is_bond:
+                    # Check blacklist ONLY if configured, and only skip THIS config
                     if config.fresh_wallet_blacklist:
-                        asset_id = trade.get('asset', '')
-                        if should_skip_volatility_category(asset_id, config.fresh_wallet_blacklist, market_title, slug):
-                            print(f"[WS] Fresh wallet alert blocked by category blacklist", flush=True)
-                            continue
+                        try:
+                            asset_id = trade.get('asset', '')
+                            if should_skip_volatility_category(asset_id, config.fresh_wallet_blacklist, market_title, slug):
+                                print(f"[WS] Fresh wallet alert blocked by category blacklist for guild {config.guild_id}", flush=True)
+                                continue
+                        except Exception as e:
+                            print(f"[WS] Error checking fresh wallet blacklist: {e}", flush=True)
                     fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                     print(f"[WS] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                     fresh_channel = await get_or_fetch_channel(fresh_channel_id)
