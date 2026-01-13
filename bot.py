@@ -2349,19 +2349,31 @@ async def handle_websocket_trade(trade: dict):
         
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
+
+        if value >= 1000:
+            print(f"[FRESH DEBUG] Wallet {wallet[:10]}... | value=${value:,.0f} | in_db={wallet_activity is not None}", flush=True)
+
         if wallet_activity is None:
-            print(f"[WS] New wallet detected: {wallet[:10]}... checking for prior activity", flush=True)
+            print(f"[FRESH DEBUG] New wallet {wallet[:10]}... - calling API", flush=True)
             try:
                 has_history = await asyncio.wait_for(
                     polymarket_client.has_prior_activity(wallet),
                     timeout=2.0
                 )
+                print(f"[FRESH DEBUG] API returned has_history={has_history} for {wallet[:10]}...", flush=True)
             except asyncio.TimeoutError:
-                has_history = True  # Assume not fresh if timeout
-                print(f"[WS] Activity check timeout for {wallet[:10]}...", flush=True)
-            print(f"[WS] Prior activity check for {wallet[:10]}...: has_history={has_history}", flush=True)
+                has_history = True
+                print(f"[FRESH DEBUG] API TIMEOUT for {wallet[:10]}...", flush=True)
+            except Exception as e:
+                has_history = True
+                print(f"[FRESH DEBUG] API ERROR for {wallet[:10]}...: {e}", flush=True)
+            
             if has_history is False:
                 is_fresh = True
+                print(f"[FRESH DEBUG] ✓ FRESH WALLET CONFIRMED: {wallet[:10]}... ${value:,.0f}", flush=True)
+            else:
+                print(f"[FRESH DEBUG] ✗ Not fresh (has history): {wallet[:10]}...", flush=True)
+            
             session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
             session.commit()
         else:

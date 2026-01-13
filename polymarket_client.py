@@ -729,23 +729,27 @@ class PolymarketClient:
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
             if last_updated and (now - last_updated).total_seconds() < 3600:
+                print(f"[FRESH API] Cache hit for {wallet_address[:10]}...: {self._wallet_history_cache[wallet_lower]}", flush=True)
                 return self._wallet_history_cache[wallet_lower]
         
         await self.ensure_session()
         try:
+            print(f"[FRESH API] Calling /activity for {wallet_address[:10]}... with limit=2", flush=True)
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/activity",
                 params={"user": wallet_address, "limit": 2}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    has_history = isinstance(data, list) and len(data) > 1
+                    activity_count = len(data) if isinstance(data, list) else 0
+                    has_history = activity_count > 1
+                    print(f"[FRESH API] {wallet_address[:10]}...: {activity_count} activities, has_history={has_history}", flush=True)
                     self._wallet_history_cache[wallet_lower] = has_history
                     self._wallet_history_updated[wallet_lower] = now
                     return has_history
-                print(f"Activity API returned status {resp.status} for {wallet_address[:10]}...")
+                print(f"[FRESH API] Bad status {resp.status} for {wallet_address[:10]}...", flush=True)
         except Exception as e:
-            print(f"Error checking wallet activity for {wallet_address}: {e}")
+            print(f"[FRESH API] Error for {wallet_address[:10]}...: {e}", flush=True)
         return None
     
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
