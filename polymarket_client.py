@@ -734,17 +734,17 @@ class PolymarketClient:
         
         await self.ensure_session()
         try:
-            print(f"[FRESH API] Calling /activity for {wallet_address[:10]}... with limit=2", flush=True)
+            print(f"[FRESH API] Calling /trades for {wallet_address[:10]}... with limit=2", flush=True)
             async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/activity",
+                f"{self.DATA_API_BASE_URL}/trades",
                 params={"user": wallet_address, "limit": 2}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"[FRESH API] Raw response for {wallet_address[:10]}...: {data[:2] if isinstance(data, list) else data}", flush=True)
-                    activity_count = len(data) if isinstance(data, list) else 0
-                    has_history = activity_count > 1
-                    print(f"[FRESH API] {wallet_address[:10]}...: {activity_count} activities, has_history={has_history}", flush=True)
+                    trade_count = len(data) if isinstance(data, list) else 0
+                    has_history = trade_count > 1
+                    print(f"[FRESH API] {wallet_address[:10]}...: {trade_count} trades, has_history={has_history}", flush=True)
                     self._wallet_history_cache[wallet_lower] = has_history
                     self._wallet_history_updated[wallet_lower] = now
                     return has_history
