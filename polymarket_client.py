@@ -729,7 +729,9 @@ class PolymarketClient:
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
             if last_updated and (now - last_updated).total_seconds() < 3600:
-                return self._wallet_history_cache[wallet_lower]
+                cached = self._wallet_history_cache[wallet_lower]
+                print(f"[ACTIVITY] Cache hit for {wallet_address[:10]}...: {cached}", flush=True)
+                return cached
         
         await self.ensure_session()
         try:
@@ -742,10 +744,11 @@ class PolymarketClient:
                     has_history = isinstance(data, list) and len(data) > 0
                     self._wallet_history_cache[wallet_lower] = has_history
                     self._wallet_history_updated[wallet_lower] = now
+                    print(f"[ACTIVITY] API check for {wallet_address[:10]}...: has_history={has_history} (data_len={len(data) if isinstance(data, list) else 'N/A'})", flush=True)
                     return has_history
-                print(f"Activity API returned status {resp.status} for {wallet_address[:10]}...")
+                print(f"[ACTIVITY] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
         except Exception as e:
-            print(f"Error checking wallet activity for {wallet_address}: {e}")
+            print(f"[ACTIVITY] Exception for {wallet_address[:10]}...: {e}", flush=True)
         return None
     
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
