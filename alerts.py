@@ -358,6 +358,7 @@ def create_custom_wallet_alert_embed(
     wallet_label: Optional[str] = None,
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
+    volume: Optional[float] = None,
     rank: Optional[int] = None
 ) -> Embed:
     stats_line = ""
@@ -630,7 +631,9 @@ def create_volatility_alert_embed(
     old_price: float,
     new_price: float,
     price_change: float,
-    time_window_minutes: int = 60
+    time_window_minutes: int = 60,
+    volume_usd: Optional[float] = None,
+    trade_count: Optional[int] = None
 ) -> Embed:
     direction = "up" if price_change > 0 else "down"
     arrow = "+" if price_change > 0 else ""
