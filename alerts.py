@@ -91,13 +91,9 @@ def encode_onsight_param(market_id: str) -> str:
     return f"m_{market_id}"
 
 
-def create_trade_button_view(market_id: str, market_url: str, slug: str = "") -> View:
+def create_trade_button_view(market_id: str, market_url: str) -> View:
     view = View()
     encoded_param = encode_onsight_param(market_id)
-    
-    if not encoded_param and slug:
-        encoded_param = f"s_{slug[:50]}"
-    
     if encoded_param:
         onsight_url = f"{ONSIGHT_BOT_URL}?start={encoded_param}"
     else:
@@ -704,8 +700,7 @@ def create_settings_embed(
     top_trader_channel_name: Optional[str] = None,
     top_trader_threshold: float = 2500.0,
     bonds_channel_name: Optional[str] = None,
-    volatility_blacklist: str = "",
-    fresh_wallet_blacklist: str = ""
+    volatility_blacklist: str = ""
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -784,13 +779,6 @@ def create_settings_embed(
         embed.add_field(
             name="Volatility Blacklist",
             value=volatility_blacklist,
-            inline=True
-        )
-    
-    if fresh_wallet_blacklist:
-        embed.add_field(
-            name="Fresh Wallet Blacklist",
-            value=fresh_wallet_blacklist,
             inline=True
         )
     

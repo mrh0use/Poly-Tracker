@@ -854,60 +854,6 @@ class VolatilityBlacklistView(discord.ui.View):
         self.add_item(VolatilityBlacklistSelect(current_blacklist))
 
 
-class FreshWalletBlacklistSelect(discord.ui.Select):
-    """Dropdown to select categories to exclude from fresh wallet alerts."""
-    
-    def __init__(self, current_blacklist: list):
-        options = [
-            discord.SelectOption(
-                label=label,
-                value=value,
-                default=value in current_blacklist
-            )
-            for label, value in POLYMARKET_CATEGORIES
-        ]
-        
-        super().__init__(
-            placeholder="Select categories to exclude...",
-            min_values=0,
-            max_values=len(options),
-            options=options
-        )
-    
-    async def callback(self, interaction: discord.Interaction):
-        session = get_session()
-        try:
-            config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
-            
-            if config:
-                config.fresh_wallet_blacklist = ",".join(self.values) if self.values else ""
-                session.commit()
-                invalidate_server_config_cache()
-            
-            if self.values:
-                label_map = {v: l for l, v in POLYMARKET_CATEGORIES}
-                formatted = ", ".join(f"**{label_map.get(v, v)}**" for v in self.values)
-                await interaction.response.send_message(
-                    f"Fresh wallet alerts will now exclude: {formatted}",
-                    ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(
-                    "Blacklist cleared - all categories will trigger alerts.",
-                    ephemeral=True
-                )
-        finally:
-            session.close()
-
-
-class FreshWalletBlacklistView(discord.ui.View):
-    """View containing the fresh wallet blacklist dropdown."""
-    
-    def __init__(self, current_blacklist: list):
-        super().__init__(timeout=120)
-        self.add_item(FreshWalletBlacklistSelect(current_blacklist))
-
-
 @bot.tree.command(name="untrack", description="Remove a wallet from tracking")
 @app_commands.checks.has_permissions(administrator=True)
 async def untrack(interaction: discord.Interaction):
@@ -1022,8 +968,7 @@ async def list_settings(interaction: discord.Interaction):
             top_trader_channel_name=top_trader_channel_name,
             top_trader_threshold=config.top_trader_threshold or 2500.0,
             bonds_channel_name=bonds_channel_name,
-            volatility_blacklist=config.volatility_blacklist or "",
-            fresh_wallet_blacklist=config.fresh_wallet_blacklist or ""
+            volatility_blacklist=config.volatility_blacklist or ""
         )
         
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -1298,43 +1243,6 @@ async def volatility_blacklist_cmd(interaction: discord.Interaction):
             f"**Volatility Alert Blacklist**\n\n"
             f"Currently excluded: `{current_display}`\n\n"
             f"Select categories to exclude from volatility alerts.\n"
-            f"Markets in these categories will not trigger alerts:",
-            view=view,
-            ephemeral=True
-        )
-    finally:
-        session.close()
-
-
-@bot.tree.command(name="fresh_wallet_blacklist", description="Exclude categories from fresh wallet alerts")
-@app_commands.checks.has_permissions(administrator=True)
-async def fresh_wallet_blacklist_cmd(interaction: discord.Interaction):
-    """Manage which categories are excluded from fresh wallet alerts."""
-    session = get_session()
-    try:
-        config = session.query(ServerConfig).filter_by(guild_id=interaction.guild_id).first()
-        
-        if not config:
-            await interaction.response.send_message("Server not configured. Run `/setup` first.", ephemeral=True)
-            return
-        
-        fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
-        if not fresh_channel_id:
-            await interaction.response.send_message("Fresh wallet alerts not enabled. Set a channel first.", ephemeral=True)
-            return
-        
-        current = []
-        if config.fresh_wallet_blacklist:
-            current = [x.strip().lower() for x in config.fresh_wallet_blacklist.split(",") if x.strip()]
-        
-        label_map = {v: l for l, v in POLYMARKET_CATEGORIES}
-        current_display = ", ".join(label_map.get(c, c) for c in current) if current else "None"
-        
-        view = FreshWalletBlacklistView(current)
-        await interaction.response.send_message(
-            f"**Fresh Wallet Alert Blacklist**\n\n"
-            f"Currently excluded: `{current_display}`\n\n"
-            f"Select categories to exclude from fresh wallet alerts.\n"
             f"Markets in these categories will not trigger alerts:",
             view=view,
             ephemeral=True
@@ -1702,8 +1610,7 @@ async def help_command(interaction: discord.Interaction):
             "`/fresh_wallet_threshold` - Fresh wallets\n"
             "`/top_trader_threshold` - Top 25 alerts\n"
             "`/volatility_threshold` - Price swing %\n"
-            "`/volatility_blacklist` - Exclude categories\n"
-            "`/fresh_wallet_blacklist` - Exclude categories"
+            "`/volatility_blacklist` - Exclude categories"
         ),
         inline=False
     )
@@ -2143,15 +2050,6 @@ async def monitor_loop():
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                         
                         elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
-                            # Check blacklist ONLY if configured
-                            if config.fresh_wallet_blacklist:
-                                try:
-                                    asset_id = trade.get('asset', '')
-                                    if should_skip_volatility_category(asset_id, config.fresh_wallet_blacklist, market_title, slug):
-                                        print(f"[MONITOR] Fresh wallet alert blocked by category blacklist for guild {config.guild_id}", flush=True)
-                                        continue
-                                except Exception as e:
-                                    print(f"[MONITOR] Error checking fresh wallet blacklist: {e}", flush=True)
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             print(f"[MONITOR] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                             fresh_channel = await get_or_fetch_channel(fresh_channel_id)
@@ -2356,7 +2254,7 @@ async def handle_websocket_trade(trade: dict):
                                 )
                                 
                                 market_id = await polymarket_client.get_market_id_async({'asset': asset_id, 'conditionId': asset_id})
-                                button_view = create_trade_button_view(market_id, market_url, alert['slug'])
+                                button_view = create_trade_button_view(market_id, market_url)
                                 
                                 try:
                                     await channel.send(embed=embed, view=button_view)
@@ -2452,19 +2350,16 @@ async def handle_websocket_trade(trade: dict):
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
         if wallet_activity is None:
-            print(f"[WS] New wallet detected: {wallet[:10]}... checking for prior activity", flush=True)
             try:
                 has_history = await asyncio.wait_for(
                     polymarket_client.has_prior_activity(wallet),
                     timeout=2.0
                 )
-                print(f"[WS] Prior activity check for {wallet[:10]}...: has_history={has_history}", flush=True)
             except asyncio.TimeoutError:
                 has_history = True  # Assume not fresh if timeout
                 print(f"[WS] Activity check timeout for {wallet[:10]}...", flush=True)
             if has_history is False:
                 is_fresh = True
-                print(f"[WS] ✓ FRESH WALLET CONFIRMED: {wallet[:10]}... value=${value:,.0f}", flush=True)
             session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
             session.commit()
         else:
@@ -2722,21 +2617,7 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                 
-                # Debug: Log fresh wallet evaluation
-                fresh_threshold = config.fresh_wallet_threshold or 10000.0
-                if is_fresh:
-                    print(f"[WS] Fresh wallet candidate: ${value:,.0f} vs threshold ${fresh_threshold:,.0f}, is_bond={is_bond}", flush=True)
-                
-                if is_fresh and value >= fresh_threshold and not is_bond:
-                    # Check blacklist ONLY if configured, and only skip THIS config
-                    if config.fresh_wallet_blacklist:
-                        try:
-                            asset_id = trade.get('asset', '')
-                            if should_skip_volatility_category(asset_id, config.fresh_wallet_blacklist, market_title, slug):
-                                print(f"[WS] Fresh wallet alert blocked by category blacklist for guild {config.guild_id}", flush=True)
-                                continue
-                        except Exception as e:
-                            print(f"[WS] Error checking fresh wallet blacklist: {e}", flush=True)
+                if is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                     fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                     print(f"[WS] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                     fresh_channel = await get_or_fetch_channel(fresh_channel_id)
