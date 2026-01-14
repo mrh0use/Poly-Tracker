@@ -987,18 +987,11 @@ class PolymarketClient:
                     markets = await resp.json()
                     if markets and len(markets) > 0:
                         market = markets[0]
-                        # DEBUG: Log FULL market response
-                        import json
-                        print(f"[CACHE DEBUG FULL] {json.dumps(market)[:800]}", flush=True)
                         
-                        # Try multiple possible field names for the ID
-                        market_id = market.get('market_id') or market.get('marketId') or market.get('_id') or ''
-                        
-                        # If still no ID, check if 'id' is actually a string
-                        if not market_id:
-                            raw_id = market.get('id')
-                            if raw_id:
-                                market_id = str(raw_id)
+                        # Get market ID from response
+                        market_id = market.get('id') or market.get('market_id') or market.get('marketId') or ''
+                        if market_id:
+                            market_id = str(market_id)
                         
                         market_data = {
                             'slug': market.get('slug', ''),

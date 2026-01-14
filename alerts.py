@@ -435,13 +435,26 @@ def create_top_trader_alert_embed(
     wallet_address: str = "Unknown",
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
-    rank: Optional[int] = None
+    rank: Optional[int] = None,
+    trader_info: Optional[Dict[str, Any]] = None
 ) -> Embed:
+    # Extract pnl/rank from trader_info if provided
+    if trader_info:
+        if pnl is None:
+            pnl = trader_info.get('pnl')
+        if rank is None:
+            rank = trader_info.get('rank')
+        username = trader_info.get('username', '')
+    else:
+        username = ''
+    
     stats_line = ""
     if pnl is not None:
         stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
+        if username:
+            stats_line += f" - {username}"
         stats_line += "\n\n"
     
     embed = Embed(
