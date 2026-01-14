@@ -723,7 +723,7 @@ class PolymarketClient:
         return all_closed
     
     async def has_prior_activity(self, wallet_address: str) -> Optional[bool]:
-        """Check if wallet has prior TRADES (not just activity like deposits/approvals)."""
+        """Check if wallet has prior TRADES using the /activity endpoint with TRADE filter."""
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
@@ -735,23 +735,29 @@ class PolymarketClient:
                 return cached
         
         await self.ensure_session()
+        
+        # Use /activity endpoint with type=TRADE filter
+        # This reliably works with proxy wallet addresses unlike /trades
         try:
             async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/trades",
-                params={"user": wallet_address, "limit": 2}
+                f"{self.DATA_API_BASE_URL}/activity",
+                params={"user": wallet_address, "type": "TRADE", "limit": 2}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     # If 2+ trades exist, wallet has prior history (not fresh)
                     # If 0-1 trades, this could be their first trade (fresh)
-                    has_prior_trades = isinstance(data, list) and len(data) >= 2
-                    self._wallet_history_cache[wallet_lower] = has_prior_trades
+                    trade_count = len(data) if isinstance(data, list) else 0
+                    has_prior = trade_count >= 2
+                    
+                    self._wallet_history_cache[wallet_lower] = has_prior
                     self._wallet_history_updated[wallet_lower] = now
-                    print(f"[FRESH CHECK] /trades API for {wallet_address[:10]}...: has_prior_trades={has_prior_trades} (count={len(data) if isinstance(data, list) else 'N/A'})", flush=True)
-                    return has_prior_trades
+                    print(f"[FRESH CHECK] /activity API for {wallet_address[:10]}...: has_prior={has_prior} (trade_count={trade_count})", flush=True)
+                    return has_prior
                 print(f"[FRESH CHECK] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
         except Exception as e:
             print(f"[FRESH CHECK] Exception for {wallet_address[:10]}...: {e}", flush=True)
+        
         return None
     
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
