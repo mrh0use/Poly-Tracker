@@ -1776,7 +1776,19 @@ async def monitor_loop():
             alerts_sent = 0
             trades_above_threshold = 0
             
+            skipped_old_count = 0
             for trade in all_trades:
+                # Filter out old trades (older than 5 minutes)
+                trade_ts = trade.get('timestamp', 0)
+                if trade_ts:
+                    # Handle milliseconds vs seconds
+                    if trade_ts > 1e12:
+                        trade_ts = trade_ts / 1000
+                    trade_age = time.time() - trade_ts
+                    if trade_age > 300:  # 5 minutes
+                        skipped_old_count += 1
+                        continue
+                
                 unique_key = polymarket_client.get_unique_trade_id(trade)
                 
                 if not unique_key or len(unique_key) < 10:
@@ -2126,7 +2138,7 @@ async def monitor_loop():
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send whale alert to {whale_channel_id}", flush=True)
             
             if new_trades_count > 0 or alerts_sent > 0:
-                print(f"[Monitor] Tracked wallets: {new_trades_count} new trades, {alerts_sent} alerts sent")
+                print(f"[Monitor] Tracked wallets: {new_trades_count} new trades, {alerts_sent} alerts sent, {skipped_old_count} old skipped")
             
             session.commit()
         finally:
