@@ -2205,6 +2205,20 @@ async def handle_websocket_trade(trade: dict):
     side = trade.get('side', '').upper()
     price = float(trade.get('price', 0) or 0)
     
+    trade_timestamp = trade.get('timestamp', 0) or trade.get('createdAt', 0) or trade.get('created_at', 0)
+    trade_time = None
+    delay_seconds = 0
+    if trade_timestamp and trade_timestamp > 0:
+        try:
+            if trade_timestamp > 1e12:
+                trade_timestamp = trade_timestamp / 1000
+            trade_time = datetime.utcfromtimestamp(trade_timestamp)
+            delay_seconds = (datetime.utcnow() - trade_time).total_seconds()
+            if delay_seconds > 60 and value >= 5000:
+                print(f"[WS DELAY] Trade ${value:,.0f} is {delay_seconds:.0f}s ({delay_seconds/60:.1f}min) old", flush=True)
+        except:
+            pass
+    
     asset_id = trade.get('asset', '')
     outcome = trade.get('outcome', 'Yes')
     outcome_index = trade.get('outcomeIndex', 0)
