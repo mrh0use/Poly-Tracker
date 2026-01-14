@@ -2240,8 +2240,10 @@ def parse_trade_timestamp(ts) -> float:
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
     
+    
     # Skip old trades (older than 5 minutes) to prevent delayed alerts on reconnect
-    raw_timestamp = trade.get('timestamp', 0)
+    # Try multiple possible timestamp fields
+    raw_timestamp = trade.get('timestamp') or trade.get('matchTime') or trade.get('createdAt') or trade.get('time') or 0
     trade_timestamp = parse_trade_timestamp(raw_timestamp)
     now = time.time()
     
@@ -2723,7 +2725,10 @@ async def handle_websocket_trade(trade: dict):
                 if value >= (config.whale_threshold or 10000.0) and not is_bond and not is_fresh:
                     whale_channel_id = config.whale_channel_id or config.alert_channel_id
                     whale_threshold = config.whale_threshold or 10000.0
-                    print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
+                    # Debug: log trade age
+                    ts = trade.get('timestamp', 0)
+                    age = int(time.time() - ts) if ts else -1
+                    print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, age={age}s, attempting channel {whale_channel_id}", flush=True)
                     whale_channel = await get_or_fetch_channel(whale_channel_id)
                     print(f"[WS] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                     if whale_channel:
