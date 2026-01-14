@@ -981,14 +981,20 @@ class PolymarketClient:
                     if isinstance(positions, list) and len(positions) > 0:
                         stats['has_open_positions'] = True
                         for pos in positions:
+                            # Unrealized PnL = currentValue - initialValue (what the position is worth now vs what you paid)
+                            # Note: cashPnl is total PnL (realized + unrealized) for that position, NOT what we need
                             initial_val = float(pos.get('initialValue', 0) or 0)
                             current_val = float(pos.get('currentValue', 0) or 0)
                             unrealized_pnl += (current_val - initial_val)
         except Exception as e:
-            pass
+            print(f"[PNL] Error fetching positions for {wallet_address[:10]}...: {e}", flush=True)
         
         if got_positions:
-            stats['realized_pnl'] = total_pnl - unrealized_pnl
+            realized = total_pnl - unrealized_pnl
+            stats['realized_pnl'] = realized
+            # Debug: Log when there's a significant discrepancy
+            if abs(total_pnl) > 1000 and abs(realized - total_pnl) > 50000:
+                print(f"[PNL DEBUG] {wallet_address[:10]}...: total={total_pnl:,.0f}, unrealized={unrealized_pnl:,.0f}, realized={realized:,.0f}", flush=True)
         else:
             stats['realized_pnl'] = total_pnl
         
@@ -1926,6 +1932,12 @@ class PolymarketWebSocket:
             size = float(payload.get('size', 0) or 0)
             price = float(payload.get('price', 0) or 0)
             
+            # Get match_time (actual trade execution time) - try multiple field name variations
+            match_time = (payload.get('match_time') or 
+                         payload.get('matchTime') or 
+                         payload.get('matchtime') or
+                         payload.get('timestamp', 0))
+            
             return {
                 'proxyWallet': payload.get('proxyWallet', ''),
                 'side': payload.get('side', 'BUY'),
@@ -1934,6 +1946,7 @@ class PolymarketWebSocket:
                 'size': size,
                 'price': price,
                 'timestamp': payload.get('timestamp', 0),
+                'match_time': match_time,  # Actual trade execution time
                 'title': payload.get('title', ''),
                 'slug': payload.get('slug', ''),
                 'icon': payload.get('icon', ''),

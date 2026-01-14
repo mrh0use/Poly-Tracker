@@ -310,6 +310,31 @@ class VWAPVolatilityTracker:
         
         return None
     
+    def _get_oldest_price_in_window(self, asset_id: str, window_minutes: int) -> Optional[float]:
+        """
+        Get the price from the oldest bucket within a time window.
+        This is the starting price for volatility calculation (non-overlapping).
+        """
+        if asset_id not in self._assets:
+            return None
+        
+        now = datetime.utcnow()
+        buckets = self._assets[asset_id]['buckets']
+        
+        # Look for the oldest bucket within the window (from window_minutes-1 down to window_minutes-3)
+        # We check a few buckets in case some minutes have no trades
+        for offset in range(window_minutes - 1, max(0, window_minutes - 4), -1):
+            target_time = now - timedelta(minutes=offset)
+            minute_key = self._get_minute_key(target_time)
+            
+            if minute_key in buckets:
+                b = buckets[minute_key]
+                if b['volume'] > 0:
+                    # Return the VWAP for that oldest bucket (most accurate price for that minute)
+                    return b['price_x_volume'] / b['volume']
+        
+        return None
+    
     def check_volatility(self, asset_id: str, guild_id: int, 
                          threshold_pct: float = 5.0) -> Optional[dict]:
         """
@@ -346,16 +371,15 @@ class VWAPVolatilityTracker:
             if not window_stats:
                 continue
             
-            old_stats = self._get_vwap_for_window(asset_id, window_minutes + 5)
-            if not old_stats:
+            # Get the starting price from the oldest bucket in the window (non-overlapping)
+            old_price = self._get_oldest_price_in_window(asset_id, window_minutes)
+            if not old_price:
                 continue
             
-            old_vwap = old_stats['vwap']
-            
-            if old_vwap <= 0.02 or old_vwap >= 0.98:
+            if old_price <= 0.02 or old_price >= 0.98:
                 continue
             
-            price_change = (current_vwap - old_vwap) * 100
+            price_change = (current_vwap - old_price) * 100
             
             if abs(price_change) < threshold_pct:
                 continue
@@ -389,7 +413,7 @@ class VWAPVolatilityTracker:
                 'asset_id': asset_id,
                 'title': metadata.get('title', 'Unknown Market'),
                 'slug': metadata.get('slug', ''),
-                'old_price': old_vwap,
+                'old_price': old_price,
                 'new_price': current_vwap,
                 'price_change_pct': price_change,
                 'time_window_minutes': window_minutes,
@@ -2192,27 +2216,39 @@ async def before_cleanup():
 
 
 
-_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_skipped': 0, 'no_timestamp': 0, 'ts_samples': []}
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_skipped': 0, 'no_matchtime': 0, 'matchtime_samples': []}
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
     
-    # STALENESS FILTER: Skip trades older than 30 seconds to avoid backlog delays
-    trade_timestamp = trade.get('timestamp', 0)
+    # STALENESS FILTER: Use matchtime (actual trade execution time), not timestamp (RTDS processing time)
+    # matchtime is the actual on-chain execution time, timestamp is when RTDS received it
+    match_time = trade.get('match_time') or trade.get('matchtime') or trade.get('matchTime', 0)
     
-    # Debug: Log timestamp samples to understand the format
-    if len(_ws_stats['ts_samples']) < 5:
-        _ws_stats['ts_samples'].append(trade_timestamp)
-        if len(_ws_stats['ts_samples']) == 5:
-            print(f"[WS DEBUG] Timestamp samples from RTDS: {_ws_stats['ts_samples']}", flush=True)
+    # Debug: Log matchtime samples to understand the format (check first 5 trades)
+    if len(_ws_stats['matchtime_samples']) < 5:
+        _ws_stats['matchtime_samples'].append(match_time)
+        if len(_ws_stats['matchtime_samples']) == 5:
+            print(f"[WS DEBUG] Matchtime samples from RTDS: {_ws_stats['matchtime_samples']}", flush=True)
     
-    if not trade_timestamp:
-        _ws_stats['no_timestamp'] += 1
-        if _ws_stats['no_timestamp'] % 1000 == 1:
-            print(f"[WS] Warning: Trade has no timestamp (count: {_ws_stats['no_timestamp']})", flush=True)
-    elif trade_timestamp:
+    # Also log periodic age checks to verify staleness detection is working
+    if _ws_stats['processed'] > 0 and _ws_stats['processed'] % 2000 == 0 and match_time:
         try:
-            trade_ts = int(trade_timestamp)
+            mt = int(match_time)
+            if mt > 1000000000000:
+                mt = mt / 1000
+            age = time.time() - mt
+            print(f"[WS DEBUG] Trade #{_ws_stats['processed']} age check: matchtime={match_time}, age={age:.0f}s", flush=True)
+        except:
+            pass
+    
+    if not match_time:
+        _ws_stats['no_matchtime'] += 1
+        if _ws_stats['no_matchtime'] % 1000 == 1:
+            print(f"[WS] Warning: Trade has no matchtime (count: {_ws_stats['no_matchtime']})", flush=True)
+    else:
+        try:
+            trade_ts = int(match_time)
             # Handle both seconds and milliseconds timestamps
             if trade_ts > 1000000000000:  # Milliseconds
                 trade_ts = trade_ts / 1000
@@ -2220,17 +2256,17 @@ async def handle_websocket_trade(trade: dict):
             age_seconds = now_ts - trade_ts
             
             # Debug log for first few large age trades
-            if age_seconds > 30 and _ws_stats['stale_skipped'] < 5:
-                print(f"[WS DEBUG] Stale trade: ts={trade_timestamp}, age={age_seconds:.0f}s, now={now_ts:.0f}", flush=True)
+            if age_seconds > 30 and _ws_stats['stale_skipped'] < 10:
+                print(f"[WS DEBUG] Stale trade detected: matchtime={match_time}, age={age_seconds:.0f}s", flush=True)
             
             if age_seconds > 30:
                 # Skip stale trades (from backlog) - count them
                 _ws_stats['stale_skipped'] += 1
-                if _ws_stats['stale_skipped'] % 500 == 1:
+                if _ws_stats['stale_skipped'] % 100 == 1:
                     print(f"[WS] Skipping stale trade (age={age_seconds:.0f}s) - total stale skipped: {_ws_stats['stale_skipped']}", flush=True)
                 return
-        except (ValueError, TypeError):
-            pass  # If timestamp parsing fails, process the trade anyway
+        except (ValueError, TypeError) as e:
+            print(f"[WS DEBUG] Matchtime parse error: {e}, value={match_time}", flush=True)
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
