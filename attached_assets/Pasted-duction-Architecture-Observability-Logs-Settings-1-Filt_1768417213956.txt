@@ -1,0 +1,150 @@
+duction
+Architecture
+Observability
+Logs
+Settings
+
+
+
+1
+
+Filter and search logs
+
+Last hour
+
+
+
+Load more
+    main()
+Traceback (most recent call last):
+  File "/app/bot.py", line 2828, in main
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 839, in static_login
+    data = await self.request(Route('GET', '/users/@me'))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 773, in request
+    raise HTTPException(response, data)
+    await self.login(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 675, in login
+    data = await self.http.static_login(token)
+           ^^^^^^^^^^^^^^^
+  File "/app/bot.py", line 2825, in run_all
+    await bot.start(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 846, in start
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+discord.errors.LoginFailure: Improper token has been passed.
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 843, in static_login
+    raise LoginFailure('Improper token has been passed.') from exc
+Running in DEVELOPMENT - using DISCORD_BOT_TOKEN (no dev token set)
+[RAILWAY] PORT environment variable: 8080
+[RAILWAY] Starting health server on port 8080
+Starting Polymarket Discord Bot...
+[HEALTH] Health server task created
+[HEALTH] Health server listening on 0.0.0.0:8080
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+discord.errors.HTTPException: 401 Unauthorized (error code: 0): 401: Unauthorized
+Traceback (most recent call last):
+The above exception was the direct cause of the following exception:
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 839, in static_login
+  File "/app/bot.py", line 2828, in main
+    return future.result()
+    data = await self.request(Route('GET', '/users/@me'))
+    asyncio.run(run_all())
+           ^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Traceback (most recent call last):
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 773, in request
+  File "/app/bot.py", line 2828, in main
+    raise HTTPException(response, data)
+    asyncio.run(run_all())
+discord.errors.HTTPException: 401 Unauthorized (error code: 0): 401: Unauthorized
+  File "/app/bot.py", line 2825, in run_all
+The above exception was the direct cause of the following exception:
+    await bot.start(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 846, in start
+Traceback (most recent call last):
+  File "/app/bot.py", line 2840, in <module>
+    await self.login(token)
+    main()
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 675, in login
+    data = await self.http.static_login(token)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 843, in static_login
+    return runner.run(main)
+    raise LoginFailure('Improper token has been passed.') from exc
+           ^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+discord.errors.LoginFailure: Improper token has been passed.
+[FATAL] Unhandled exception in main: LoginFailure: Improper token has been passed.
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/app/bot.py", line 2825, in run_all
+    await bot.start(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 846, in start
+    await self.login(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 675, in login
+    data = await self.http.static_login(token)
+[FATAL] Bot crashed with exception: LoginFailure: Improper token has been passed.
+Traceback (most recent call last):
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 839, in static_login
+    data = await self.request(Route('GET', '/users/@me'))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 773, in request
+    raise HTTPException(response, data)
+    asyncio.run(run_all())
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/app/bot.py", line 2825, in run_all
+    await bot.start(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 846, in start
+    data = await self.http.static_login(token)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 843, in static_login
+    raise LoginFailure('Improper token has been passed.') from exc
+discord.errors.LoginFailure: Improper token has been passed.
+    await self.login(token)
+  File "/app/.venv/lib/python3.11/site-packages/discord/client.py", line 675, in login
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 843, in static_login
+    raise LoginFailure('Improper token has been passed.') from exc
+discord.errors.LoginFailure: Improper token has been passed.
+Traceback (most recent call last):
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 839, in static_login
+    data = await self.request(Route('GET', '/users/@me'))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/.venv/lib/python3.11/site-packages/discord/http.py", line 773, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 401 Unauthorized (error code: 0): 401: Unauthorized
+The above exception was the direct cause of the following exception:
+Traceback (most recent call last):
+  File "/app/bot.py", line 2840, in <module>
+    main()
+  File "/app/bot.py", line 2828, in main
+Running in DEVELOPMENT - using DISCORD_BOT_TOKEN (no dev token set)
+[RAILWAY] PORT environment variable: 8080
+[RAILWAY] Starting health server on port 8080
+Starting Polymarket Discord Bot...

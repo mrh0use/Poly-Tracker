@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 from database import get_session, MarketSlugMapping
 
 
-ONSIGHT_BOT_URL = "https://t.me/devtradeonsight67bot"
+ONSIGHT_BOT_URL = "https://t.me/polysightbot"
 
 
 def format_pnl(pnl: float) -> str:
