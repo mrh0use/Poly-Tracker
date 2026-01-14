@@ -2371,7 +2371,7 @@ async def handle_websocket_trade(trade: dict):
                 print(f"[FRESH] Activity check timeout for {wallet[:10]}..., assuming not fresh", flush=True)
             if has_history is False:
                 is_fresh = True
-                print(f"[FRESH] ✓ CONFIRMED FRESH WALLET: {wallet[:10]}... value=${value:,.0f}", flush=True)
+                print(f"[FRESH] ✓ CONFIRMED FRESH WALLET: {wallet[:10]}... value=${value:,.0f} | is_bond={is_bond} | price={price:.2f}", flush=True)
             elif has_history is None:
                 print(f"[FRESH] API error for {wallet[:10]}..., assuming not fresh", flush=True)
             session.add(WalletActivity(wallet_address=wallet, transaction_count=1))

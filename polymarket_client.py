@@ -830,7 +830,7 @@ class PolymarketClient:
         try:
             await self.ensure_session()
             async with self.session.get(
-                f"{self.GAMMA_API_BASE_URL}/markets",
+                f"{self.GAMMA_BASE_URL}/markets",
                 params={"slug": slug},
                 timeout=aiohttp.ClientTimeout(total=5)
             ) as resp:
