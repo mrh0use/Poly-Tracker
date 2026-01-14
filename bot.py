@@ -482,8 +482,12 @@ class PolymarketBot(commands.Bot):
         
         if not self.websocket_started:
             self.websocket_started = True
-            asyncio.create_task(start_websocket())
-            print("WebSocket task scheduled")
+            if USE_REST_POLLING:
+                rest_polling_loop.start()
+                print("[STARTUP] REST API polling started (WebSocket disabled)")
+            else:
+                asyncio.create_task(start_websocket())
+                print("WebSocket task scheduled")
         
         
         # Log all server configs at startup
@@ -2236,6 +2240,10 @@ _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'l
 STALE_TRADE_THRESHOLD = 60  # Skip trades older than 60 seconds (based on WS timestamp)
 BLOCKCHAIN_STALE_THRESHOLD = 300  # Skip trades older than 5 minutes on-chain (300 seconds)
 
+# REST API Polling mode - use REST API instead of unreliable WebSocket
+USE_REST_POLLING = True
+REST_POLLING_INTERVAL = 2.5  # seconds between polls
+
 async def verify_trade_freshness_on_chain(trade: dict) -> tuple[bool, float]:
     """
     Verify trade's actual age on the blockchain.
@@ -2262,11 +2270,15 @@ async def verify_trade_freshness_on_chain(trade: dict) -> tuple[bool, float]:
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
     
+    # Check if this trade came from REST API (already verified for freshness)
+    from_rest = trade.get('_from_rest', False)
+    
     _ws_stats['total_received'] += 1
     
     trade_timestamp = trade.get('timestamp', 0)
-    if trade_timestamp:
-        # Update WebSocket timestamp for freshness tracking
+    if trade_timestamp and not from_rest:
+        # Only do timestamp-based staleness check for WebSocket trades
+        # REST trades are verified using blockchain timestamp instead
         polymarket_client.update_ws_timestamp(trade_timestamp)
         
         current_time = time.time()
@@ -2281,8 +2293,8 @@ async def handle_websocket_trade(trade: dict):
         if _ws_stats['total_received'] % 2000 == 0:
             print(f"[WS LATENCY] Trade latency: {latency:.1f}s (stale skipped: {_ws_stats['stale_trades']})", flush=True)
     
-    # Check if alerting is paused due to WebSocket lag
-    if polymarket_client.is_alerting_paused_for_lag():
+    # Check if alerting is paused due to WebSocket lag (skip for REST trades)
+    if not from_rest and polymarket_client.is_alerting_paused_for_lag():
         return  # Skip all alerting when data is stale
     
     value = polymarket_client.calculate_trade_value(trade)
@@ -2380,14 +2392,16 @@ async def handle_websocket_trade(trade: dict):
         print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+ BUY: {_ws_stats['above_5k']}, $10k+ BUY: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
     
     # Only log significant trades ($2.5k+ to match alert thresholds)
+    log_prefix = "[REST]" if from_rest else "[WS]"
     if value >= 2500:
-        print(f"[WS] Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
+        print(f"{log_prefix} Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
     elif is_tracked:
-        print(f"[WS] Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
+        print(f"{log_prefix} Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
     
     # Verify trade freshness on blockchain for all potential alert trades
     # Must check at $2,500+ to catch top trader alerts (lowest threshold)
-    if value >= 2500 or is_tracked:
+    # Skip for REST trades - they were already verified in handle_rest_trade
+    if not from_rest and (value >= 2500 or is_tracked):
         is_blockchain_fresh, blockchain_age = await verify_trade_freshness_on_chain(trade)
         if not is_blockchain_fresh:
             _ws_stats['blockchain_stale'] += 1
@@ -2810,6 +2824,107 @@ async def start_websocket():
     await bot.wait_until_ready()
     print("[WebSocket] Starting real-time trade feed...")
     await polymarket_ws.connect()
+
+
+# REST API Polling (replaces WebSocket when RTDS is unreliable)
+_rest_seen_tx_hashes = set()
+_rest_stats = {'polls': 0, 'trades_processed': 0, 'alerts_sent': 0}
+
+async def handle_rest_trade(trade: dict):
+    """
+    Process a trade from REST API.
+    This bypasses the WebSocket timestamp check and uses blockchain verification directly.
+    """
+    global _ws_stats, _rest_stats
+    
+    value = polymarket_client.calculate_trade_value(trade)
+    wallet = polymarket_client.get_wallet_from_trade(trade)
+    
+    if not wallet:
+        return
+    
+    wallet = wallet.lower()
+    side = trade.get('side', '').upper()
+    price = float(trade.get('price', 0) or 0)
+    
+    # Same filtering as WebSocket
+    if side == 'SELL':
+        return
+    
+    tracked_addresses, tracked_by_guild = get_cached_tracked_wallets()
+    is_tracked = wallet in tracked_addresses
+    
+    if value < 1000 and not is_tracked:
+        return
+    
+    # Verify freshness on blockchain for significant trades
+    if value >= 2500 or is_tracked:
+        is_blockchain_fresh, blockchain_age = await verify_trade_freshness_on_chain(trade)
+        if not is_blockchain_fresh:
+            print(f"[REST STALE] Skipping ${value:,.0f} trade - {blockchain_age/60:.1f} min old on-chain", flush=True)
+            return
+        if value >= 5000:
+            print(f"[REST] ✓ Fresh trade ${value:,.0f} ({blockchain_age:.1f}s old on-chain)", flush=True)
+    
+    # Check bot ready state
+    if not bot.is_ready():
+        return
+    
+    # Process directly - bypass handle_websocket_trade's timestamp check
+    # The blockchain check above is more reliable than the API timestamp check
+    
+    # Mark the trade as coming from REST (for internal tracking)
+    trade['_from_rest'] = True
+    
+    # Now call the main handler but it will skip the timestamp check due to _from_rest flag
+    await handle_websocket_trade(trade)
+
+
+@tasks.loop(seconds=REST_POLLING_INTERVAL)
+async def rest_polling_loop():
+    """Poll REST API for recent trades instead of WebSocket."""
+    global _rest_seen_tx_hashes, _rest_stats
+    
+    try:
+        trades = await polymarket_client.get_recent_trades(limit=50)
+        if not trades:
+            return
+        
+        _rest_stats['polls'] += 1
+        new_trades = 0
+        
+        for trade in trades:
+            tx_hash = trade.get('transactionHash', '')
+            if not tx_hash or tx_hash in _rest_seen_tx_hashes:
+                continue
+            
+            _rest_seen_tx_hashes.add(tx_hash)
+            new_trades += 1
+            
+            # Process the trade
+            try:
+                await handle_rest_trade(trade)
+            except Exception as e:
+                print(f"[REST] Error processing trade: {e}", flush=True)
+        
+        _rest_stats['trades_processed'] += new_trades
+        
+        # Log stats every 20 polls (~50 seconds)
+        if _rest_stats['polls'] % 20 == 0:
+            print(f"[REST] Polls: {_rest_stats['polls']}, Trades: {_rest_stats['trades_processed']}, Cache: {len(_rest_seen_tx_hashes)}", flush=True)
+            
+            # Prune old tx hashes to prevent memory bloat (keep last 10000)
+            if len(_rest_seen_tx_hashes) > 10000:
+                _rest_seen_tx_hashes = set(list(_rest_seen_tx_hashes)[-5000:])
+        
+    except Exception as e:
+        print(f"[REST] Polling error: {e}", flush=True)
+
+
+@rest_polling_loop.before_loop
+async def before_rest_polling():
+    await bot.wait_until_ready()
+    print("[REST] REST API polling started (replacing WebSocket)", flush=True)
 
 
 @setup.error
