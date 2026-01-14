@@ -177,8 +177,8 @@ class PolymarketClient:
         self._rest_api_latest_timestamp: float = 0  # Latest trade timestamp from REST API
         self._ws_latest_timestamp: float = 0  # Latest trade timestamp from WebSocket
         self._ws_lag_seconds: float = 0  # Calculated lag (REST - WS)
-        self._ws_lag_warning_threshold: float = 30  # Warn if lag > 30 seconds
-        self._ws_lag_critical_threshold: float = 60  # Critical if lag > 60 seconds
+        self._ws_lag_warning_threshold: float = 1800  # Warn if lag > 30 minutes
+        self._ws_lag_critical_threshold: float = 2700  # Critical if lag > 45 minutes
         self._alerts_paused_for_lag: bool = False  # Pause alerts if lag is critical
     
     async def ensure_session(self):
