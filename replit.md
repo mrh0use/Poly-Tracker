@@ -22,7 +22,7 @@ The bot is built around a modular architecture comprising a main Discord bot han
     - **Sports/Esports Alerts:** Dedicated channel for sports-related market activity (default $5k+).
     - **Bonds Alerts:** For high-certainty markets (>=95% price, $5k+).
 - **Filtering:** Excludes sell transactions above 99% (position closures) and focuses on BUY transactions for most alerts.
-- **Data Enrichment:** Alerts include trader's lifetime PnL, rank, and cash balance for tracked wallets.
+- **Data Enrichment:** Alerts include trader's **realized PnL** (total PnL minus unrealized gains from open positions), rank, and cash balance for tracked wallets.
 - **Interactive Elements:** Alerts feature clickable links to Polymarket and "Trade via Onsight" buttons.
 - **Configuration:**
     - **Per-Server Settings:** Each Discord server maintains its own configuration for alert channels, thresholds, and tracking.
