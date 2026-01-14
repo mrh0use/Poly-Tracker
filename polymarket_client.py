@@ -1719,11 +1719,27 @@ class PolymarketWebSocket:
             size = float(payload.get('size', 0) or 0)
             price = float(payload.get('price', 0) or 0)
             
-            # Use message-level timestamp (milliseconds) or fall back to payload timestamp
-            timestamp = msg_timestamp or payload.get('timestamp', 0)
-            # Convert milliseconds to seconds if needed
-            if timestamp > 1e12:
-                timestamp = timestamp / 1000
+            # CRITICAL: Use payload's match_time or timestamp FIRST - this is the actual trade execution time
+            # msg_timestamp is when WS broadcast the message, NOT when trade happened
+            # Polymarket docs: payload.match_time and payload.timestamp are in SECONDS
+            payload_match_time = payload.get('match_time') or payload.get('matchTime')
+            payload_timestamp = payload.get('timestamp')
+            
+            # Prefer match_time (actual execution time), then payload timestamp, then msg_timestamp as last resort
+            if payload_match_time:
+                # match_time is in seconds (string or int)
+                timestamp = float(payload_match_time)
+            elif payload_timestamp:
+                # payload timestamp is in seconds
+                timestamp = float(payload_timestamp)
+                # But if it looks like milliseconds, convert
+                if timestamp > 1e12:
+                    timestamp = timestamp / 1000
+            elif msg_timestamp:
+                # Fallback to message-level timestamp (milliseconds)
+                timestamp = msg_timestamp / 1000 if msg_timestamp > 1e12 else msg_timestamp
+            else:
+                timestamp = 0
             
             return {
                 'proxyWallet': payload.get('proxyWallet', ''),
