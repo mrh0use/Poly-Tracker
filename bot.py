@@ -2228,6 +2228,9 @@ async def handle_websocket_trade(trade: dict):
                 if alert:
                     if should_skip_volatility_category(asset_id, config.volatility_blacklist or "", market_title, slug):
                         continue
+                    if polymarket_client.is_market_ended(asset_id, alert.get('title', '')):
+                        print(f"[VOLATILITY] ✗ Skipped ended market: {alert.get('title', '')[:40]}...", flush=True)
+                        continue
                     try:
                         session = get_session()
                         cooldown_time = datetime.utcnow() - timedelta(minutes=15)

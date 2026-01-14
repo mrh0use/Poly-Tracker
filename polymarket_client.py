@@ -322,6 +322,8 @@ class PolymarketClient:
                                 'groupSlug': market.get('groupSlug', ''),
                                 'eventSlug': event_slug,
                                 'marketId': market.get('id', ''),
+                                'endDate': market.get('endDate', ''),
+                                'closed': market.get('closed', False),
                             }
                         tokens = market.get('tokens', [])
                         for token in tokens:
@@ -334,6 +336,8 @@ class PolymarketClient:
                                     'groupSlug': market.get('groupSlug', ''),
                                     'eventSlug': event_slug,
                                     'marketId': market.get('id', ''),
+                                    'endDate': market.get('endDate', ''),
+                                    'closed': market.get('closed', False),
                                 }
                         
                         clob_token_ids_raw = market.get('clobTokenIds', [])
@@ -354,6 +358,8 @@ class PolymarketClient:
                                     'groupSlug': market.get('groupSlug', ''),
                                     'eventSlug': event_slug,
                                     'marketId': market.get('id', ''),
+                                    'endDate': market.get('endDate', ''),
+                                    'closed': market.get('closed', False),
                                 }
                     self._cache_last_updated = now
                     print(f"Market cache refreshed: {len(self._market_cache)} entries")
@@ -470,6 +476,89 @@ class PolymarketClient:
                     break
         
         return categories
+    
+    def is_market_ended(self, asset_id: str, title_override: str = "") -> bool:
+        """
+        Check if a market has ended based on title parsing for short-window markets,
+        or endDate for regular markets.
+        Returns True if the market is closed or its trading window has passed.
+        """
+        import re
+        from datetime import timezone
+        
+        market_info = self._market_cache.get(asset_id, {})
+        
+        if market_info.get('closed', False):
+            return True
+        
+        title = title_override or market_info.get('title', '')
+        
+        if 'up or down' in title.lower():
+            now_utc = datetime.now(timezone.utc)
+            title_lower = title.lower()
+            
+            date_pattern = re.search(r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})', title_lower)
+            if date_pattern:
+                month_str = date_pattern.group(1)
+                day_num = int(date_pattern.group(2))
+                
+                month_map = {'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+                             'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12}
+                month_num = month_map.get(month_str, 0)
+                
+                is_today = (now_utc.month == month_num and now_utc.day == day_num)
+            else:
+                is_today = False
+            
+            if is_today:
+                try:
+                    from zoneinfo import ZoneInfo
+                except ImportError:
+                    from backports.zoneinfo import ZoneInfo
+                
+                eastern = ZoneInfo('America/New_York')
+                now_et = now_utc.astimezone(eastern)
+                
+                range_match = re.search(r'(\d{1,2}):?(\d{2})?(am|pm)\s*-\s*(\d{1,2}):?(\d{2})?(am|pm)\s*(et|est)', title_lower)
+                if range_match:
+                    end_hour = int(range_match.group(4))
+                    end_min = int(range_match.group(5) or 0)
+                    end_ampm = range_match.group(6)
+                    
+                    if end_ampm == 'pm' and end_hour != 12:
+                        end_hour += 12
+                    elif end_ampm == 'am' and end_hour == 12:
+                        end_hour = 0
+                    
+                    if now_et.hour > end_hour or (now_et.hour == end_hour and now_et.minute >= end_min):
+                        return True
+                
+                else:
+                    time_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s*(et|est)', title_lower)
+                    if time_match:
+                        hour = int(time_match.group(1))
+                        minute = int(time_match.group(2) or 0)
+                        ampm = time_match.group(3)
+                        
+                        if ampm == 'pm' and hour != 12:
+                            hour += 12
+                        elif ampm == 'am' and hour == 12:
+                            hour = 0
+                        
+                        if now_et.hour > hour or (now_et.hour == hour and now_et.minute >= minute):
+                            return True
+        
+        end_date_str = market_info.get('endDate', '')
+        if end_date_str:
+            try:
+                end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+                now = datetime.now(end_date.tzinfo) if end_date.tzinfo else datetime.utcnow()
+                if now > end_date:
+                    return True
+            except (ValueError, TypeError):
+                pass
+        
+        return False
     
     def is_sports_market(self, trade_or_event: Dict[str, Any]) -> bool:
         """
