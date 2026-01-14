@@ -310,31 +310,6 @@ class VWAPVolatilityTracker:
         
         return None
     
-    def _get_oldest_price_in_window(self, asset_id: str, window_minutes: int) -> Optional[float]:
-        """
-        Get the price from the oldest bucket within a time window.
-        This is the starting price for volatility calculation (non-overlapping).
-        """
-        if asset_id not in self._assets:
-            return None
-        
-        now = datetime.utcnow()
-        buckets = self._assets[asset_id]['buckets']
-        
-        # Look for the oldest bucket within the window (from window_minutes-1 down to window_minutes-3)
-        # We check a few buckets in case some minutes have no trades
-        for offset in range(window_minutes - 1, max(0, window_minutes - 4), -1):
-            target_time = now - timedelta(minutes=offset)
-            minute_key = self._get_minute_key(target_time)
-            
-            if minute_key in buckets:
-                b = buckets[minute_key]
-                if b['volume'] > 0:
-                    # Return the VWAP for that oldest bucket (most accurate price for that minute)
-                    return b['price_x_volume'] / b['volume']
-        
-        return None
-    
     def check_volatility(self, asset_id: str, guild_id: int, 
                          threshold_pct: float = 5.0) -> Optional[dict]:
         """
@@ -371,15 +346,16 @@ class VWAPVolatilityTracker:
             if not window_stats:
                 continue
             
-            # Get the starting price from the oldest bucket in the window (non-overlapping)
-            old_price = self._get_oldest_price_in_window(asset_id, window_minutes)
-            if not old_price:
+            old_stats = self._get_vwap_for_window(asset_id, window_minutes + 5)
+            if not old_stats:
                 continue
             
-            if old_price <= 0.02 or old_price >= 0.98:
+            old_vwap = old_stats['vwap']
+            
+            if old_vwap <= 0.02 or old_vwap >= 0.98:
                 continue
             
-            price_change = (current_vwap - old_price) * 100
+            price_change = (current_vwap - old_vwap) * 100
             
             if abs(price_change) < threshold_pct:
                 continue
@@ -413,7 +389,7 @@ class VWAPVolatilityTracker:
                 'asset_id': asset_id,
                 'title': metadata.get('title', 'Unknown Market'),
                 'slug': metadata.get('slug', ''),
-                'old_price': old_price,
+                'old_price': old_vwap,
                 'new_price': current_vwap,
                 'price_change_pct': price_change,
                 'time_window_minutes': window_minutes,
@@ -512,7 +488,7 @@ class PolymarketBot(commands.Bot):
             all_configs = session.query(ServerConfig).all()
             print(f"[STARTUP] Found {len(all_configs)} server configs:", flush=True)
             for c in all_configs:
-                print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 1000:,.0f}, sports=${c.sports_threshold or 3000:,.0f}, paused={c.is_paused}", flush=True)
+                print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 10000:,.0f}, sports=${c.sports_threshold or 5000:,.0f}, paused={c.is_paused}", flush=True)
         finally:
             session.close()
     
@@ -984,13 +960,13 @@ async def list_settings(interaction: discord.Interaction):
             volatility_channel_name=volatility_channel_name,
             volatility_threshold=config.volatility_threshold or 5.0,
             sports_channel_name=sports_channel_name,
-            sports_threshold=config.sports_threshold or 3000.0,
+            sports_threshold=config.sports_threshold or 5000.0,
             wallet_stats=wallet_stats,
             whale_channel_name=whale_channel_name,
             fresh_wallet_channel_name=fresh_wallet_channel_name,
             tracked_wallet_channel_name=tracked_wallet_channel_name,
             top_trader_channel_name=top_trader_channel_name,
-            top_trader_threshold=config.top_trader_threshold or 3000.0,
+            top_trader_threshold=config.top_trader_threshold or 2500.0,
             bonds_channel_name=bonds_channel_name,
             volatility_blacklist=config.volatility_blacklist or ""
         )
@@ -1158,7 +1134,7 @@ async def sports_threshold(interaction: discord.Interaction, amount: float):
 
 
 @bot.tree.command(name="fresh_wallet_threshold", description="Set the minimum USD value for fresh wallet alerts")
-@app_commands.describe(amount="Minimum USD value for fresh wallet alerts (e.g., 1000)")
+@app_commands.describe(amount="Minimum USD value for fresh wallet alerts (e.g., 10000)")
 @app_commands.checks.has_permissions(administrator=True)
 async def fresh_wallet_threshold_cmd(interaction: discord.Interaction, amount: float):
     if amount < 100:
@@ -1631,7 +1607,7 @@ async def help_command(interaction: discord.Interaction):
         value=(
             "`/threshold` - Whale alerts ($10k)\n"
             "`/sports_threshold` - Sports ($5k)\n"
-            "`/fresh_wallet_threshold` - Fresh wallets ($1k)\n"
+            "`/fresh_wallet_threshold` - Fresh wallets ($10k)\n"
             "`/top_trader_threshold` - Top 25 ($2.5k)\n"
             "`/volatility_threshold` - Price swing (5pts)\n"
             "`/volatility_blacklist` - Exclude categories"
@@ -1830,17 +1806,14 @@ async def monitor_loop():
                 if side == 'sell':
                     continue
                 
-                # Get trade timestamp early - needed for fresh wallet check
-                trade_timestamp = trade.get('timestamp', 0)
-                
                 is_fresh = False
                 if wallet not in processed_wallets_this_batch:
                     wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
                     if wallet_activity is None:
                         try:
                             has_history = await asyncio.wait_for(
-                                polymarket_client.has_prior_activity(wallet, value),
-                                timeout=3.0
+                                polymarket_client.has_prior_activity(wallet),
+                                timeout=2.0
                             )
                         except asyncio.TimeoutError:
                             has_history = True  # Assume not fresh if timeout
@@ -1860,6 +1833,7 @@ async def monitor_loop():
                     market_id = await polymarket_client.get_market_id_async(trade)
                     button_view = create_trade_button_view(market_id, market_url)
                     
+                    trade_timestamp = trade.get('timestamp', 0)
                     trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
                     
                     def is_trade_after_tracking(trade_dt, added_dt):
@@ -1895,7 +1869,7 @@ async def monitor_loop():
                                 wallet_address=wallet,
                                 wallet_label=tw.label,
                                 market_url=market_url,
-                                pnl=wallet_stats.get('realized_pnl'),
+                                pnl=wallet_stats.get('pnl'),
                                 volume=wallet_stats.get('volume'),
                                 rank=wallet_stats.get('rank')
                             )
@@ -1946,7 +1920,7 @@ async def monitor_loop():
                         if sports_channel:
                             if wallet in tracked_addresses:
                                 pass
-                            elif is_fresh and value >= (config.sports_threshold or 3000.0):
+                            elif is_fresh and value >= (config.sports_threshold or 5000.0):
                                 print(f"[MONITOR] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                                 try:
                                     wallet_stats = await asyncio.wait_for(
@@ -1962,7 +1936,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('realized_pnl'),
+                                    pnl=wallet_stats.get('pnl'),
                                     rank=wallet_stats.get('rank'),
                                     is_sports=True
                                 )
@@ -1977,7 +1951,7 @@ async def monitor_loop():
                                     print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
                                     print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
-                            elif value >= (config.sports_threshold or 3000.0):
+                            elif value >= (config.sports_threshold or 5000.0):
                                 print(f"[MONITOR] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                                 try:
                                     wallet_stats = await asyncio.wait_for(
@@ -1993,7 +1967,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('realized_pnl'),
+                                    pnl=wallet_stats.get('pnl'),
                                     rank=wallet_stats.get('rank'),
                                     is_sports=True
                                 )
@@ -2057,7 +2031,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('realized_pnl'),
+                                    pnl=wallet_stats.get('pnl'),
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
@@ -2075,7 +2049,7 @@ async def monitor_loop():
                             else:
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                         
-                        elif is_fresh and value >= (config.fresh_wallet_threshold or 1000.0) and not is_bond:
+                        elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                             print(f"[MONITOR] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                             fresh_channel = await get_or_fetch_channel(fresh_channel_id)
@@ -2095,7 +2069,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('realized_pnl'),
+                                    pnl=wallet_stats.get('pnl'),
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
@@ -2133,7 +2107,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('realized_pnl'),
+                                    pnl=wallet_stats.get('pnl'),
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
@@ -2216,57 +2190,10 @@ async def before_cleanup():
 
 
 
-_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_skipped': 0, 'no_matchtime': 0, 'matchtime_samples': []}
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
-    
-    # STALENESS FILTER: Use matchtime (actual trade execution time), not timestamp (RTDS processing time)
-    # matchtime is the actual on-chain execution time, timestamp is when RTDS received it
-    match_time = trade.get('match_time') or trade.get('matchtime') or trade.get('matchTime', 0)
-    
-    # Debug: Log matchtime samples to understand the format (check first 5 trades)
-    if len(_ws_stats['matchtime_samples']) < 5:
-        _ws_stats['matchtime_samples'].append(match_time)
-        if len(_ws_stats['matchtime_samples']) == 5:
-            print(f"[WS DEBUG] Matchtime samples from RTDS: {_ws_stats['matchtime_samples']}", flush=True)
-    
-    # Also log periodic age checks to verify staleness detection is working
-    if _ws_stats['processed'] > 0 and _ws_stats['processed'] % 2000 == 0 and match_time:
-        try:
-            mt = int(match_time)
-            if mt > 1000000000000:
-                mt = mt / 1000
-            age = time.time() - mt
-            print(f"[WS DEBUG] Trade #{_ws_stats['processed']} age check: matchtime={match_time}, age={age:.0f}s", flush=True)
-        except:
-            pass
-    
-    if not match_time:
-        _ws_stats['no_matchtime'] += 1
-        if _ws_stats['no_matchtime'] % 1000 == 1:
-            print(f"[WS] Warning: Trade has no matchtime (count: {_ws_stats['no_matchtime']})", flush=True)
-    else:
-        try:
-            trade_ts = int(match_time)
-            # Handle both seconds and milliseconds timestamps
-            if trade_ts > 1000000000000:  # Milliseconds
-                trade_ts = trade_ts / 1000
-            now_ts = time.time()
-            age_seconds = now_ts - trade_ts
-            
-            # Debug log for first few large age trades
-            if age_seconds > 30 and _ws_stats['stale_skipped'] < 10:
-                print(f"[WS DEBUG] Stale trade detected: matchtime={match_time}, age={age_seconds:.0f}s", flush=True)
-            
-            if age_seconds > 30:
-                # Skip stale trades (from backlog) - count them
-                _ws_stats['stale_skipped'] += 1
-                if _ws_stats['stale_skipped'] % 100 == 1:
-                    print(f"[WS] Skipping stale trade (age={age_seconds:.0f}s) - total stale skipped: {_ws_stats['stale_skipped']}", flush=True)
-                return
-        except (ValueError, TypeError) as e:
-            print(f"[WS DEBUG] Matchtime parse error: {e}, value={match_time}", flush=True)
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
@@ -2299,9 +2226,6 @@ async def handle_websocket_trade(trade: dict):
                 if alert:
                     if should_skip_volatility_category(asset_id, config.volatility_blacklist or "", market_title, slug):
                         continue
-                    if polymarket_client.is_market_ended(asset_id, alert.get('title', '')):
-                        print(f"[VOLATILITY] ✗ Skipped ended market: {alert.get('title', '')[:40]}...", flush=True)
-                        continue
                     try:
                         session = get_session()
                         cooldown_time = datetime.utcnow() - timedelta(minutes=15)
@@ -2329,7 +2253,7 @@ async def handle_websocket_trade(trade: dict):
                                     trade_count=alert['trade_count']
                                 )
                                 
-                                market_id = await polymarket_client.get_market_id_by_slug(alert['slug'])
+                                market_id = await polymarket_client.get_market_id_async({'asset': asset_id, 'conditionId': asset_id})
                                 button_view = create_trade_button_view(market_id, market_url)
                                 
                                 try:
@@ -2416,13 +2340,6 @@ async def handle_websocket_trade(trade: dict):
         is_sports = polymarket_client.is_sports_market(trade)
         is_bond = price >= 0.95
         
-        # Get trade timestamp early - needed for fresh wallet check
-        trade_timestamp = trade.get('timestamp', 0)
-        
-        # Log for debugging trade routing
-        if value >= 5000:
-            print(f"[WS] Trade routing: ${value:,.0f} | is_sports={is_sports} | is_bond={is_bond} | market={market_title[:50]}...", flush=True)
-        
         all_configs = get_cached_server_configs()
         configs = [c for c in all_configs if not c.is_paused]
         configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id or c.top_trader_channel_id or c.bonds_channel_id or c.tracked_wallet_channel_id or c.whale_channel_id or c.fresh_wallet_channel_id]
@@ -2433,21 +2350,16 @@ async def handle_websocket_trade(trade: dict):
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
         if wallet_activity is None:
-            print(f"[FRESH] New wallet detected: {wallet[:10]}... checking for prior activity", flush=True)
             try:
                 has_history = await asyncio.wait_for(
-                    polymarket_client.has_prior_activity(wallet, value),
-                    timeout=3.0
+                    polymarket_client.has_prior_activity(wallet),
+                    timeout=2.0
                 )
-                print(f"[FRESH] API result for {wallet[:10]}...: has_history={has_history}", flush=True)
             except asyncio.TimeoutError:
                 has_history = True  # Assume not fresh if timeout
-                print(f"[FRESH] Activity check timeout for {wallet[:10]}..., assuming not fresh", flush=True)
+                print(f"[WS] Activity check timeout for {wallet[:10]}...", flush=True)
             if has_history is False:
                 is_fresh = True
-                print(f"[FRESH] ✓ CONFIRMED FRESH WALLET: {wallet[:10]}... value=${value:,.0f} | is_bond={is_bond} | price={price:.2f}", flush=True)
-            elif has_history is None:
-                print(f"[FRESH] API error for {wallet[:10]}..., assuming not fresh", flush=True)
             session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
             session.commit()
         else:
@@ -2471,6 +2383,7 @@ async def handle_websocket_trade(trade: dict):
         if top_trader_info:
             print(f"[WS] TOP TRADER DETECTED: {wallet[:10]}... ${value:,.0f} - Rank #{top_trader_info.get('rank')} ({top_trader_info.get('username', 'Unknown')})", flush=True)
         
+        trade_timestamp = trade.get('timestamp', 0)
         trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
         
         def is_trade_after_tracking(trade_dt, added_dt):
@@ -2509,7 +2422,7 @@ async def handle_websocket_trade(trade: dict):
                         wallet_address=wallet,
                         wallet_label=tw.label,
                         market_url=market_url,
-                        pnl=wallet_stats.get('realized_pnl'),
+                        pnl=wallet_stats.get('pnl'),
                         volume=wallet_stats.get('volume'),
                         rank=wallet_stats.get('rank')
                     )
@@ -2529,7 +2442,7 @@ async def handle_websocket_trade(trade: dict):
                     print(f"[WS] ✗ CHANNEL IS NONE - cannot send tracked wallet alert to {tracked_channel_id}", flush=True)
             
             if is_sports:
-                top_trader_threshold = config.top_trader_threshold or 3000.0
+                top_trader_threshold = config.top_trader_threshold or 2500.0
                 sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
@@ -2567,7 +2480,7 @@ async def handle_websocket_trade(trade: dict):
                 if sports_channel:
                     if wallet in tracked_addresses:
                         pass
-                    elif is_fresh and value >= (config.sports_threshold or 3000.0):
+                    elif is_fresh and value >= (config.sports_threshold or 5000.0):
                         print(f"[WS] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                         try:
                             wallet_stats = await asyncio.wait_for(
@@ -2583,7 +2496,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('realized_pnl'),
+                            pnl=wallet_stats.get('pnl'),
                             rank=wallet_stats.get('rank'),
                             is_sports=True
                         )
@@ -2599,7 +2512,7 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
-                    elif value >= (config.sports_threshold or 3000.0):
+                    elif value >= (config.sports_threshold or 5000.0):
                         print(f"[WS] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                         try:
                             wallet_stats = await asyncio.wait_for(
@@ -2615,7 +2528,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('realized_pnl'),
+                            pnl=wallet_stats.get('pnl'),
                             rank=wallet_stats.get('rank'),
                             is_sports=True
                         )
@@ -2632,7 +2545,7 @@ async def handle_websocket_trade(trade: dict):
                         except Exception as e:
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
             else:
-                top_trader_threshold = config.top_trader_threshold or 3000.0
+                top_trader_threshold = config.top_trader_threshold or 2500.0
                 sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
@@ -2686,7 +2599,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('realized_pnl'),
+                            pnl=wallet_stats.get('pnl'),
                             rank=wallet_stats.get('rank')
                         )
                         try:
@@ -2704,7 +2617,7 @@ async def handle_websocket_trade(trade: dict):
                     else:
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send bonds alert to {config.bonds_channel_id}", flush=True)
                 
-                if is_fresh and value >= (config.fresh_wallet_threshold or 1000.0) and not is_bond:
+                if is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                     fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
                     print(f"[WS] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
                     fresh_channel = await get_or_fetch_channel(fresh_channel_id)
@@ -2724,7 +2637,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('realized_pnl'),
+                            pnl=wallet_stats.get('pnl'),
                             rank=wallet_stats.get('rank')
                         )
                         try:
@@ -2763,7 +2676,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('realized_pnl'),
+                            pnl=wallet_stats.get('pnl'),
                             rank=wallet_stats.get('rank')
                         )
                         try:

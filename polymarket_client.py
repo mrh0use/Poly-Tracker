@@ -68,32 +68,6 @@ class PolymarketClient:
         'map 1 winner', 'map 2 winner', 'map 3 winner', 'map winner',
         'bayer leverkusen', 'bayer 04 leverkusen', 'vfb stuttgart', 'rb leipzig',
         'eintracht frankfurt', 'sc freiburg', 'union berlin', 'werder bremen',
-        # Additional Bundesliga teams (CRITICAL - many were missing)
-        'vfl wolfsburg', 'wolfsburg', 'fc st. pauli', 'st. pauli', 'st pauli', 'fc st pauli',
-        'fsv mainz', 'mainz 05', 'fc augsburg', 'augsburg', 'tsg hoffenheim', 'hoffenheim',
-        'borussia monchengladbach', 'monchengladbach', 'gladbach', 'fc heidenheim', 'heidenheim',
-        'holstein kiel', 'vfl bochum', 'bochum',
-        # Additional La Liga teams
-        'real betis', 'celta vigo', 'girona fc', 'getafe cf', 'osasuna', 'rayo vallecano',
-        'deportivo alaves', 'espanyol', 'real valladolid', 'las palmas', 'leganes',
-        # Additional Serie A teams
-        'as roma', 'roma', 'atalanta', 'lazio', 'fiorentina', 'torino fc', 'genoa',
-        'bologna fc', 'udinese', 'empoli', 'cagliari', 'parma calcio', 'parma', 'como',
-        'hellas verona', 'venezia fc', 'lecce', 'monza',
-        # Additional Ligue 1 teams  
-        'olympique marseille', 'marseille', 'monaco', 'as monaco', 'olympique lyon', 'lyon',
-        'lille', 'losc lille', 'lens', 'rc lens', 'nice', 'ogc nice', 'rennes', 'stade rennais',
-        'strasbourg', 'toulouse', 'nantes', 'fc nantes', 'montpellier', 'brest', 'stade brestois',
-        'reims', 'angers', 'auxerre', 'le havre', 'saint-etienne',
-        # Portuguese Liga
-        'sporting cp', 'sporting lisbon', 'braga', 'vitoria guimaraes',
-        # Dutch Eredivisie
-        'psv eindhoven', 'psv', 'feyenoord', 'az alkmaar', 'fc twente', 'utrecht',
-        # Belgian Pro League
-        'club brugge', 'anderlecht', 'union saint-gilloise', 'gent', 'genk',
-        # African Cup of Nations teams (AFCON)
-        'senegal', 'egypt', 'morocco', 'nigeria', 'cameroon', 'ghana', 'ivory coast',
-        'algeria', 'tunisia', 'south africa', 'afcon',
         'kansas jayhawks', 'west virginia mountaineers', 'duke blue devils',
         'kentucky wildcats', 'north carolina tar heels', 'purdue boilermakers',
         'nba trade', 'nfl trade', 'mlb trade', 'nhl trade',
@@ -151,10 +125,6 @@ class PolymarketClient:
         'jake paul', 'mike tyson', 'canelo alvarez', 'tyson fury', 'oleksandr usyk',
         'anthony joshua', 'conor mcgregor', 'jon jones', 'israel adesanya', 'alex pereira',
         'sean strickland', 'ufc fight', 'boxing match',
-        # Sports market patterns (common in Polymarket sports market titles)
-        'o/u 2.5', 'o/u 3.5', 'o/u 1.5', 'o/u 0.5', 'total 2', 'total 3', 'total goals',
-        'btts', 'both teams to score', 'will win on', 'will win vs',
-        'match winner', 'game winner', 'outright winner', 'to win', 'to beat',
     ]
     
     CRYPTO_KEYWORDS = [
@@ -352,8 +322,6 @@ class PolymarketClient:
                                 'groupSlug': market.get('groupSlug', ''),
                                 'eventSlug': event_slug,
                                 'marketId': market.get('id', ''),
-                                'endDate': market.get('endDate', ''),
-                                'closed': market.get('closed', False),
                             }
                         tokens = market.get('tokens', [])
                         for token in tokens:
@@ -366,8 +334,6 @@ class PolymarketClient:
                                     'groupSlug': market.get('groupSlug', ''),
                                     'eventSlug': event_slug,
                                     'marketId': market.get('id', ''),
-                                    'endDate': market.get('endDate', ''),
-                                    'closed': market.get('closed', False),
                                 }
                         
                         clob_token_ids_raw = market.get('clobTokenIds', [])
@@ -388,8 +354,6 @@ class PolymarketClient:
                                     'groupSlug': market.get('groupSlug', ''),
                                     'eventSlug': event_slug,
                                     'marketId': market.get('id', ''),
-                                    'endDate': market.get('endDate', ''),
-                                    'closed': market.get('closed', False),
                                 }
                     self._cache_last_updated = now
                     print(f"Market cache refreshed: {len(self._market_cache)} entries")
@@ -506,89 +470,6 @@ class PolymarketClient:
                     break
         
         return categories
-    
-    def is_market_ended(self, asset_id: str, title_override: str = "") -> bool:
-        """
-        Check if a market has ended based on title parsing for short-window markets,
-        or endDate for regular markets.
-        Returns True if the market is closed or its trading window has passed.
-        """
-        import re
-        from datetime import timezone
-        
-        market_info = self._market_cache.get(asset_id, {})
-        
-        if market_info.get('closed', False):
-            return True
-        
-        title = title_override or market_info.get('title', '')
-        
-        if 'up or down' in title.lower():
-            now_utc = datetime.now(timezone.utc)
-            title_lower = title.lower()
-            
-            date_pattern = re.search(r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})', title_lower)
-            if date_pattern:
-                month_str = date_pattern.group(1)
-                day_num = int(date_pattern.group(2))
-                
-                month_map = {'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
-                             'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12}
-                month_num = month_map.get(month_str, 0)
-                
-                is_today = (now_utc.month == month_num and now_utc.day == day_num)
-            else:
-                is_today = False
-            
-            if is_today:
-                try:
-                    from zoneinfo import ZoneInfo
-                except ImportError:
-                    from backports.zoneinfo import ZoneInfo
-                
-                eastern = ZoneInfo('America/New_York')
-                now_et = now_utc.astimezone(eastern)
-                
-                range_match = re.search(r'(\d{1,2}):?(\d{2})?(am|pm)\s*-\s*(\d{1,2}):?(\d{2})?(am|pm)\s*(et|est)', title_lower)
-                if range_match:
-                    end_hour = int(range_match.group(4))
-                    end_min = int(range_match.group(5) or 0)
-                    end_ampm = range_match.group(6)
-                    
-                    if end_ampm == 'pm' and end_hour != 12:
-                        end_hour += 12
-                    elif end_ampm == 'am' and end_hour == 12:
-                        end_hour = 0
-                    
-                    if now_et.hour > end_hour or (now_et.hour == end_hour and now_et.minute >= end_min):
-                        return True
-                
-                else:
-                    time_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s*(et|est)', title_lower)
-                    if time_match:
-                        hour = int(time_match.group(1))
-                        minute = int(time_match.group(2) or 0)
-                        ampm = time_match.group(3)
-                        
-                        if ampm == 'pm' and hour != 12:
-                            hour += 12
-                        elif ampm == 'am' and hour == 12:
-                            hour = 0
-                        
-                        if now_et.hour > hour or (now_et.hour == hour and now_et.minute >= minute):
-                            return True
-        
-        end_date_str = market_info.get('endDate', '')
-        if end_date_str:
-            try:
-                end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
-                now = datetime.now(end_date.tzinfo) if end_date.tzinfo else datetime.utcnow()
-                if now > end_date:
-                    return True
-            except (ValueError, TypeError):
-                pass
-        
-        return False
     
     def is_sports_market(self, trade_or_event: Dict[str, Any]) -> bool:
         """
@@ -841,127 +722,31 @@ class PolymarketClient:
         
         return all_closed
     
-    async def has_prior_activity(self, wallet_address: str, current_trade_value: float = 0) -> Optional[bool]:
-        """
-        Check if wallet has prior trading activity using Data API.
-        
-        A wallet is FRESH (no prior activity) if they have zero prior on-chain trades,
-        or if their only trade is the current trade being processed.
-        
-        Args:
-            wallet_address: The wallet address to check
-            current_trade_value: The USD value of the current trade being processed
-        
-        Returns:
-            True = Has prior activity (NOT fresh)
-            False = No prior activity (IS fresh)
-            None = Error occurred
-        """
+    async def has_prior_activity(self, wallet_address: str) -> Optional[bool]:
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
-        # Check cache first (5 min TTL) - only for wallets with confirmed history
-        # We intentionally don't cache fresh wallets because they become non-fresh on their next trade
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
-            if last_updated and (now - last_updated).total_seconds() < 300:
-                cached = self._wallet_history_cache[wallet_lower]
-                if cached:  # Only use cache if wallet has prior activity
-                    print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity=True", flush=True)
-                    return True
+            if last_updated and (now - last_updated).total_seconds() < 3600:
+                return self._wallet_history_cache[wallet_lower]
         
-        # Use Data API /activity endpoint for authoritative on-chain history
-        # This is the ground truth - it queries actual blockchain transactions
         await self.ensure_session()
         try:
-            # Query on-chain activity for this wallet, excluding the current trade timestamp
-            # by looking for any prior TRADE activity
             async with self.session.get(
-                "https://data-api.polymarket.com/activity",
-                params={
-                    "user": wallet_address,
-                    "type": "TRADE",
-                    "limit": 5,  # We only need to know if ANY prior trades exist
-                    "sortBy": "TIMESTAMP",
-                    "sortDirection": "DESC"
-                },
-                timeout=aiohttp.ClientTimeout(total=4)
-            ) as resp:
-                if resp.status == 200:
-                    activities = await resp.json()
-                    
-                    if not activities or len(activities) == 0:
-                        # No trades at all - definitely fresh
-                        print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - No on-chain trades found", flush=True)
-                        return False
-                    
-                    # Check if there's more than one trade, or if the single trade
-                    # is older than a few seconds (meaning it's not the current trade)
-                    if len(activities) > 1:
-                        # Multiple trades = has history
-                        self._wallet_history_cache[wallet_lower] = True
-                        self._wallet_history_updated[wallet_lower] = now
-                        total_volume = sum(float(a.get('usdcSize', 0) or 0) for a in activities)
-                        print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - {len(activities)} on-chain trades, ${total_volume:,.0f} volume", flush=True)
-                        return True
-                    
-                    # Single trade - check if it matches current trade value
-                    if len(activities) == 1:
-                        single_trade = activities[0]
-                        single_value = float(single_trade.get('usdcSize', 0) or 0)
-                        
-                        # Allow tolerance for this being the current trade
-                        if current_trade_value > 0 and abs(single_value - current_trade_value) < 50:
-                            print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - Only on-chain trade matches current (${single_value:,.0f} ~= ${current_trade_value:,.0f})", flush=True)
-                            return False
-                        else:
-                            # Single trade doesn't match current trade - has prior history
-                            self._wallet_history_cache[wallet_lower] = True
-                            self._wallet_history_updated[wallet_lower] = now
-                            print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - Prior on-chain trade ${single_value:,.0f}", flush=True)
-                            return True
-                    
-                    return False
-                        
-                print(f"[FRESH CHECK] Data API error status {resp.status} for {wallet_address[:10]}...", flush=True)
-        except asyncio.TimeoutError:
-            print(f"[FRESH CHECK] Timeout for {wallet_address[:10]}...", flush=True)
-        except Exception as e:
-            print(f"[FRESH CHECK] Exception for {wallet_address[:10]}...: {e}", flush=True)
-        
-        return None
-    
-    async def get_market_id_by_slug(self, slug: str) -> str:
-        """Get the numeric market ID from a market slug for Onsight deep links."""
-        if not slug:
-            return ''
-        
-        # First check the market cache
-        for key, market_info in self._market_cache.items():
-            if market_info.get('slug') == slug:
-                market_id = market_info.get('marketId', '')
-                if market_id:
-                    return str(market_id)
-        
-        # API fallback if not in cache
-        try:
-            await self.ensure_session()
-            async with self.session.get(
-                f"{self.GAMMA_BASE_URL}/markets",
-                params={"slug": slug},
-                timeout=aiohttp.ClientTimeout(total=5)
+                f"{self.DATA_API_BASE_URL}/activity",
+                params={"user": wallet_address, "limit": 1}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    if isinstance(data, list) and len(data) > 0:
-                        market_id = data[0].get('id', '')
-                        if market_id:
-                            print(f"[CACHE] API lookup for slug={slug} -> market_id={market_id}", flush=True)
-                            return str(market_id)
+                    has_history = isinstance(data, list) and len(data) > 0
+                    self._wallet_history_cache[wallet_lower] = has_history
+                    self._wallet_history_updated[wallet_lower] = now
+                    return has_history
+                print(f"Activity API returned status {resp.status} for {wallet_address[:10]}...")
         except Exception as e:
-            print(f"[CACHE] Failed to lookup market_id for slug={slug}: {e}", flush=True)
-        
-        return ''
+            print(f"Error checking wallet activity for {wallet_address}: {e}")
+        return None
     
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
         wallet_lower = wallet_address.lower()
@@ -973,9 +758,8 @@ class PolymarketClient:
                 return self._wallet_stats_cache[wallet_lower]
         
         await self.ensure_session()
-        stats = {'pnl': 0.0, 'realized_pnl': None, 'volume': 0.0, 'rank': None, 'username': None, 'has_open_positions': False}
+        stats = {'pnl': 0.0, 'volume': 0.0, 'rank': None, 'username': None}
         
-        total_pnl = 0.0
         try:
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/v1/leaderboard",
@@ -985,48 +769,14 @@ class PolymarketClient:
                     data = await resp.json()
                     if isinstance(data, list) and len(data) > 0:
                         user_data = data[0]
-                        total_pnl = float(user_data.get('pnl', 0) or 0)
                         stats = {
-                            'pnl': total_pnl,
-                            'realized_pnl': None,
+                            'pnl': float(user_data.get('pnl', 0) or 0),
                             'volume': float(user_data.get('vol', 0) or 0),
                             'rank': user_data.get('rank'),
-                            'username': user_data.get('userName'),
-                            'has_open_positions': False
+                            'username': user_data.get('userName')
                         }
         except Exception as e:
             print(f"Error fetching leaderboard stats for {wallet_address}: {e}")
-        
-        unrealized_pnl = 0.0
-        got_positions = False
-        try:
-            async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/positions",
-                params={"user": wallet_address, "sizeThreshold": "0"},
-                timeout=aiohttp.ClientTimeout(total=5)
-            ) as resp:
-                if resp.status == 200:
-                    positions = await resp.json()
-                    got_positions = True
-                    if isinstance(positions, list) and len(positions) > 0:
-                        stats['has_open_positions'] = True
-                        for pos in positions:
-                            # Unrealized PnL = currentValue - initialValue (what the position is worth now vs what you paid)
-                            # Note: cashPnl is total PnL (realized + unrealized) for that position, NOT what we need
-                            initial_val = float(pos.get('initialValue', 0) or 0)
-                            current_val = float(pos.get('currentValue', 0) or 0)
-                            unrealized_pnl += (current_val - initial_val)
-        except Exception as e:
-            print(f"[PNL] Error fetching positions for {wallet_address[:10]}...: {e}", flush=True)
-        
-        if got_positions:
-            realized = total_pnl - unrealized_pnl
-            stats['realized_pnl'] = realized
-            # Debug: Log when there's a significant discrepancy
-            if abs(total_pnl) > 1000 and abs(realized - total_pnl) > 50000:
-                print(f"[PNL DEBUG] {wallet_address[:10]}...: total={total_pnl:,.0f}, unrealized={unrealized_pnl:,.0f}, realized={realized:,.0f}", flush=True)
-        else:
-            stats['realized_pnl'] = total_pnl
         
         self._wallet_stats_cache[wallet_lower] = stats
         self._wallet_stats_updated[wallet_lower] = now
@@ -1237,6 +987,9 @@ class PolymarketClient:
                     markets = await resp.json()
                     if markets and len(markets) > 0:
                         market = markets[0]
+                        # DEBUG: Log FULL market response
+                        import json
+                        print(f"[CACHE DEBUG FULL] {json.dumps(market)[:800]}", flush=True)
                         
                         # Try multiple possible field names for the ID
                         market_id = market.get('market_id') or market.get('marketId') or market.get('_id') or ''
@@ -1962,12 +1715,6 @@ class PolymarketWebSocket:
             size = float(payload.get('size', 0) or 0)
             price = float(payload.get('price', 0) or 0)
             
-            # Get match_time (actual trade execution time) - try multiple field name variations
-            match_time = (payload.get('match_time') or 
-                         payload.get('matchTime') or 
-                         payload.get('matchtime') or
-                         payload.get('timestamp', 0))
-            
             return {
                 'proxyWallet': payload.get('proxyWallet', ''),
                 'side': payload.get('side', 'BUY'),
@@ -1976,7 +1723,6 @@ class PolymarketWebSocket:
                 'size': size,
                 'price': price,
                 'timestamp': payload.get('timestamp', 0),
-                'match_time': match_time,  # Actual trade execution time
                 'title': payload.get('title', ''),
                 'slug': payload.get('slug', ''),
                 'icon': payload.get('icon', ''),

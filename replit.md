@@ -6,7 +6,7 @@ This project is a Discord bot designed to monitor Polymarket activity and delive
 ## User Preferences
 - Keep Discord interface simple
 - Real-time alerts only (no summaries)
-- Default thresholds: $10k for whale alerts, $1k for fresh wallet alerts, $5k for sports alerts
+- Default thresholds: $10k for whale and fresh wallet alerts, $5k for sports alerts
 
 ## System Architecture
 The bot is built around a modular architecture comprising a main Discord bot handling slash commands and a monitoring loop, a dedicated Polymarket API client, a database layer for persistence, and an alerting module for formatting Discord embeds.
@@ -15,14 +15,14 @@ The bot is built around a modular architecture comprising a main Discord bot han
 - **Real-time Monitoring:** Utilizes Polymarket's RTDS WebSocket for instant trade alerts, with a polling mechanism as a backup.
 - **Alert Types:**
     - **Whale Alerts:** Configurable threshold for large transactions (default $10k+).
-    - **Fresh Wallet Alerts:** Identifies new wallets making their first trades (default $1k+). Uses authoritative Data API (`/activity` endpoint) to check on-chain transaction history for accurate detection (zero prior trades). Excludes bonds markets.
+    - **Fresh Wallet Alerts:** Identifies new wallets making their first trades (default $10k+).
     - **Custom Wallet Tracking:** Monitors activity for specific user-defined wallet addresses.
-    - **Volatility Alerts:** VWAP-based (Volume-Weighted Average Price) detection with volume confirmation. Multi-timeframe (5/15/60-minute windows), alerts on shortest triggering timeframe. Requirements: minimum $2,000 volume, 3+ trades, 1.3x relative volume. Urgency formatting: 🚨 RAPID (5min), ⚡ Fast (15min), 📊 Swing (60min). Per-timeframe cooldowns (15min). 5-minute warm-up period after restart. Tracks both BUYs and SELLs for accurate VWAP calculation. **Market End-Time Detection:** Skips alerts for ended markets by parsing end times from titles (e.g., "Up or Down - January 14, 11:30AM ET") using zoneinfo for proper EST/EDT timezone handling with DST support. **Category Blacklist:** `/volatility_blacklist` command allows excluding specific categories (Politics, Sports, Crypto, Finance, Geopolitics, Earnings, Tech, Culture, World, Economy, Climate & Science, Elections, Mentions) from triggering volatility alerts.
+    - **Volatility Alerts:** VWAP-based (Volume-Weighted Average Price) detection with volume confirmation. Multi-timeframe (5/15/60-minute windows), alerts on shortest triggering timeframe. Requirements: minimum $2,000 volume, 3+ trades, 1.3x relative volume. Urgency formatting: 🚨 RAPID (5min), ⚡ Fast (15min), 📊 Swing (60min). Per-timeframe cooldowns (15min). 5-minute warm-up period after restart. Tracks both BUYs and SELLs for accurate VWAP calculation. **Category Blacklist:** `/volatility_blacklist` command allows excluding specific categories (Politics, Sports, Crypto, Finance, Geopolitics, Earnings, Tech, Culture, World, Economy, Climate & Science, Elections, Mentions) from triggering volatility alerts.
     - **Top Trader Alerts:** Tracks trades from Polymarket's top 25 all-time profit leaders (triggers at $2.5k+, uses on-demand leaderboard lookups with 24-hour negative result caching).
     - **Sports/Esports Alerts:** Dedicated channel for sports-related market activity (default $5k+).
     - **Bonds Alerts:** For high-certainty markets (>=95% price, $5k+).
 - **Filtering:** Excludes sell transactions above 99% (position closures) and focuses on BUY transactions for most alerts.
-- **Data Enrichment:** Alerts include trader's **realized PnL** (total PnL minus unrealized gains from open positions), rank, and cash balance for tracked wallets.
+- **Data Enrichment:** Alerts include trader's lifetime PnL, rank, and cash balance for tracked wallets.
 - **Interactive Elements:** Alerts feature clickable links to Polymarket and "Trade via Onsight" buttons.
 - **Configuration:**
     - **Per-Server Settings:** Each Discord server maintains its own configuration for alert channels, thresholds, and tracking.

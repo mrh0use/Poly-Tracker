@@ -12,7 +12,7 @@ from database import get_session, MarketSlugMapping
 ONSIGHT_BOT_URL = "https://t.me/polysightbot"
 
 
-def format_pnl(pnl: float, label: str = "Realized PnL") -> str:
+def format_pnl(pnl: float) -> str:
     """Format PnL with proper sign placement: -$54 instead of $-54"""
     if pnl >= 0:
         return f"+${pnl:,.0f}"
@@ -118,7 +118,7 @@ def create_bonds_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -196,7 +196,7 @@ def create_whale_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -279,7 +279,7 @@ def create_fresh_wallet_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -363,7 +363,7 @@ def create_custom_wallet_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -444,7 +444,7 @@ def create_top_trader_alert_embed(
         rank = trader_info.get('rank', rank)
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
+        stats_line = f"**{format_pnl(pnl)} PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -696,11 +696,7 @@ def create_settings_embed(
     wallet_stats: Optional[Dict[str, Any]] = None,
     whale_channel_name: Optional[str] = None,
     fresh_wallet_channel_name: Optional[str] = None,
-    tracked_wallet_channel_name: Optional[str] = None,
-    top_trader_channel_name: Optional[str] = None,
-    top_trader_threshold: float = 2500.0,
-    bonds_channel_name: Optional[str] = None,
-    volatility_blacklist: str = ""
+    tracked_wallet_channel_name: Optional[str] = None
 ) -> Embed:
     status = "Paused" if is_paused else "Active"
     status_color = 0xFF6B6B if is_paused else 0x4ECDC4
@@ -719,8 +715,8 @@ def create_settings_embed(
     )
     
     embed.add_field(
-        name="\u200b",
-        value="\u200b",
+        name="Fallback Channel",
+        value=f"#{channel_name}" if channel_name else "Not configured",
         inline=True
     )
     
@@ -762,25 +758,6 @@ def create_settings_embed(
         value=f"#{sports_channel_name} (${sports_threshold:,.0f}+)" if sports_channel_name else "Not configured",
         inline=True
     )
-    
-    embed.add_field(
-        name="Top Trader Alerts",
-        value=f"#{top_trader_channel_name} (${top_trader_threshold:,.0f}+)" if top_trader_channel_name else "Not configured",
-        inline=True
-    )
-    
-    embed.add_field(
-        name="Bonds Alerts",
-        value=f"#{bonds_channel_name}" if bonds_channel_name else "Not configured",
-        inline=True
-    )
-    
-    if volatility_blacklist:
-        embed.add_field(
-            name="Volatility Blacklist",
-            value=volatility_blacklist,
-            inline=True
-        )
     
     embed.add_field(
         name="\u200b",
