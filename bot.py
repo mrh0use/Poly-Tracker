@@ -2255,7 +2255,7 @@ async def handle_websocket_trade(trade: dict):
                                     trade_count=alert['trade_count']
                                 )
                                 
-                                market_id = polymarket_client.get_market_id_by_slug(alert['slug'])
+                                market_id = await polymarket_client.get_market_id_by_slug(alert['slug'])
                                 button_view = create_trade_button_view(market_id, market_url)
                                 
                                 try:

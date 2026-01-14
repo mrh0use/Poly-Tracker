@@ -771,13 +771,13 @@ class PolymarketClient:
                         # The leaderboard includes the current trade immediately.
                         # To check if this is their first trade:
                         # - Subtract the current trade value from total volume
-                        # - If remaining volume is near zero (< $100), this is their first trade
+                        # - If remaining volume is near zero (< $10), this is their first trade
                         # - If remaining volume is significant, they have prior trades
                         
                         if current_trade_value > 0:
-                            # Subtract current trade and allow small tolerance for rounding
+                            # Subtract current trade and allow minimal tolerance for rounding
                             prior_volume = volume - current_trade_value
-                            tolerance = 100  # $100 tolerance for price differences
+                            tolerance = 10  # $10 tolerance for minor price slippage only
                             has_prior = prior_volume > tolerance
                             
                             # Don't cache when using trade-specific logic
@@ -814,17 +814,35 @@ class PolymarketClient:
         
         return None
     
-    def get_market_id_by_slug(self, slug: str) -> str:
+    async def get_market_id_by_slug(self, slug: str) -> str:
         """Get the numeric market ID from a market slug for Onsight deep links."""
         if not slug:
             return ''
         
-        # Search the market cache for a matching slug
+        # First check the market cache
         for key, market_info in self._market_cache.items():
             if market_info.get('slug') == slug:
                 market_id = market_info.get('marketId', '')
                 if market_id:
                     return str(market_id)
+        
+        # API fallback if not in cache
+        try:
+            await self.ensure_session()
+            async with self.session.get(
+                f"{self.GAMMA_API_BASE_URL}/markets",
+                params={"slug": slug},
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        market_id = data[0].get('id', '')
+                        if market_id:
+                            print(f"[CACHE] API lookup for slug={slug} -> market_id={market_id}", flush=True)
+                            return str(market_id)
+        except Exception as e:
+            print(f"[CACHE] Failed to lookup market_id for slug={slug}: {e}", flush=True)
         
         return ''
     
