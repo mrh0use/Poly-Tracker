@@ -504,10 +504,22 @@ class PolymarketBot(commands.Bot):
 bot = PolymarketBot()
 
 
+_invalid_channel_cache = {}  # Cache of invalid channel IDs with expiry
+CHANNEL_CACHE_TTL = 300  # 5 minutes before retrying an invalid channel
+
 async def get_or_fetch_channel(channel_id):
-    """Get channel from cache or fetch from API if not cached."""
+    """Get channel from cache or fetch from API if not cached. Caches invalid channels to avoid spam."""
     if not channel_id:
         return None
+    
+    # Check if this channel was recently found to be invalid
+    if channel_id in _invalid_channel_cache:
+        cached_time = _invalid_channel_cache[channel_id]
+        if time.time() - cached_time < CHANNEL_CACHE_TTL:
+            return None  # Skip silently - we know it's bad
+        else:
+            del _invalid_channel_cache[channel_id]  # Expired, try again
+    
     channel = bot.get_channel(channel_id)
     if channel:
         return channel
@@ -516,10 +528,12 @@ async def get_or_fetch_channel(channel_id):
         print(f"[CHANNEL] Fetched channel {channel_id} from API (was not in cache)", flush=True)
         return channel
     except discord.NotFound:
-        print(f"[CHANNEL] Channel {channel_id} not found", flush=True)
+        _invalid_channel_cache[channel_id] = time.time()
+        print(f"[CHANNEL] Channel {channel_id} not found (cached for {CHANNEL_CACHE_TTL}s)", flush=True)
         return None
     except discord.Forbidden:
-        print(f"[CHANNEL] Bot lacks access to channel {channel_id}", flush=True)
+        _invalid_channel_cache[channel_id] = time.time()
+        print(f"[CHANNEL] Bot lacks access to channel {channel_id} (cached for {CHANNEL_CACHE_TTL}s)", flush=True)
         return None
     except Exception as e:
         print(f"[CHANNEL] Error fetching channel {channel_id}: {e}", flush=True)
@@ -2190,10 +2204,28 @@ async def before_cleanup():
 
 
 
-_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_trades': 0, 'total_received': 0}
+
+STALE_TRADE_THRESHOLD = 60  # Skip trades older than 60 seconds
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
+    
+    _ws_stats['total_received'] += 1
+    
+    trade_timestamp = trade.get('timestamp', 0)
+    if trade_timestamp:
+        current_time = time.time()
+        latency = current_time - trade_timestamp
+        
+        if latency > STALE_TRADE_THRESHOLD:
+            _ws_stats['stale_trades'] += 1
+            if _ws_stats['stale_trades'] <= 5 or _ws_stats['stale_trades'] % 100 == 0:
+                print(f"[WS STALE] Skipping trade {latency:.0f}s old (timestamp: {trade_timestamp}, now: {current_time:.0f})", flush=True)
+            return
+        
+        if _ws_stats['total_received'] % 2000 == 0:
+            print(f"[WS LATENCY] Trade latency: {latency:.1f}s (stale skipped: {_ws_stats['stale_trades']})", flush=True)
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
