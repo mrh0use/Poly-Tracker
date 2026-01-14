@@ -2231,9 +2231,33 @@ async def before_freshness():
     await asyncio.sleep(30)  # Wait 30s before first check to let WS connect
 
 
-_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_trades': 0, 'total_received': 0}
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_trades': 0, 'total_received': 0, 'blockchain_stale': 0}
 
-STALE_TRADE_THRESHOLD = 60  # Skip trades older than 60 seconds
+STALE_TRADE_THRESHOLD = 60  # Skip trades older than 60 seconds (based on WS timestamp)
+BLOCKCHAIN_STALE_THRESHOLD = 300  # Skip trades older than 5 minutes on-chain (300 seconds)
+
+async def verify_trade_freshness_on_chain(trade: dict) -> tuple[bool, float]:
+    """
+    Verify trade's actual age on the blockchain.
+    Returns (is_fresh, age_seconds) where is_fresh is True if trade is within threshold.
+    Only call this for trades that would trigger an alert.
+    """
+    tx_hash = trade.get('transactionHash', '')
+    if not tx_hash:
+        return True, 0  # Can't verify, assume fresh
+    
+    try:
+        blockchain_ts = await polymarket_client.get_blockchain_tx_timestamp(tx_hash)
+        if blockchain_ts is None:
+            return True, 0  # RPC failed, assume fresh
+        
+        current_time = time.time()
+        age_seconds = current_time - blockchain_ts
+        
+        is_fresh = age_seconds <= BLOCKCHAIN_STALE_THRESHOLD
+        return is_fresh, age_seconds
+    except Exception as e:
+        return True, 0  # On error, assume fresh
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
@@ -2360,6 +2384,14 @@ async def handle_websocket_trade(trade: dict):
         print(f"[WS] Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
     elif is_tracked:
         print(f"[WS] Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
+    
+    # Verify trade freshness on blockchain for significant trades ($5k+ or tracked)
+    if value >= 5000 or is_tracked:
+        is_blockchain_fresh, blockchain_age = await verify_trade_freshness_on_chain(trade)
+        if not is_blockchain_fresh:
+            _ws_stats['blockchain_stale'] += 1
+            print(f"[WS STALE] Skipping ${value:,.0f} trade - {blockchain_age/60:.1f} min old on-chain (threshold: {BLOCKCHAIN_STALE_THRESHOLD/60:.0f} min)", flush=True)
+            return
     
     # Check bot ready state before processing
     if not bot.is_ready():
