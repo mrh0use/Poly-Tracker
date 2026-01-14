@@ -172,6 +172,14 @@ class PolymarketClient:
         self._top_traders_updated: Optional[datetime] = None
         self._proxy_to_trader_map: Dict[str, Dict[str, Any]] = {}
         self._non_top_trader_cache: Dict[str, datetime] = {}  # Negative result cache (24 hour TTL)
+        
+        # Freshness tracking for WebSocket vs REST API comparison
+        self._rest_api_latest_timestamp: float = 0  # Latest trade timestamp from REST API
+        self._ws_latest_timestamp: float = 0  # Latest trade timestamp from WebSocket
+        self._ws_lag_seconds: float = 0  # Calculated lag (REST - WS)
+        self._ws_lag_warning_threshold: float = 30  # Warn if lag > 30 seconds
+        self._ws_lag_critical_threshold: float = 60  # Critical if lag > 60 seconds
+        self._alerts_paused_for_lag: bool = False  # Pause alerts if lag is critical
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -196,6 +204,78 @@ class PolymarketClient:
         except Exception as e:
             print(f"Error fetching trades: {e}")
             return []
+    
+    async def check_ws_freshness(self) -> dict:
+        """
+        Compare REST API trades with WebSocket to detect lag.
+        Returns dict with lag info and whether alerts should be paused.
+        """
+        try:
+            trades = await self.get_recent_trades(limit=10)
+            if not trades:
+                return {'error': 'No trades from REST API', 'paused': False}
+            
+            # Get the most recent trade timestamp from REST API
+            latest_trade = trades[0] if trades else None
+            if not latest_trade:
+                return {'error': 'Empty trades list', 'paused': False}
+            
+            rest_timestamp = latest_trade.get('timestamp', 0)
+            if isinstance(rest_timestamp, str):
+                try:
+                    rest_timestamp = float(rest_timestamp)
+                except:
+                    rest_timestamp = 0
+            
+            self._rest_api_latest_timestamp = rest_timestamp
+            
+            # Calculate lag between REST API and WebSocket
+            current_time = time.time()
+            
+            if self._ws_latest_timestamp > 0:
+                # Compare REST API timestamp with WebSocket timestamp
+                self._ws_lag_seconds = rest_timestamp - self._ws_latest_timestamp
+            else:
+                # No WebSocket data yet, use current time as reference
+                self._ws_lag_seconds = current_time - rest_timestamp
+            
+            # Check thresholds
+            was_paused = self._alerts_paused_for_lag
+            
+            if self._ws_lag_seconds > self._ws_lag_critical_threshold:
+                self._alerts_paused_for_lag = True
+                if not was_paused:
+                    print(f"[FRESHNESS] 🚨 CRITICAL: WebSocket is {self._ws_lag_seconds:.0f}s behind REST API - PAUSING ALERTS", flush=True)
+            elif self._ws_lag_seconds > self._ws_lag_warning_threshold:
+                if was_paused:
+                    self._alerts_paused_for_lag = False
+                    print(f"[FRESHNESS] ✓ WebSocket lag reduced to {self._ws_lag_seconds:.0f}s - RESUMING ALERTS", flush=True)
+                else:
+                    print(f"[FRESHNESS] ⚠️ WARNING: WebSocket is {self._ws_lag_seconds:.0f}s behind REST API", flush=True)
+            else:
+                if was_paused:
+                    self._alerts_paused_for_lag = False
+                    print(f"[FRESHNESS] ✓ WebSocket caught up ({self._ws_lag_seconds:.1f}s lag) - RESUMING ALERTS", flush=True)
+            
+            return {
+                'rest_timestamp': rest_timestamp,
+                'ws_timestamp': self._ws_latest_timestamp,
+                'lag_seconds': self._ws_lag_seconds,
+                'paused': self._alerts_paused_for_lag,
+                'status': 'critical' if self._alerts_paused_for_lag else ('warning' if self._ws_lag_seconds > self._ws_lag_warning_threshold else 'ok')
+            }
+        except Exception as e:
+            print(f"[FRESHNESS] Error checking freshness: {e}", flush=True)
+            return {'error': str(e), 'paused': False}
+    
+    def update_ws_timestamp(self, timestamp: float):
+        """Update the latest WebSocket trade timestamp."""
+        if timestamp > self._ws_latest_timestamp:
+            self._ws_latest_timestamp = timestamp
+    
+    def is_alerting_paused_for_lag(self) -> bool:
+        """Check if alerting is paused due to WebSocket lag."""
+        return self._alerts_paused_for_lag
     
     async def get_wallet_trades(self, wallet_address: str, limit: int = 20) -> List[Dict[str, Any]]:
         await self.ensure_session()

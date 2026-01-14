@@ -468,6 +468,10 @@ class PolymarketBot(commands.Bot):
             cleanup_loop.start()
             print("Cleanup loop started")
         
+        if not freshness_loop.is_running():
+            freshness_loop.start()
+            print("Freshness monitoring loop started")
+        
         await polymarket_client.fetch_sports_tags()
         await polymarket_client.fetch_sports_teams()
         print("Sports tags and teams loaded from API")
@@ -2202,6 +2206,23 @@ async def before_cleanup():
     await bot.wait_until_ready()
 
 
+@tasks.loop(seconds=30)
+async def freshness_loop():
+    """Check WebSocket freshness against REST API every 30 seconds."""
+    try:
+        result = await polymarket_client.check_ws_freshness()
+        if result.get('status') == 'ok' and result.get('lag_seconds', 0) >= 0:
+            pass  # Normal operation, no need to log every time
+        elif 'error' in result:
+            print(f"[FRESHNESS] Check failed: {result['error']}", flush=True)
+    except Exception as e:
+        print(f"[FRESHNESS] Loop error: {e}", flush=True)
+
+
+@freshness_loop.before_loop
+async def before_freshness():
+    await bot.wait_until_ready()
+    await asyncio.sleep(30)  # Wait 30s before first check to let WS connect
 
 
 _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_trades': 0, 'total_received': 0}
@@ -2215,6 +2236,9 @@ async def handle_websocket_trade(trade: dict):
     
     trade_timestamp = trade.get('timestamp', 0)
     if trade_timestamp:
+        # Update WebSocket timestamp for freshness tracking
+        polymarket_client.update_ws_timestamp(trade_timestamp)
+        
         current_time = time.time()
         latency = current_time - trade_timestamp
         
@@ -2226,6 +2250,10 @@ async def handle_websocket_trade(trade: dict):
         
         if _ws_stats['total_received'] % 2000 == 0:
             print(f"[WS LATENCY] Trade latency: {latency:.1f}s (stale skipped: {_ws_stats['stale_trades']})", flush=True)
+    
+    # Check if alerting is paused due to WebSocket lag
+    if polymarket_client.is_alerting_paused_for_lag():
+        return  # Skip all alerting when data is stale
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
