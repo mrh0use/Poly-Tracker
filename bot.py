@@ -2379,14 +2379,15 @@ async def handle_websocket_trade(trade: dict):
     if _ws_stats['processed'] % 5000 == 0:
         print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+ BUY: {_ws_stats['above_5k']}, $10k+ BUY: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
     
-    # Only log significant trades
-    if value >= 5000:
+    # Only log significant trades ($2.5k+ to match alert thresholds)
+    if value >= 2500:
         print(f"[WS] Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
     elif is_tracked:
         print(f"[WS] Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
     
-    # Verify trade freshness on blockchain for significant trades ($5k+ or tracked)
-    if value >= 5000 or is_tracked:
+    # Verify trade freshness on blockchain for all potential alert trades
+    # Must check at $2,500+ to catch top trader alerts (lowest threshold)
+    if value >= 2500 or is_tracked:
         is_blockchain_fresh, blockchain_age = await verify_trade_freshness_on_chain(trade)
         if not is_blockchain_fresh:
             _ws_stats['blockchain_stale'] += 1
