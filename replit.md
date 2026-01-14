@@ -30,6 +30,7 @@ The bot is built around a modular architecture comprising a main Discord bot han
 - **Performance Optimizations:** Implements caching for server configurations and tracked wallets, API call timeouts, and efficient WebSocket handling to reduce CPU and database load. Volatility tracking is managed in-memory to minimize database writes.
 - **Resilience:** Features WebSocket activity timeouts, proactive reconnections, and a backup WebSocket for enhanced reliability.
 - **Data Freshness Monitoring:** REST API polling every 30 seconds to verify WebSocket data freshness. Compares REST API trade timestamps with WebSocket timestamps to detect lag. Logs warnings at 30+ seconds lag, automatically pauses all alerts at 60+ seconds lag until WebSocket catches up. Prevents sending alerts based on stale data.
+- **Blockchain Freshness Verification:** Queries Polygon blockchain to compare actual on-chain transaction timestamps with Polymarket API timestamps. Detects true pipeline delays (when Polymarket's data pipeline is behind the blockchain). Warning at 30 minutes, pauses alerts at 45 minutes lag.
 
 **UI/UX Decisions:**
 - **Simple Discord Interface:** Focus on clear, concise alerts and easy-to-use slash commands for configuration.
