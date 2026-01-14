@@ -1601,6 +1601,13 @@ class PolymarketWebSocket:
                 
                 print("[WebSocket] Connected - NO PING mode (data activity timeout only)", flush=True)
                 
+                # Call reconnect callback on initial connect too (for warm-up period)
+                if self.on_reconnect_callback:
+                    try:
+                        self.on_reconnect_callback()
+                    except Exception as e:
+                        print(f"[WS] Connect callback error: {e}", flush=True)
+                
                 while self._running:
                     try:
                         if self._connection_switched:
