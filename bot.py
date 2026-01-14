@@ -2205,30 +2205,6 @@ async def handle_websocket_trade(trade: dict):
     side = trade.get('side', '').upper()
     price = float(trade.get('price', 0) or 0)
     
-    raw_timestamp = trade.get('timestamp', 0)
-    raw_createdAt = trade.get('createdAt', 0)
-    raw_created_at = trade.get('created_at', 0)
-    trade_timestamp = raw_timestamp or raw_createdAt or raw_created_at
-    trade_time = None
-    delay_seconds = 0
-    
-    if value >= 5000:
-        print(f"[WS TIMESTAMP DEBUG] ${value:,.0f} trade - raw ts: {raw_timestamp}, createdAt: {raw_createdAt}, created_at: {raw_created_at}", flush=True)
-    
-    if trade_timestamp and trade_timestamp > 0:
-        try:
-            if trade_timestamp > 1e12:
-                trade_timestamp = trade_timestamp / 1000
-            trade_time = datetime.utcfromtimestamp(trade_timestamp)
-            delay_seconds = (datetime.utcnow() - trade_time).total_seconds()
-            if value >= 5000:
-                print(f"[WS DELAY CHECK] ${value:,.0f} trade: ts={trade_timestamp}, trade_time={trade_time}, now={datetime.utcnow()}, delay={delay_seconds:.0f}s ({delay_seconds/60:.1f}min)", flush=True)
-        except Exception as e:
-            if value >= 5000:
-                print(f"[WS TIMESTAMP ERROR] ${value:,.0f} trade - error parsing: {e}", flush=True)
-    elif value >= 5000:
-        print(f"[WS NO TIMESTAMP] ${value:,.0f} trade - no valid timestamp found", flush=True)
-    
     asset_id = trade.get('asset', '')
     outcome = trade.get('outcome', 'Yes')
     outcome_index = trade.get('outcomeIndex', 0)
@@ -2522,9 +2498,7 @@ async def handle_websocket_trade(trade: dict):
                             market_url=market_url,
                             pnl=wallet_stats.get('pnl'),
                             rank=wallet_stats.get('rank'),
-                            is_sports=True,
-                            trade_time=trade_time,
-                            delay_seconds=delay_seconds
+                            is_sports=True
                         )
                         try:
                             message = await sports_channel.send(embed=embed, view=button_view)
@@ -2556,9 +2530,7 @@ async def handle_websocket_trade(trade: dict):
                             market_url=market_url,
                             pnl=wallet_stats.get('pnl'),
                             rank=wallet_stats.get('rank'),
-                            is_sports=True,
-                            trade_time=trade_time,
-                            delay_seconds=delay_seconds
+                            is_sports=True
                         )
                         try:
                             message = await sports_channel.send(embed=embed, view=button_view)
@@ -2586,9 +2558,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            trader_info=top_trader_info,
-                            trade_time=trade_time,
-                            delay_seconds=delay_seconds
+                            trader_info=top_trader_info
                         )
                         try:
                             message = await top_channel.send(embed=embed, view=button_view)
@@ -2630,9 +2600,7 @@ async def handle_websocket_trade(trade: dict):
                             wallet_address=wallet,
                             market_url=market_url,
                             pnl=wallet_stats.get('pnl'),
-                            rank=wallet_stats.get('rank'),
-                            trade_time=trade_time,
-                            delay_seconds=delay_seconds
+                            rank=wallet_stats.get('rank')
                         )
                         try:
                             message = await bonds_channel.send(embed=embed, view=button_view)
@@ -2670,9 +2638,7 @@ async def handle_websocket_trade(trade: dict):
                             wallet_address=wallet,
                             market_url=market_url,
                             pnl=wallet_stats.get('pnl'),
-                            rank=wallet_stats.get('rank'),
-                            trade_time=trade_time,
-                            delay_seconds=delay_seconds
+                            rank=wallet_stats.get('rank')
                         )
                         try:
                             message = await fresh_channel.send(embed=embed, view=button_view)
@@ -2711,9 +2677,7 @@ async def handle_websocket_trade(trade: dict):
                             wallet_address=wallet,
                             market_url=market_url,
                             pnl=wallet_stats.get('pnl'),
-                            rank=wallet_stats.get('rank'),
-                            trade_time=trade_time,
-                            delay_seconds=delay_seconds
+                            rank=wallet_stats.get('rank')
                         )
                         try:
                             message = await whale_channel.send(embed=embed, view=button_view)

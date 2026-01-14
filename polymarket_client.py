@@ -1715,11 +1715,6 @@ class PolymarketWebSocket:
             size = float(payload.get('size', 0) or 0)
             price = float(payload.get('price', 0) or 0)
             
-            value = size * price
-            if value >= 10000:
-                print(f"[RTDS RAW PAYLOAD] ${value:,.0f} trade - ALL FIELDS: {list(payload.keys())}", flush=True)
-                print(f"[RTDS RAW PAYLOAD] Full data: {payload}", flush=True)
-            
             return {
                 'proxyWallet': payload.get('proxyWallet', ''),
                 'side': payload.get('side', 'BUY'),
