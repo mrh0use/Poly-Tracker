@@ -668,75 +668,6 @@ class PolymarketClient:
             print(f"Error fetching USDC balance for {wallet_address}: {e}")
             return None
     
-    async def get_transaction_block_timestamp(self, tx_hash: str) -> Optional[int]:
-        """Get the block timestamp for a transaction on Polygon.
-        
-        This is used to verify the actual execution time of a trade,
-        since Polymarket's WebSocket only provides the broadcast time.
-        
-        Returns: Unix timestamp in seconds, or None if not found.
-        """
-        if not tx_hash or not tx_hash.startswith('0x'):
-            return None
-        
-        await self.ensure_session()
-        
-        # First get the transaction receipt to find the block number
-        rpc_payload = {
-            "jsonrpc": "2.0",
-            "method": "eth_getTransactionReceipt",
-            "params": [tx_hash],
-            "id": 1
-        }
-        
-        try:
-            async with self.session.post(
-                "https://polygon-rpc.com",
-                json=rpc_payload,
-                headers={"Content-Type": "application/json"},
-                timeout=aiohttp.ClientTimeout(total=5)
-            ) as resp:
-                if resp.status != 200:
-                    return None
-                result = await resp.json()
-                receipt = result.get("result")
-                if not receipt:
-                    return None
-                
-                block_number_hex = receipt.get("blockNumber")
-                if not block_number_hex:
-                    return None
-                
-                # Now get the block to find its timestamp
-                block_payload = {
-                    "jsonrpc": "2.0",
-                    "method": "eth_getBlockByNumber",
-                    "params": [block_number_hex, False],  # False = don't include full txs
-                    "id": 2
-                }
-                
-                async with self.session.post(
-                    "https://polygon-rpc.com",
-                    json=block_payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=5)
-                ) as block_resp:
-                    if block_resp.status != 200:
-                        return None
-                    block_result = await block_resp.json()
-                    block = block_result.get("result")
-                    if not block:
-                        return None
-                    
-                    timestamp_hex = block.get("timestamp")
-                    if timestamp_hex:
-                        return int(timestamp_hex, 16)
-                    return None
-                    
-        except Exception as e:
-            # Don't spam logs - this is a best-effort lookup
-            return None
-    
     async def _fetch_positions_paginated(self, wallet_address: str) -> List[Dict[str, Any]]:
         await self.ensure_session()
         all_positions = []
@@ -1056,6 +987,10 @@ class PolymarketClient:
                     markets = await resp.json()
                     if markets and len(markets) > 0:
                         market = markets[0]
+                        # DEBUG: Log FULL market response
+                        import json
+                        print(f"[CACHE DEBUG FULL] {json.dumps(market)[:800]}", flush=True)
+                        
                         # Try multiple possible field names for the ID
                         market_id = market.get('market_id') or market.get('marketId') or market.get('_id') or ''
                         
@@ -1666,13 +1601,6 @@ class PolymarketWebSocket:
                 
                 print("[WebSocket] Connected - NO PING mode (data activity timeout only)", flush=True)
                 
-                # Call reconnect callback on initial connect too (for warm-up period)
-                if self.on_reconnect_callback:
-                    try:
-                        self.on_reconnect_callback()
-                    except Exception as e:
-                        print(f"[WS] Connect callback error: {e}", flush=True)
-                
                 while self._running:
                     try:
                         if self._connection_switched:
@@ -1757,9 +1685,8 @@ class PolymarketWebSocket:
                 print(f"[WS DEBUG] topic={topic}, type={msg_type}, has_payload={message.get('payload') is not None}", flush=True)
             
             payload = message.get('payload')
-            msg_timestamp = message.get('timestamp', 0)  # Message-level timestamp in milliseconds
             if payload and self.on_trade_callback:
-                trade = self._normalize_trade(payload, msg_timestamp)
+                trade = self._normalize_trade(payload)
                 if trade:
                     self._debug_trade_count += 1
                     if self._debug_trade_count % 1000 == 0:
@@ -1783,46 +1710,10 @@ class PolymarketWebSocket:
             self._debug_error_count += 1
             print(f"[WebSocket] Error handling message #{self._debug_msg_count}: {e}", flush=True)
     
-    def _normalize_trade(self, payload: Dict[str, Any], msg_timestamp: int = 0) -> Dict[str, Any]:
+    def _normalize_trade(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
             size = float(payload.get('size', 0) or 0)
             price = float(payload.get('price', 0) or 0)
-            
-            # Calculate USD value for debug logging
-            usd_value = size * price
-            
-            # DEBUG: Dump full payload for whale trades ($10000+) to see all available fields
-            # Only log first 10 whale trades to avoid log spam
-            if not hasattr(self, '_whale_debug_count'):
-                self._whale_debug_count = 0
-            if usd_value >= 10000 and self._whale_debug_count < 10:
-                self._whale_debug_count += 1
-                import json as json_module
-                print(f"[WS RAW PAYLOAD #{self._whale_debug_count}] ${usd_value:,.0f} trade - ALL FIELDS:", flush=True)
-                print(f"[WS RAW PAYLOAD #{self._whale_debug_count}] {json_module.dumps(payload, default=str)}", flush=True)
-                print(f"[WS RAW PAYLOAD #{self._whale_debug_count}] msg_timestamp={msg_timestamp}", flush=True)
-            
-            # CRITICAL: Use payload's match_time or timestamp FIRST - this is the actual trade execution time
-            # msg_timestamp is when WS broadcast the message, NOT when trade happened
-            # Polymarket docs: payload.match_time and payload.timestamp are in SECONDS
-            payload_match_time = payload.get('match_time') or payload.get('matchTime')
-            payload_timestamp = payload.get('timestamp')
-            
-            # Prefer match_time (actual execution time), then payload timestamp, then msg_timestamp as last resort
-            if payload_match_time:
-                # match_time is in seconds (string or int)
-                timestamp = float(payload_match_time)
-            elif payload_timestamp:
-                # payload timestamp is in seconds
-                timestamp = float(payload_timestamp)
-                # But if it looks like milliseconds, convert
-                if timestamp > 1e12:
-                    timestamp = timestamp / 1000
-            elif msg_timestamp:
-                # Fallback to message-level timestamp (milliseconds)
-                timestamp = msg_timestamp / 1000 if msg_timestamp > 1e12 else msg_timestamp
-            else:
-                timestamp = 0
             
             return {
                 'proxyWallet': payload.get('proxyWallet', ''),
@@ -1831,7 +1722,7 @@ class PolymarketWebSocket:
                 'conditionId': payload.get('conditionId', ''),
                 'size': size,
                 'price': price,
-                'timestamp': timestamp,
+                'timestamp': payload.get('timestamp', 0),
                 'title': payload.get('title', ''),
                 'slug': payload.get('slug', ''),
                 'icon': payload.get('icon', ''),

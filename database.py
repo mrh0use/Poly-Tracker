@@ -61,7 +61,7 @@ class SeenTransaction(Base):
     __tablename__ = 'seen_transactions'
     
     tx_hash = Column(String(66), primary_key=True)
-    seen_at = Column(DateTime, default=datetime.utcnow, index=True)
+    seen_at = Column(DateTime, default=datetime.utcnow)
 
 
 class WalletActivity(Base):

@@ -1776,19 +1776,7 @@ async def monitor_loop():
             alerts_sent = 0
             trades_above_threshold = 0
             
-            skipped_old_count = 0
             for trade in all_trades:
-                # Filter out old trades (older than 5 minutes)
-                trade_ts = trade.get('timestamp', 0)
-                if trade_ts:
-                    # Handle milliseconds vs seconds
-                    if trade_ts > 1e12:
-                        trade_ts = trade_ts / 1000
-                    trade_age = time.time() - trade_ts
-                    if trade_age > 300:  # 5 minutes
-                        skipped_old_count += 1
-                        continue
-                
                 unique_key = polymarket_client.get_unique_trade_id(trade)
                 
                 if not unique_key or len(unique_key) < 10:
@@ -2138,7 +2126,7 @@ async def monitor_loop():
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send whale alert to {whale_channel_id}", flush=True)
             
             if new_trades_count > 0 or alerts_sent > 0:
-                print(f"[Monitor] Tracked wallets: {new_trades_count} new trades, {alerts_sent} alerts sent, {skipped_old_count} old skipped")
+                print(f"[Monitor] Tracked wallets: {new_trades_count} new trades, {alerts_sent} alerts sent")
             
             session.commit()
         finally:
@@ -2181,7 +2169,7 @@ async def cleanup_loop():
                 VolatilityAlert.alerted_at < alert_cutoff
             ).delete()
             
-            old_cutoff = datetime.utcnow() - timedelta(hours=24)
+            old_cutoff = datetime.utcnow() - timedelta(days=7)
             deleted_seen = session.query(SeenTransaction).filter(
                 SeenTransaction.seen_at < old_cutoff
             ).delete()
@@ -2203,64 +2191,9 @@ async def before_cleanup():
 
 
 _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
-_ws_connection_time = 0  # Set when WebSocket connects
-
-def set_ws_connection_time():
-    """Called when WebSocket connects to set warm-up period."""
-    global _ws_connection_time
-    _ws_connection_time = time.time()
-    print(f"[WS] Connection time set - warming up for 10 seconds")
-
-def parse_trade_timestamp(ts) -> float:
-    """Parse trade timestamp from various formats to Unix seconds."""
-    if not ts:
-        return 0
-    try:
-        if isinstance(ts, (int, float)):
-            # If > 1e12, it's milliseconds
-            if ts > 1e12:
-                return ts / 1000
-            return float(ts)
-        if isinstance(ts, str):
-            # Try ISO 8601 format
-            if 'T' in ts or '-' in ts:
-                from datetime import datetime
-                ts_clean = ts.replace('Z', '+00:00')
-                dt = datetime.fromisoformat(ts_clean)
-                return dt.timestamp()
-            # Try parsing as number string
-            val = float(ts)
-            if val > 1e12:
-                return val / 1000
-            return val
-    except:
-        pass
-    return 0
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
-    
-    
-    # Skip old trades (older than 5 minutes) to prevent delayed alerts on reconnect
-    # Try multiple possible timestamp fields
-    raw_timestamp = trade.get('timestamp') or trade.get('matchTime') or trade.get('createdAt') or trade.get('time') or 0
-    trade_timestamp = parse_trade_timestamp(raw_timestamp)
-    now = time.time()
-    
-    if trade_timestamp > 0:
-        trade_age_seconds = now - trade_timestamp
-        if trade_age_seconds > 300:  # 5 minutes
-            # Log first few skipped old trades for debugging
-            if _ws_stats.get('skipped_old', 0) < 5:
-                _ws_stats['skipped_old'] = _ws_stats.get('skipped_old', 0) + 1
-                print(f"[WS] Skipping old trade: age={trade_age_seconds:.0f}s")
-            return
-    else:
-        # No valid timestamp - check if we're in warm-up period after connection
-        if _ws_connection_time > 0:
-            time_since_connect = now - _ws_connection_time
-            if time_since_connect < 10:  # 10 second warm-up
-                return
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
@@ -2725,10 +2658,7 @@ async def handle_websocket_trade(trade: dict):
                 if value >= (config.whale_threshold or 10000.0) and not is_bond and not is_fresh:
                     whale_channel_id = config.whale_channel_id or config.alert_channel_id
                     whale_threshold = config.whale_threshold or 10000.0
-                    # Debug: log trade age
-                    ts = trade.get('timestamp', 0)
-                    age = int(time.time() - ts) if ts else -1
-                    print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, age={age}s, attempting channel {whale_channel_id}", flush=True)
+                    print(f"[WS] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
                     whale_channel = await get_or_fetch_channel(whale_channel_id)
                     print(f"[WS] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                     if whale_channel:
@@ -2769,7 +2699,7 @@ async def handle_websocket_trade(trade: dict):
 
 def on_websocket_reconnect():
     """Called when WebSocket reconnects."""
-    set_ws_connection_time()
+    pass
 
 polymarket_ws = PolymarketWebSocket(
     on_trade_callback=handle_websocket_trade,
