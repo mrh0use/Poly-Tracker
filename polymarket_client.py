@@ -172,14 +172,6 @@ class PolymarketClient:
         self._top_traders_updated: Optional[datetime] = None
         self._proxy_to_trader_map: Dict[str, Dict[str, Any]] = {}
         self._non_top_trader_cache: Dict[str, datetime] = {}  # Negative result cache (24 hour TTL)
-        
-        # Freshness tracking for WebSocket vs REST API comparison
-        self._rest_api_latest_timestamp: float = 0  # Latest trade timestamp from REST API
-        self._ws_latest_timestamp: float = 0  # Latest trade timestamp from WebSocket
-        self._ws_lag_seconds: float = 0  # Calculated lag (REST - WS)
-        self._ws_lag_warning_threshold: float = 1800  # Warn if lag > 30 minutes
-        self._ws_lag_critical_threshold: float = 2700  # Critical if lag > 45 minutes
-        self._alerts_paused_for_lag: bool = False  # Pause alerts if lag is critical
     
     async def ensure_session(self):
         if self.session is None or self.session.closed:
@@ -204,203 +196,6 @@ class PolymarketClient:
         except Exception as e:
             print(f"Error fetching trades: {e}")
             return []
-    
-    async def check_ws_freshness(self) -> dict:
-        """
-        Compare REST API trades with WebSocket to detect lag.
-        Returns dict with lag info and whether alerts should be paused.
-        """
-        try:
-            trades = await self.get_recent_trades(limit=10)
-            if not trades:
-                return {'error': 'No trades from REST API', 'paused': False}
-            
-            # Get the most recent trade timestamp from REST API
-            latest_trade = trades[0] if trades else None
-            if not latest_trade:
-                return {'error': 'Empty trades list', 'paused': False}
-            
-            rest_timestamp = latest_trade.get('timestamp', 0)
-            if isinstance(rest_timestamp, str):
-                try:
-                    rest_timestamp = float(rest_timestamp)
-                except:
-                    rest_timestamp = 0
-            
-            self._rest_api_latest_timestamp = rest_timestamp
-            
-            # Calculate lag between REST API and WebSocket
-            current_time = time.time()
-            
-            if self._ws_latest_timestamp > 0:
-                # Compare REST API timestamp with WebSocket timestamp
-                self._ws_lag_seconds = rest_timestamp - self._ws_latest_timestamp
-            else:
-                # No WebSocket data yet, use current time as reference
-                self._ws_lag_seconds = current_time - rest_timestamp
-            
-            # Check thresholds
-            was_paused = self._alerts_paused_for_lag
-            
-            if self._ws_lag_seconds > self._ws_lag_critical_threshold:
-                self._alerts_paused_for_lag = True
-                if not was_paused:
-                    print(f"[FRESHNESS] 🚨 CRITICAL: WebSocket is {self._ws_lag_seconds:.0f}s behind REST API - PAUSING ALERTS", flush=True)
-            elif self._ws_lag_seconds > self._ws_lag_warning_threshold:
-                if was_paused:
-                    self._alerts_paused_for_lag = False
-                    print(f"[FRESHNESS] ✓ WebSocket lag reduced to {self._ws_lag_seconds:.0f}s - RESUMING ALERTS", flush=True)
-                else:
-                    print(f"[FRESHNESS] ⚠️ WARNING: WebSocket is {self._ws_lag_seconds:.0f}s behind REST API", flush=True)
-            else:
-                if was_paused:
-                    self._alerts_paused_for_lag = False
-                    print(f"[FRESHNESS] ✓ WebSocket caught up ({self._ws_lag_seconds:.1f}s lag) - RESUMING ALERTS", flush=True)
-            
-            return {
-                'rest_timestamp': rest_timestamp,
-                'ws_timestamp': self._ws_latest_timestamp,
-                'lag_seconds': self._ws_lag_seconds,
-                'paused': self._alerts_paused_for_lag,
-                'status': 'critical' if self._alerts_paused_for_lag else ('warning' if self._ws_lag_seconds > self._ws_lag_warning_threshold else 'ok')
-            }
-        except Exception as e:
-            print(f"[FRESHNESS] Error checking freshness: {e}", flush=True)
-            return {'error': str(e), 'paused': False}
-    
-    def update_ws_timestamp(self, timestamp: float):
-        """Update the latest WebSocket trade timestamp."""
-        if timestamp > self._ws_latest_timestamp:
-            self._ws_latest_timestamp = timestamp
-    
-    def is_alerting_paused_for_lag(self) -> bool:
-        """Check if alerting is paused due to WebSocket lag."""
-        return self._alerts_paused_for_lag
-    
-    async def get_blockchain_tx_timestamp(self, tx_hash: str) -> Optional[int]:
-        """
-        Query Polygon blockchain to get the actual block timestamp for a transaction.
-        Returns Unix timestamp of when the transaction was mined, or None if lookup fails.
-        """
-        await self.ensure_session()
-        
-        POLYGON_RPC_URLS = [
-            "https://polygon-rpc.com",
-            "https://rpc-mainnet.matic.quiknode.pro",
-            "https://polygon.llamarpc.com",
-        ]
-        
-        for rpc_url in POLYGON_RPC_URLS:
-            try:
-                # First get the transaction to find block number
-                tx_payload = {
-                    "jsonrpc": "2.0",
-                    "method": "eth_getTransactionReceipt",
-                    "params": [tx_hash],
-                    "id": 1
-                }
-                
-                async with self.session.post(rpc_url, json=tx_payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                    if resp.status != 200:
-                        continue
-                    tx_data = await resp.json()
-                    
-                    if not tx_data.get('result') or not tx_data['result'].get('blockNumber'):
-                        continue
-                    
-                    block_hex = tx_data['result']['blockNumber']
-                    
-                    # Now get the block to find timestamp
-                    block_payload = {
-                        "jsonrpc": "2.0",
-                        "method": "eth_getBlockByNumber",
-                        "params": [block_hex, False],
-                        "id": 2
-                    }
-                    
-                    async with self.session.post(rpc_url, json=block_payload, timeout=aiohttp.ClientTimeout(total=5)) as block_resp:
-                        if block_resp.status != 200:
-                            continue
-                        block_data = await block_resp.json()
-                        
-                        if block_data.get('result') and block_data['result'].get('timestamp'):
-                            return int(block_data['result']['timestamp'], 16)
-                            
-            except Exception as e:
-                continue  # Try next RPC
-        
-        return None
-    
-    async def check_blockchain_freshness(self) -> dict:
-        """
-        Check actual pipeline lag by comparing blockchain tx timestamp vs API timestamp.
-        This detects when Polymarket's entire data pipeline is delayed.
-        """
-        try:
-            trades = await self.get_recent_trades(limit=5)
-            if not trades:
-                return {'error': 'No trades from REST API', 'paused': False}
-            
-            # Find a trade with a transaction hash
-            for trade in trades:
-                tx_hash = trade.get('transactionHash')
-                api_timestamp = trade.get('timestamp', 0)
-                
-                if not tx_hash or not api_timestamp:
-                    continue
-                
-                if isinstance(api_timestamp, str):
-                    try:
-                        api_timestamp = float(api_timestamp)
-                    except:
-                        continue
-                
-                # Query blockchain for actual execution time
-                blockchain_timestamp = await self.get_blockchain_tx_timestamp(tx_hash)
-                
-                if blockchain_timestamp is None:
-                    continue
-                
-                current_time = time.time()
-                
-                # Calculate true pipeline lag (how old is the trade on-chain vs now)
-                blockchain_age = current_time - blockchain_timestamp
-                api_age = current_time - api_timestamp
-                pipeline_delay = api_timestamp - blockchain_timestamp  # How long between on-chain and API
-                
-                was_paused = self._alerts_paused_for_lag
-                
-                # Use blockchain age for freshness decision
-                if blockchain_age > self._ws_lag_critical_threshold:
-                    self._alerts_paused_for_lag = True
-                    if not was_paused:
-                        print(f"[FRESHNESS] 🚨 CRITICAL: Trades are {blockchain_age:.0f}s old on-chain (pipeline delay: {pipeline_delay:.0f}s) - PAUSING ALERTS", flush=True)
-                elif blockchain_age > self._ws_lag_warning_threshold:
-                    if was_paused:
-                        self._alerts_paused_for_lag = False
-                        print(f"[FRESHNESS] ✓ Trade age reduced to {blockchain_age:.0f}s - RESUMING ALERTS", flush=True)
-                    else:
-                        print(f"[FRESHNESS] ⚠️ WARNING: Trades are {blockchain_age:.0f}s old on-chain (pipeline delay: {pipeline_delay:.0f}s)", flush=True)
-                else:
-                    if was_paused:
-                        self._alerts_paused_for_lag = False
-                        print(f"[FRESHNESS] ✓ Trades fresh ({blockchain_age:.1f}s old) - RESUMING ALERTS", flush=True)
-                
-                return {
-                    'blockchain_timestamp': blockchain_timestamp,
-                    'api_timestamp': api_timestamp,
-                    'blockchain_age_seconds': blockchain_age,
-                    'pipeline_delay_seconds': pipeline_delay,
-                    'tx_hash': tx_hash,
-                    'paused': self._alerts_paused_for_lag,
-                    'status': 'critical' if self._alerts_paused_for_lag else ('warning' if blockchain_age > self._ws_lag_warning_threshold else 'ok')
-                }
-            
-            return {'error': 'No valid trades with tx hash found', 'paused': self._alerts_paused_for_lag}
-            
-        except Exception as e:
-            print(f"[FRESHNESS] Blockchain check error: {e}", flush=True)
-            return {'error': str(e), 'paused': self._alerts_paused_for_lag}
     
     async def get_wallet_trades(self, wallet_address: str, limit: int = 20) -> List[Dict[str, Any]]:
         await self.ensure_session()
@@ -1192,11 +987,18 @@ class PolymarketClient:
                     markets = await resp.json()
                     if markets and len(markets) > 0:
                         market = markets[0]
+                        # DEBUG: Log FULL market response
+                        import json
+                        print(f"[CACHE DEBUG FULL] {json.dumps(market)[:800]}", flush=True)
                         
-                        # Get market ID from response
-                        market_id = market.get('id') or market.get('market_id') or market.get('marketId') or ''
-                        if market_id:
-                            market_id = str(market_id)
+                        # Try multiple possible field names for the ID
+                        market_id = market.get('market_id') or market.get('marketId') or market.get('_id') or ''
+                        
+                        # If still no ID, check if 'id' is actually a string
+                        if not market_id:
+                            raw_id = market.get('id')
+                            if raw_id:
+                                market_id = str(raw_id)
                         
                         market_data = {
                             'slug': market.get('slug', ''),

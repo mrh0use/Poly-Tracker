@@ -468,10 +468,6 @@ class PolymarketBot(commands.Bot):
             cleanup_loop.start()
             print("Cleanup loop started")
         
-        if not freshness_loop.is_running():
-            freshness_loop.start()
-            print("Freshness monitoring loop started")
-        
         await polymarket_client.fetch_sports_tags()
         await polymarket_client.fetch_sports_teams()
         print("Sports tags and teams loaded from API")
@@ -482,12 +478,8 @@ class PolymarketBot(commands.Bot):
         
         if not self.websocket_started:
             self.websocket_started = True
-            if USE_REST_POLLING:
-                rest_polling_loop.start()
-                print("[STARTUP] REST API polling started (WebSocket disabled)")
-            else:
-                asyncio.create_task(start_websocket())
-                print("WebSocket task scheduled")
+            asyncio.create_task(start_websocket())
+            print("WebSocket task scheduled")
         
         
         # Log all server configs at startup
@@ -512,22 +504,10 @@ class PolymarketBot(commands.Bot):
 bot = PolymarketBot()
 
 
-_invalid_channel_cache = {}  # Cache of invalid channel IDs with expiry
-CHANNEL_CACHE_TTL = 300  # 5 minutes before retrying an invalid channel
-
 async def get_or_fetch_channel(channel_id):
-    """Get channel from cache or fetch from API if not cached. Caches invalid channels to avoid spam."""
+    """Get channel from cache or fetch from API if not cached."""
     if not channel_id:
         return None
-    
-    # Check if this channel was recently found to be invalid
-    if channel_id in _invalid_channel_cache:
-        cached_time = _invalid_channel_cache[channel_id]
-        if time.time() - cached_time < CHANNEL_CACHE_TTL:
-            return None  # Skip silently - we know it's bad
-        else:
-            del _invalid_channel_cache[channel_id]  # Expired, try again
-    
     channel = bot.get_channel(channel_id)
     if channel:
         return channel
@@ -536,12 +516,10 @@ async def get_or_fetch_channel(channel_id):
         print(f"[CHANNEL] Fetched channel {channel_id} from API (was not in cache)", flush=True)
         return channel
     except discord.NotFound:
-        _invalid_channel_cache[channel_id] = time.time()
-        print(f"[CHANNEL] Channel {channel_id} not found (cached for {CHANNEL_CACHE_TTL}s)", flush=True)
+        print(f"[CHANNEL] Channel {channel_id} not found", flush=True)
         return None
     except discord.Forbidden:
-        _invalid_channel_cache[channel_id] = time.time()
-        print(f"[CHANNEL] Bot lacks access to channel {channel_id} (cached for {CHANNEL_CACHE_TTL}s)", flush=True)
+        print(f"[CHANNEL] Bot lacks access to channel {channel_id}", flush=True)
         return None
     except Exception as e:
         print(f"[CHANNEL] Error fetching channel {channel_id}: {e}", flush=True)
@@ -2210,92 +2188,12 @@ async def before_cleanup():
     await bot.wait_until_ready()
 
 
-_freshness_check_count = 0
-
-@tasks.loop(seconds=30)
-async def freshness_loop():
-    """Check blockchain freshness every 30 seconds to detect Polymarket pipeline delays."""
-    global _freshness_check_count
-    _freshness_check_count += 1
-    try:
-        result = await polymarket_client.check_blockchain_freshness()
-        if 'error' in result:
-            print(f"[FRESHNESS] Check failed: {result['error']}", flush=True)
-        elif _freshness_check_count % 10 == 0:  # Log every 5 minutes (10 * 30s)
-            age = result.get('blockchain_age_seconds', 0)
-            delay = result.get('pipeline_delay_seconds', 0)
-            print(f"[FRESHNESS] ✓ Status: {result.get('status', 'unknown')}, trade age: {age:.1f}s, pipeline delay: {delay:.1f}s", flush=True)
-    except Exception as e:
-        print(f"[FRESHNESS] Loop error: {e}", flush=True)
 
 
-@freshness_loop.before_loop
-async def before_freshness():
-    await bot.wait_until_ready()
-    await asyncio.sleep(30)  # Wait 30s before first check to let WS connect
-
-
-_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_trades': 0, 'total_received': 0, 'blockchain_stale': 0}
-
-STALE_TRADE_THRESHOLD = 60  # Skip trades older than 60 seconds (based on WS timestamp)
-BLOCKCHAIN_STALE_THRESHOLD = 300  # Skip trades older than 5 minutes on-chain (300 seconds)
-
-# REST API Polling mode - use REST API instead of unreliable WebSocket
-USE_REST_POLLING = True
-REST_POLLING_INTERVAL = 2.5  # seconds between polls
-
-async def verify_trade_freshness_on_chain(trade: dict) -> tuple[bool, float]:
-    """
-    Verify trade's actual age on the blockchain.
-    Returns (is_fresh, age_seconds) where is_fresh is True if trade is within threshold.
-    Only call this for trades that would trigger an alert.
-    """
-    tx_hash = trade.get('transactionHash', '')
-    if not tx_hash:
-        return True, 0  # Can't verify, assume fresh
-    
-    try:
-        blockchain_ts = await polymarket_client.get_blockchain_tx_timestamp(tx_hash)
-        if blockchain_ts is None:
-            return True, 0  # RPC failed, assume fresh
-        
-        current_time = time.time()
-        age_seconds = current_time - blockchain_ts
-        
-        is_fresh = age_seconds <= BLOCKCHAIN_STALE_THRESHOLD
-        return is_fresh, age_seconds
-    except Exception as e:
-        return True, 0  # On error, assume fresh
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
-    
-    # Check if this trade came from REST API (already verified for freshness)
-    from_rest = trade.get('_from_rest', False)
-    
-    _ws_stats['total_received'] += 1
-    
-    trade_timestamp = trade.get('timestamp', 0)
-    if trade_timestamp and not from_rest:
-        # Only do timestamp-based staleness check for WebSocket trades
-        # REST trades are verified using blockchain timestamp instead
-        polymarket_client.update_ws_timestamp(trade_timestamp)
-        
-        current_time = time.time()
-        latency = current_time - trade_timestamp
-        
-        if latency > STALE_TRADE_THRESHOLD:
-            _ws_stats['stale_trades'] += 1
-            if _ws_stats['stale_trades'] <= 5 or _ws_stats['stale_trades'] % 100 == 0:
-                print(f"[WS STALE] Skipping trade {latency:.0f}s old (timestamp: {trade_timestamp}, now: {current_time:.0f})", flush=True)
-            return
-        
-        if _ws_stats['total_received'] % 2000 == 0:
-            print(f"[WS LATENCY] Trade latency: {latency:.1f}s (stale skipped: {_ws_stats['stale_trades']})", flush=True)
-    
-    # Check if alerting is paused due to WebSocket lag (skip for REST trades)
-    if not from_rest and polymarket_client.is_alerting_paused_for_lag():
-        return  # Skip all alerting when data is stale
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
@@ -2391,22 +2289,11 @@ async def handle_websocket_trade(trade: dict):
     if _ws_stats['processed'] % 5000 == 0:
         print(f"[WS Stats] Processed: {_ws_stats['processed']}, $5k+ BUY: {_ws_stats['above_5k']}, $10k+ BUY: {_ws_stats['above_10k']}, Alerts: {_ws_stats['alerts_sent']}")
     
-    # Only log significant trades ($2.5k+ to match alert thresholds)
-    log_prefix = "[REST]" if from_rest else "[WS]"
-    if value >= 2500:
-        print(f"{log_prefix} Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
+    # Only log significant trades
+    if value >= 5000:
+        print(f"[WS] Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
     elif is_tracked:
-        print(f"{log_prefix} Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
-    
-    # Verify trade freshness on blockchain for all potential alert trades
-    # Must check at $2,500+ to catch top trader alerts (lowest threshold)
-    # Skip for REST trades - they were already verified in handle_rest_trade
-    if not from_rest and (value >= 2500 or is_tracked):
-        is_blockchain_fresh, blockchain_age = await verify_trade_freshness_on_chain(trade)
-        if not is_blockchain_fresh:
-            _ws_stats['blockchain_stale'] += 1
-            print(f"[WS STALE] Skipping ${value:,.0f} trade - {blockchain_age/60:.1f} min old on-chain (threshold: {BLOCKCHAIN_STALE_THRESHOLD/60:.0f} min)", flush=True)
-            return
+        print(f"[WS] Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
     
     # Check bot ready state before processing
     if not bot.is_ready():
@@ -2824,107 +2711,6 @@ async def start_websocket():
     await bot.wait_until_ready()
     print("[WebSocket] Starting real-time trade feed...")
     await polymarket_ws.connect()
-
-
-# REST API Polling (replaces WebSocket when RTDS is unreliable)
-_rest_seen_tx_hashes = set()
-_rest_stats = {'polls': 0, 'trades_processed': 0, 'alerts_sent': 0}
-
-async def handle_rest_trade(trade: dict):
-    """
-    Process a trade from REST API.
-    This bypasses the WebSocket timestamp check and uses blockchain verification directly.
-    """
-    global _ws_stats, _rest_stats
-    
-    value = polymarket_client.calculate_trade_value(trade)
-    wallet = polymarket_client.get_wallet_from_trade(trade)
-    
-    if not wallet:
-        return
-    
-    wallet = wallet.lower()
-    side = trade.get('side', '').upper()
-    price = float(trade.get('price', 0) or 0)
-    
-    # Same filtering as WebSocket
-    if side == 'SELL':
-        return
-    
-    tracked_addresses, tracked_by_guild = get_cached_tracked_wallets()
-    is_tracked = wallet in tracked_addresses
-    
-    if value < 1000 and not is_tracked:
-        return
-    
-    # Verify freshness on blockchain for significant trades
-    if value >= 2500 or is_tracked:
-        is_blockchain_fresh, blockchain_age = await verify_trade_freshness_on_chain(trade)
-        if not is_blockchain_fresh:
-            print(f"[REST STALE] Skipping ${value:,.0f} trade - {blockchain_age/60:.1f} min old on-chain", flush=True)
-            return
-        if value >= 5000:
-            print(f"[REST] ✓ Fresh trade ${value:,.0f} ({blockchain_age:.1f}s old on-chain)", flush=True)
-    
-    # Check bot ready state
-    if not bot.is_ready():
-        return
-    
-    # Process directly - bypass handle_websocket_trade's timestamp check
-    # The blockchain check above is more reliable than the API timestamp check
-    
-    # Mark the trade as coming from REST (for internal tracking)
-    trade['_from_rest'] = True
-    
-    # Now call the main handler but it will skip the timestamp check due to _from_rest flag
-    await handle_websocket_trade(trade)
-
-
-@tasks.loop(seconds=REST_POLLING_INTERVAL)
-async def rest_polling_loop():
-    """Poll REST API for recent trades instead of WebSocket."""
-    global _rest_seen_tx_hashes, _rest_stats
-    
-    try:
-        trades = await polymarket_client.get_recent_trades(limit=50)
-        if not trades:
-            return
-        
-        _rest_stats['polls'] += 1
-        new_trades = 0
-        
-        for trade in trades:
-            tx_hash = trade.get('transactionHash', '')
-            if not tx_hash or tx_hash in _rest_seen_tx_hashes:
-                continue
-            
-            _rest_seen_tx_hashes.add(tx_hash)
-            new_trades += 1
-            
-            # Process the trade
-            try:
-                await handle_rest_trade(trade)
-            except Exception as e:
-                print(f"[REST] Error processing trade: {e}", flush=True)
-        
-        _rest_stats['trades_processed'] += new_trades
-        
-        # Log stats every 20 polls (~50 seconds)
-        if _rest_stats['polls'] % 20 == 0:
-            print(f"[REST] Polls: {_rest_stats['polls']}, Trades: {_rest_stats['trades_processed']}, Cache: {len(_rest_seen_tx_hashes)}", flush=True)
-            
-            # Prune old tx hashes to prevent memory bloat (keep last 10000)
-            if len(_rest_seen_tx_hashes) > 10000:
-                _rest_seen_tx_hashes = set(list(_rest_seen_tx_hashes)[-5000:])
-        
-    except Exception as e:
-        print(f"[REST] Polling error: {e}", flush=True)
-
-
-@rest_polling_loop.before_loop
-async def before_rest_polling():
-    await bot.wait_until_ready()
-    print("[REST] REST API polling started (replacing WebSocket)", flush=True)
 
 
 @setup.error
