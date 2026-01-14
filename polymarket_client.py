@@ -277,6 +277,131 @@ class PolymarketClient:
         """Check if alerting is paused due to WebSocket lag."""
         return self._alerts_paused_for_lag
     
+    async def get_blockchain_tx_timestamp(self, tx_hash: str) -> Optional[int]:
+        """
+        Query Polygon blockchain to get the actual block timestamp for a transaction.
+        Returns Unix timestamp of when the transaction was mined, or None if lookup fails.
+        """
+        await self.ensure_session()
+        
+        POLYGON_RPC_URLS = [
+            "https://polygon-rpc.com",
+            "https://rpc-mainnet.matic.quiknode.pro",
+            "https://polygon.llamarpc.com",
+        ]
+        
+        for rpc_url in POLYGON_RPC_URLS:
+            try:
+                # First get the transaction to find block number
+                tx_payload = {
+                    "jsonrpc": "2.0",
+                    "method": "eth_getTransactionReceipt",
+                    "params": [tx_hash],
+                    "id": 1
+                }
+                
+                async with self.session.post(rpc_url, json=tx_payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                    if resp.status != 200:
+                        continue
+                    tx_data = await resp.json()
+                    
+                    if not tx_data.get('result') or not tx_data['result'].get('blockNumber'):
+                        continue
+                    
+                    block_hex = tx_data['result']['blockNumber']
+                    
+                    # Now get the block to find timestamp
+                    block_payload = {
+                        "jsonrpc": "2.0",
+                        "method": "eth_getBlockByNumber",
+                        "params": [block_hex, False],
+                        "id": 2
+                    }
+                    
+                    async with self.session.post(rpc_url, json=block_payload, timeout=aiohttp.ClientTimeout(total=5)) as block_resp:
+                        if block_resp.status != 200:
+                            continue
+                        block_data = await block_resp.json()
+                        
+                        if block_data.get('result') and block_data['result'].get('timestamp'):
+                            return int(block_data['result']['timestamp'], 16)
+                            
+            except Exception as e:
+                continue  # Try next RPC
+        
+        return None
+    
+    async def check_blockchain_freshness(self) -> dict:
+        """
+        Check actual pipeline lag by comparing blockchain tx timestamp vs API timestamp.
+        This detects when Polymarket's entire data pipeline is delayed.
+        """
+        try:
+            trades = await self.get_recent_trades(limit=5)
+            if not trades:
+                return {'error': 'No trades from REST API', 'paused': False}
+            
+            # Find a trade with a transaction hash
+            for trade in trades:
+                tx_hash = trade.get('transactionHash')
+                api_timestamp = trade.get('timestamp', 0)
+                
+                if not tx_hash or not api_timestamp:
+                    continue
+                
+                if isinstance(api_timestamp, str):
+                    try:
+                        api_timestamp = float(api_timestamp)
+                    except:
+                        continue
+                
+                # Query blockchain for actual execution time
+                blockchain_timestamp = await self.get_blockchain_tx_timestamp(tx_hash)
+                
+                if blockchain_timestamp is None:
+                    continue
+                
+                current_time = time.time()
+                
+                # Calculate true pipeline lag (how old is the trade on-chain vs now)
+                blockchain_age = current_time - blockchain_timestamp
+                api_age = current_time - api_timestamp
+                pipeline_delay = api_timestamp - blockchain_timestamp  # How long between on-chain and API
+                
+                was_paused = self._alerts_paused_for_lag
+                
+                # Use blockchain age for freshness decision
+                if blockchain_age > self._ws_lag_critical_threshold:
+                    self._alerts_paused_for_lag = True
+                    if not was_paused:
+                        print(f"[FRESHNESS] 🚨 CRITICAL: Trades are {blockchain_age:.0f}s old on-chain (pipeline delay: {pipeline_delay:.0f}s) - PAUSING ALERTS", flush=True)
+                elif blockchain_age > self._ws_lag_warning_threshold:
+                    if was_paused:
+                        self._alerts_paused_for_lag = False
+                        print(f"[FRESHNESS] ✓ Trade age reduced to {blockchain_age:.0f}s - RESUMING ALERTS", flush=True)
+                    else:
+                        print(f"[FRESHNESS] ⚠️ WARNING: Trades are {blockchain_age:.0f}s old on-chain (pipeline delay: {pipeline_delay:.0f}s)", flush=True)
+                else:
+                    if was_paused:
+                        self._alerts_paused_for_lag = False
+                        print(f"[FRESHNESS] ✓ Trades fresh ({blockchain_age:.1f}s old) - RESUMING ALERTS", flush=True)
+                
+                return {
+                    'blockchain_timestamp': blockchain_timestamp,
+                    'api_timestamp': api_timestamp,
+                    'blockchain_age_seconds': blockchain_age,
+                    'pipeline_delay_seconds': pipeline_delay,
+                    'tx_hash': tx_hash,
+                    'paused': self._alerts_paused_for_lag,
+                    'status': 'critical' if self._alerts_paused_for_lag else ('warning' if blockchain_age > self._ws_lag_warning_threshold else 'ok')
+                }
+            
+            return {'error': 'No valid trades with tx hash found', 'paused': self._alerts_paused_for_lag}
+            
+        except Exception as e:
+            print(f"[FRESHNESS] Blockchain check error: {e}", flush=True)
+            return {'error': str(e), 'paused': self._alerts_paused_for_lag}
+    
     async def get_wallet_trades(self, wallet_address: str, limit: int = 20) -> List[Dict[str, Any]]:
         await self.ensure_session()
         try:

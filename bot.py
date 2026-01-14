@@ -2210,16 +2210,17 @@ _freshness_check_count = 0
 
 @tasks.loop(seconds=30)
 async def freshness_loop():
-    """Check WebSocket freshness against REST API every 30 seconds."""
+    """Check blockchain freshness every 30 seconds to detect Polymarket pipeline delays."""
     global _freshness_check_count
     _freshness_check_count += 1
     try:
-        result = await polymarket_client.check_ws_freshness()
+        result = await polymarket_client.check_blockchain_freshness()
         if 'error' in result:
             print(f"[FRESHNESS] Check failed: {result['error']}", flush=True)
         elif _freshness_check_count % 10 == 0:  # Log every 5 minutes (10 * 30s)
-            lag = result.get('lag_seconds', 0)
-            print(f"[FRESHNESS] ✓ Status: {result.get('status', 'unknown')}, lag: {lag:.1f}s", flush=True)
+            age = result.get('blockchain_age_seconds', 0)
+            delay = result.get('pipeline_delay_seconds', 0)
+            print(f"[FRESHNESS] ✓ Status: {result.get('status', 'unknown')}, trade age: {age:.1f}s, pipeline delay: {delay:.1f}s", flush=True)
     except Exception as e:
         print(f"[FRESHNESS] Loop error: {e}", flush=True)
 
