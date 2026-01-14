@@ -2206,15 +2206,20 @@ async def before_cleanup():
     await bot.wait_until_ready()
 
 
+_freshness_check_count = 0
+
 @tasks.loop(seconds=30)
 async def freshness_loop():
     """Check WebSocket freshness against REST API every 30 seconds."""
+    global _freshness_check_count
+    _freshness_check_count += 1
     try:
         result = await polymarket_client.check_ws_freshness()
-        if result.get('status') == 'ok' and result.get('lag_seconds', 0) >= 0:
-            pass  # Normal operation, no need to log every time
-        elif 'error' in result:
+        if 'error' in result:
             print(f"[FRESHNESS] Check failed: {result['error']}", flush=True)
+        elif _freshness_check_count % 10 == 0:  # Log every 5 minutes (10 * 30s)
+            lag = result.get('lag_seconds', 0)
+            print(f"[FRESHNESS] ✓ Status: {result.get('status', 'unknown')}, lag: {lag:.1f}s", flush=True)
     except Exception as e:
         print(f"[FRESHNESS] Loop error: {e}", flush=True)
 
