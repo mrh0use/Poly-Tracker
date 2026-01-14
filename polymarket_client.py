@@ -1692,8 +1692,9 @@ class PolymarketWebSocket:
                 print(f"[WS DEBUG] topic={topic}, type={msg_type}, has_payload={message.get('payload') is not None}", flush=True)
             
             payload = message.get('payload')
+            msg_timestamp = message.get('timestamp', 0)  # Message-level timestamp in milliseconds
             if payload and self.on_trade_callback:
-                trade = self._normalize_trade(payload)
+                trade = self._normalize_trade(payload, msg_timestamp)
                 if trade:
                     self._debug_trade_count += 1
                     if self._debug_trade_count % 1000 == 0:
@@ -1717,10 +1718,16 @@ class PolymarketWebSocket:
             self._debug_error_count += 1
             print(f"[WebSocket] Error handling message #{self._debug_msg_count}: {e}", flush=True)
     
-    def _normalize_trade(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_trade(self, payload: Dict[str, Any], msg_timestamp: int = 0) -> Dict[str, Any]:
         try:
             size = float(payload.get('size', 0) or 0)
             price = float(payload.get('price', 0) or 0)
+            
+            # Use message-level timestamp (milliseconds) or fall back to payload timestamp
+            timestamp = msg_timestamp or payload.get('timestamp', 0)
+            # Convert milliseconds to seconds if needed
+            if timestamp > 1e12:
+                timestamp = timestamp / 1000
             
             return {
                 'proxyWallet': payload.get('proxyWallet', ''),
@@ -1729,7 +1736,7 @@ class PolymarketWebSocket:
                 'conditionId': payload.get('conditionId', ''),
                 'size': size,
                 'price': price,
-                'timestamp': payload.get('timestamp', 0),
+                'timestamp': timestamp,
                 'title': payload.get('title', ''),
                 'slug': payload.get('slug', ''),
                 'icon': payload.get('icon', ''),
