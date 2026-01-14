@@ -114,7 +114,9 @@ def create_bonds_alert_embed(
     wallet_address: str = "Unknown",
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
-    rank: Optional[int] = None
+    rank: Optional[int] = None,
+    trade_time: Optional[datetime] = None,
+    delay_seconds: float = 0
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
@@ -126,11 +128,12 @@ def create_bonds_alert_embed(
     price = float(trade.get('price', 0) or 0)
     price_pct = price * 100
     
+    embed_timestamp = trade_time if trade_time else datetime.utcnow()
     embed = Embed(
         title=f"🏦 Bond Alert ({price_pct:.0f}%)",
         description=f"{stats_line}Someone is locking in profits on a near-certain market!",
         color=0x9B59B6,
-        timestamp=datetime.utcnow()
+        timestamp=embed_timestamp
     )
     
     embed.add_field(
@@ -179,7 +182,10 @@ def create_bonds_alert_embed(
         inline=True
     )
     
-    embed.set_footer(text="Polymarket Bond Monitor (>=95%)")
+    footer_text = "Polymarket Bond Monitor (>=95%)"
+    if delay_seconds > 60:
+        footer_text += f" | ⏱️ {delay_seconds/60:.0f}min delay"
+    embed.set_footer(text=footer_text)
     
     return embed
 
@@ -192,7 +198,9 @@ def create_whale_alert_embed(
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
     rank: Optional[int] = None,
-    is_sports: bool = False
+    is_sports: bool = False,
+    trade_time: Optional[datetime] = None,
+    delay_seconds: float = 0
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
@@ -208,11 +216,12 @@ def create_whale_alert_embed(
         title = "🐋 Whale Alert"
         description = f"{stats_line}A whale just made a massive move!"
     
+    embed_timestamp = trade_time if trade_time else datetime.utcnow()
     embed = Embed(
         title=title,
         description=description,
         color=0xFF6B6B,
-        timestamp=datetime.utcnow()
+        timestamp=embed_timestamp
     )
     
     embed.add_field(
@@ -262,7 +271,10 @@ def create_whale_alert_embed(
         inline=True
     )
     
-    embed.set_footer(text="Polymarket Whale Monitor")
+    footer_text = "Polymarket Whale Monitor"
+    if delay_seconds > 60:
+        footer_text += f" | ⏱️ {delay_seconds/60:.0f}min delay"
+    embed.set_footer(text=footer_text)
     
     return embed
 
@@ -275,7 +287,9 @@ def create_fresh_wallet_alert_embed(
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
     rank: Optional[int] = None,
-    is_sports: bool = False
+    is_sports: bool = False,
+    trade_time: Optional[datetime] = None,
+    delay_seconds: float = 0
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
@@ -291,11 +305,12 @@ def create_fresh_wallet_alert_embed(
         title = "🆕 Fresh Wallet Alert"
         description = f"{stats_line}A brand new wallet just placed their first big bet!"
     
+    embed_timestamp = trade_time if trade_time else datetime.utcnow()
     embed = Embed(
         title=title,
         description=description,
         color=0x4ECDC4,
-        timestamp=datetime.utcnow()
+        timestamp=embed_timestamp
     )
     
     embed.add_field(
@@ -345,7 +360,10 @@ def create_fresh_wallet_alert_embed(
         inline=True
     )
     
-    embed.set_footer(text="Polymarket Fresh Wallet Monitor")
+    footer_text = "Polymarket Fresh Wallet Monitor"
+    if delay_seconds > 60:
+        footer_text += f" | ⏱️ {delay_seconds/60:.0f}min delay"
+    embed.set_footer(text=footer_text)
     
     return embed
 
@@ -359,7 +377,9 @@ def create_custom_wallet_alert_embed(
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
     volume: Optional[float] = None,
-    rank: Optional[int] = None
+    rank: Optional[int] = None,
+    trade_time: Optional[datetime] = None,
+    delay_seconds: float = 0
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
@@ -370,11 +390,12 @@ def create_custom_wallet_alert_embed(
     
     label = wallet_label or f"{wallet_address[:6]}...{wallet_address[-4:]}"
     
+    embed_timestamp = trade_time if trade_time else datetime.utcnow()
     embed = Embed(
         title=f"👀 Tracked Wallet Alert",
         description=f"{stats_line}**{label}** just made a move!",
         color=0xF39C12,
-        timestamp=datetime.utcnow()
+        timestamp=embed_timestamp
     )
     
     embed.add_field(
@@ -424,7 +445,10 @@ def create_custom_wallet_alert_embed(
         inline=True
     )
     
-    embed.set_footer(text="Polymarket Tracked Wallet Monitor")
+    footer_text = "Polymarket Tracked Wallet Monitor"
+    if delay_seconds > 60:
+        footer_text += f" | ⏱️ {delay_seconds/60:.0f}min delay"
+    embed.set_footer(text=footer_text)
     
     return embed
 
@@ -437,7 +461,9 @@ def create_top_trader_alert_embed(
     market_url: str = "https://polymarket.com",
     pnl: Optional[float] = None,
     rank: Optional[int] = None,
-    trader_info: Optional[Dict[str, Any]] = None
+    trader_info: Optional[Dict[str, Any]] = None,
+    trade_time: Optional[datetime] = None,
+    delay_seconds: float = 0
 ) -> Embed:
     if trader_info:
         pnl = trader_info.get('pnl', pnl)
@@ -449,11 +475,12 @@ def create_top_trader_alert_embed(
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
     
+    embed_timestamp = trade_time if trade_time else datetime.utcnow()
     embed = Embed(
         title=f"🏆 Top Trader Alert",
         description=f"{stats_line}A top 25 trader just made a move!",
         color=0xFFD700,
-        timestamp=datetime.utcnow()
+        timestamp=embed_timestamp
     )
     
     embed.add_field(
@@ -503,7 +530,10 @@ def create_top_trader_alert_embed(
         inline=True
     )
     
-    embed.set_footer(text="Polymarket Top Trader Monitor")
+    footer_text = "Polymarket Top Trader Monitor"
+    if delay_seconds > 60:
+        footer_text += f" | ⏱️ {delay_seconds/60:.0f}min delay"
+    embed.set_footer(text=footer_text)
     
     return embed
 
