@@ -943,7 +943,7 @@ class PolymarketClient:
                 return self._wallet_stats_cache[wallet_lower]
         
         await self.ensure_session()
-        stats = {'pnl': 0.0, 'realized_pnl': 0.0, 'volume': 0.0, 'rank': None, 'username': None}
+        stats = {'pnl': 0.0, 'realized_pnl': None, 'volume': 0.0, 'rank': None, 'username': None, 'has_open_positions': False}
         
         total_pnl = 0.0
         try:
@@ -958,15 +958,17 @@ class PolymarketClient:
                         total_pnl = float(user_data.get('pnl', 0) or 0)
                         stats = {
                             'pnl': total_pnl,
-                            'realized_pnl': total_pnl,
+                            'realized_pnl': None,
                             'volume': float(user_data.get('vol', 0) or 0),
                             'rank': user_data.get('rank'),
-                            'username': user_data.get('userName')
+                            'username': user_data.get('userName'),
+                            'has_open_positions': False
                         }
         except Exception as e:
             print(f"Error fetching leaderboard stats for {wallet_address}: {e}")
         
         unrealized_pnl = 0.0
+        got_positions = False
         try:
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/positions",
@@ -975,7 +977,9 @@ class PolymarketClient:
             ) as resp:
                 if resp.status == 200:
                     positions = await resp.json()
-                    if isinstance(positions, list):
+                    got_positions = True
+                    if isinstance(positions, list) and len(positions) > 0:
+                        stats['has_open_positions'] = True
                         for pos in positions:
                             initial_val = float(pos.get('initialValue', 0) or 0)
                             current_val = float(pos.get('currentValue', 0) or 0)
@@ -983,7 +987,10 @@ class PolymarketClient:
         except Exception as e:
             pass
         
-        stats['realized_pnl'] = total_pnl - unrealized_pnl
+        if got_positions:
+            stats['realized_pnl'] = total_pnl - unrealized_pnl
+        else:
+            stats['realized_pnl'] = total_pnl
         
         self._wallet_stats_cache[wallet_lower] = stats
         self._wallet_stats_updated[wallet_lower] = now

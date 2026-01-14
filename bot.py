@@ -2192,14 +2192,25 @@ async def before_cleanup():
 
 
 
-_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_skipped': 0}
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_skipped': 0, 'no_timestamp': 0, 'ts_samples': []}
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
     
     # STALENESS FILTER: Skip trades older than 30 seconds to avoid backlog delays
     trade_timestamp = trade.get('timestamp', 0)
-    if trade_timestamp:
+    
+    # Debug: Log timestamp samples to understand the format
+    if len(_ws_stats['ts_samples']) < 5:
+        _ws_stats['ts_samples'].append(trade_timestamp)
+        if len(_ws_stats['ts_samples']) == 5:
+            print(f"[WS DEBUG] Timestamp samples from RTDS: {_ws_stats['ts_samples']}", flush=True)
+    
+    if not trade_timestamp:
+        _ws_stats['no_timestamp'] += 1
+        if _ws_stats['no_timestamp'] % 1000 == 1:
+            print(f"[WS] Warning: Trade has no timestamp (count: {_ws_stats['no_timestamp']})", flush=True)
+    elif trade_timestamp:
         try:
             trade_ts = int(trade_timestamp)
             # Handle both seconds and milliseconds timestamps
@@ -2207,6 +2218,10 @@ async def handle_websocket_trade(trade: dict):
                 trade_ts = trade_ts / 1000
             now_ts = time.time()
             age_seconds = now_ts - trade_ts
+            
+            # Debug log for first few large age trades
+            if age_seconds > 30 and _ws_stats['stale_skipped'] < 5:
+                print(f"[WS DEBUG] Stale trade: ts={trade_timestamp}, age={age_seconds:.0f}s, now={now_ts:.0f}", flush=True)
             
             if age_seconds > 30:
                 # Skip stale trades (from backlog) - count them
