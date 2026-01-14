@@ -1,0 +1,69 @@
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+[WebSocket] Starting real-time trade feed...
+[WebSocket] Connecting to Polymarket RTDS...
+[WS PRIMARY] Attempting connection...
+Market cache refreshed: 1500 entries
+Top traders cache refreshed: 25 entries
+Slash commands synced
+Monitor loop started (backup for tracked wallets)
+VWAP volatility tracker ready (builds from trade WebSocket)
+Volatility loop started
+Cleanup loop started
+[VOLATILITY] Stats: 0 assets, 0 buckets, 0 cooldowns, min_vol=$2000
+Cleanup: 53 old volatility alerts, 0 old seen transactions
+[API] Loaded 124 sports tag IDs from Polymarket API
+[API] Loaded 478 sports team names from Polymarket API
+Sports tags and teams loaded from API
+Market cache refreshed: 1500 entries
+[STARTUP] Market cache populated with 1500 entries
+WebSocket task scheduled
+[STARTUP] Found 3 server configs:
+[STARTUP] Guild 1458300719471001632: whale=$10,000, fresh=$1,000, sports=$5,000, paused=False
+[STARTUP] Guild 1029388897647607889: whale=$10,000, fresh=$1,000, sports=$5,000, paused=False
+[STARTUP] Guild 1263380715496538193: whale=$10,000, fresh=$100, sports=$3,000, paused=False
+  Top #1: 0x56687bf4... (Theo4) - $22,053,934 PnL
+  Top #2: 0x1f2dd6d4... (Fredi9999) - $16,620,028 PnL
+  Top #3: 0x78b9ac44... (Len9311238) - $8,709,973 PnL
+  Top #4: 0xd2359732... (zxgngl) - $7,807,266 PnL
+  Top #5: 0x863134d0... (RepTrump) - $7,532,410 PnL
+[TOP TRADERS] Loaded 25 top traders
+[WS PRIMARY] ✓ Connected and verified (received data)
+[WebSocket] Connected - NO PING mode (data activity timeout only)
+[WebSocket] ✓ Receiving messages...
+[CACHE DEBUG FULL] {"id": "1167655", "question": "Will MrBeast's Celebrity Challenge video get between 79 and 82 million views on week 1?", "conditionId": "0x4e5e25b3ce7a68acdb4345670ae1fc218950b91666581aca68e92d3959780948", "slug": "will-mrbeasts-celebrity-challenge-video-get-between-79-and-82-million-views-on-week-1", "endDate": "2026-01-15T00:00:00Z", "liquidity": "223910.05098", "startDate": "2026-01-13T00:44:05.888517Z", "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/of-views-of-next-mrbeast-video-on-day-1--HcOnJGLLP3O.jpg", "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/of-views-of-next-mrbeast-video-on-day-1--HcOnJGLLP3O.jpg", "description": "This market will resolve according to the number of views the \"30 Celebrities Fight for $1,000,000!\" YouTube video posted by MrB
+[CACHE] Added market 1167655 (slug=will-mrbeasts-celebrity-challe) for condition 0x4e5e25b3ce7a68acdb...
+Starting Container
+[HEALTH] Health server listening on 0.0.0.0:8080
+Running in PRODUCTION - using DISCORD_BOT_TOKEN
+[RAILWAY] PORT environment variable: 8080
+[RAILWAY] Starting health server on port 8080
+Starting Polymarket Discord Bot...
+[HEALTH] Health server task created
+Database initialized
+Stopping Container
+Logged in as Onsight Alerts#1758 (ID: 1457772492340068476)
+[WS] Trades processed: 1000
+[SIGNAL] Received SIGTERM (signal 15)
+    self._run_once()
+[SIGNAL] Stack trace at signal:
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 1898, in _run_once
+    event_list = self._selector.select(timeout)
+    fd_event_list = self._selector.poll(timeout, max_ev)
+  File "/mise/installs/python/3.11.14/lib/python3.11/selectors.py", line 468, in select
+Unclosed client session
+    asyncio.run(run_all())
+client_session: <aiohttp.client.ClientSession object at 0x7fa923f8f410>
+    return self._loop.run_until_complete(task)
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 641, in run_until_complete
+    return runner.run(main)
+    self.run_forever()
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+  File "/mise/installs/python/3.11.14/lib/python3.11/asyncio/base_events.py", line 608, in run_forever
+  File "/app/bot.py", line 2840, in <module>
+    main()
+  File "/app/bot.py", line 2828, in main
+Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x7fa923fd98d0>, 22451094.560577795)])', 'deque([(<aiohttp.client_proto.ResponseHandler object at 0x7fa92333f0e0>, 22451102.056211263)])']
+connector: <aiohttp.connector.TCPConnector object at 0x7fa923f8f650>
+2026-01-14 20:35:06.879 UTC [27] LOG:  checkpoint starting: time
