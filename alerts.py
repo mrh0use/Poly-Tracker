@@ -12,7 +12,7 @@ from database import get_session, MarketSlugMapping
 ONSIGHT_BOT_URL = "https://t.me/polysightbot"
 
 
-def format_pnl(pnl: float) -> str:
+def format_pnl(pnl: float, label: str = "Realized PnL") -> str:
     """Format PnL with proper sign placement: -$54 instead of $-54"""
     if pnl >= 0:
         return f"+${pnl:,.0f}"
@@ -118,7 +118,7 @@ def create_bonds_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} PnL**"
+        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -196,7 +196,7 @@ def create_whale_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} PnL**"
+        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -279,7 +279,7 @@ def create_fresh_wallet_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} PnL**"
+        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -363,7 +363,7 @@ def create_custom_wallet_alert_embed(
 ) -> Embed:
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} PnL**"
+        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"
@@ -444,7 +444,7 @@ def create_top_trader_alert_embed(
         rank = trader_info.get('rank', rank)
     stats_line = ""
     if pnl is not None:
-        stats_line = f"**{format_pnl(pnl)} PnL**"
+        stats_line = f"**{format_pnl(pnl)} Realized PnL**"
         if rank:
             stats_line += f" *(Rank #{rank})*"
         stats_line += "\n\n"

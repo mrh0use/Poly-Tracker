@@ -813,13 +813,10 @@ class PolymarketClient:
     
     async def has_prior_activity(self, wallet_address: str, current_trade_value: float = 0) -> Optional[bool]:
         """
-        Check if wallet has prior trading activity using leaderboard stats.
+        Check if wallet has prior trading activity using Data API.
         
-        A wallet is FRESH (no prior activity) if their total volume is approximately
-        equal to the current trade value (meaning this is their first trade).
-        
-        The leaderboard API includes the current trade immediately, so we need to
-        account for that by comparing volume to the current trade value.
+        A wallet is FRESH (no prior activity) if they have zero prior on-chain trades,
+        or if their only trade is the current trade being processed.
         
         Args:
             wallet_address: The wallet address to check
@@ -833,15 +830,14 @@ class PolymarketClient:
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
-        # Check cache first (5 min TTL) - only for wallets confirmed to have history
+        # Check cache first (5 min TTL) - for both fresh and non-fresh wallets
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
             if last_updated and (now - last_updated).total_seconds() < 300:
                 cached = self._wallet_history_cache[wallet_lower]
-                # Only use cache for wallets with prior activity (positive cache)
-                if cached:
-                    print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity=True", flush=True)
-                    return True
+                if cached is not None:
+                    print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity={cached}", flush=True)
+                    return cached
         
         # Use Data API /activity endpoint for authoritative on-chain history
         # This is the ground truth - it queries actual blockchain transactions
@@ -946,8 +942,9 @@ class PolymarketClient:
                 return self._wallet_stats_cache[wallet_lower]
         
         await self.ensure_session()
-        stats = {'pnl': 0.0, 'volume': 0.0, 'rank': None, 'username': None}
+        stats = {'pnl': 0.0, 'realized_pnl': 0.0, 'volume': 0.0, 'rank': None, 'username': None}
         
+        total_pnl = 0.0
         try:
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/v1/leaderboard",
@@ -957,14 +954,35 @@ class PolymarketClient:
                     data = await resp.json()
                     if isinstance(data, list) and len(data) > 0:
                         user_data = data[0]
+                        total_pnl = float(user_data.get('pnl', 0) or 0)
                         stats = {
-                            'pnl': float(user_data.get('pnl', 0) or 0),
+                            'pnl': total_pnl,
+                            'realized_pnl': total_pnl,
                             'volume': float(user_data.get('vol', 0) or 0),
                             'rank': user_data.get('rank'),
                             'username': user_data.get('userName')
                         }
         except Exception as e:
             print(f"Error fetching leaderboard stats for {wallet_address}: {e}")
+        
+        unrealized_pnl = 0.0
+        try:
+            async with self.session.get(
+                f"{self.DATA_API_BASE_URL}/positions",
+                params={"user": wallet_address, "sizeThreshold": "0"},
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status == 200:
+                    positions = await resp.json()
+                    if isinstance(positions, list):
+                        for pos in positions:
+                            initial_val = float(pos.get('initialValue', 0) or 0)
+                            current_val = float(pos.get('currentValue', 0) or 0)
+                            unrealized_pnl += (current_val - initial_val)
+        except Exception as e:
+            pass
+        
+        stats['realized_pnl'] = total_pnl - unrealized_pnl
         
         self._wallet_stats_cache[wallet_lower] = stats
         self._wallet_stats_updated[wallet_lower] = now

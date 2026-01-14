@@ -1871,7 +1871,7 @@ async def monitor_loop():
                                 wallet_address=wallet,
                                 wallet_label=tw.label,
                                 market_url=market_url,
-                                pnl=wallet_stats.get('pnl'),
+                                pnl=wallet_stats.get('realized_pnl'),
                                 volume=wallet_stats.get('volume'),
                                 rank=wallet_stats.get('rank')
                             )
@@ -1938,7 +1938,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('pnl'),
+                                    pnl=wallet_stats.get('realized_pnl'),
                                     rank=wallet_stats.get('rank'),
                                     is_sports=True
                                 )
@@ -1969,7 +1969,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('pnl'),
+                                    pnl=wallet_stats.get('realized_pnl'),
                                     rank=wallet_stats.get('rank'),
                                     is_sports=True
                                 )
@@ -2033,7 +2033,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('pnl'),
+                                    pnl=wallet_stats.get('realized_pnl'),
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
@@ -2071,7 +2071,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('pnl'),
+                                    pnl=wallet_stats.get('realized_pnl'),
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
@@ -2109,7 +2109,7 @@ async def monitor_loop():
                                     market_title=market_title,
                                     wallet_address=wallet,
                                     market_url=market_url,
-                                    pnl=wallet_stats.get('pnl'),
+                                    pnl=wallet_stats.get('realized_pnl'),
                                     rank=wallet_stats.get('rank')
                                 )
                                 try:
@@ -2458,7 +2458,7 @@ async def handle_websocket_trade(trade: dict):
                         wallet_address=wallet,
                         wallet_label=tw.label,
                         market_url=market_url,
-                        pnl=wallet_stats.get('pnl'),
+                        pnl=wallet_stats.get('realized_pnl'),
                         volume=wallet_stats.get('volume'),
                         rank=wallet_stats.get('rank')
                     )
@@ -2532,7 +2532,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('pnl'),
+                            pnl=wallet_stats.get('realized_pnl'),
                             rank=wallet_stats.get('rank'),
                             is_sports=True
                         )
@@ -2564,7 +2564,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('pnl'),
+                            pnl=wallet_stats.get('realized_pnl'),
                             rank=wallet_stats.get('rank'),
                             is_sports=True
                         )
@@ -2635,7 +2635,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('pnl'),
+                            pnl=wallet_stats.get('realized_pnl'),
                             rank=wallet_stats.get('rank')
                         )
                         try:
@@ -2673,7 +2673,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('pnl'),
+                            pnl=wallet_stats.get('realized_pnl'),
                             rank=wallet_stats.get('rank')
                         )
                         try:
@@ -2712,7 +2712,7 @@ async def handle_websocket_trade(trade: dict):
                             market_title=market_title,
                             wallet_address=wallet,
                             market_url=market_url,
-                            pnl=wallet_stats.get('pnl'),
+                            pnl=wallet_stats.get('realized_pnl'),
                             rank=wallet_stats.get('rank')
                         )
                         try:
