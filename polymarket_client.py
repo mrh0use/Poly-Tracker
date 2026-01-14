@@ -68,6 +68,32 @@ class PolymarketClient:
         'map 1 winner', 'map 2 winner', 'map 3 winner', 'map winner',
         'bayer leverkusen', 'bayer 04 leverkusen', 'vfb stuttgart', 'rb leipzig',
         'eintracht frankfurt', 'sc freiburg', 'union berlin', 'werder bremen',
+        # Additional Bundesliga teams (CRITICAL - many were missing)
+        'vfl wolfsburg', 'wolfsburg', 'fc st. pauli', 'st. pauli', 'st pauli', 'fc st pauli',
+        'fsv mainz', 'mainz 05', 'fc augsburg', 'augsburg', 'tsg hoffenheim', 'hoffenheim',
+        'borussia monchengladbach', 'monchengladbach', 'gladbach', 'fc heidenheim', 'heidenheim',
+        'holstein kiel', 'vfl bochum', 'bochum',
+        # Additional La Liga teams
+        'real betis', 'celta vigo', 'girona fc', 'getafe cf', 'osasuna', 'rayo vallecano',
+        'deportivo alaves', 'espanyol', 'real valladolid', 'las palmas', 'leganes',
+        # Additional Serie A teams
+        'as roma', 'roma', 'atalanta', 'lazio', 'fiorentina', 'torino fc', 'genoa',
+        'bologna fc', 'udinese', 'empoli', 'cagliari', 'parma calcio', 'parma', 'como',
+        'hellas verona', 'venezia fc', 'lecce', 'monza',
+        # Additional Ligue 1 teams  
+        'olympique marseille', 'marseille', 'monaco', 'as monaco', 'olympique lyon', 'lyon',
+        'lille', 'losc lille', 'lens', 'rc lens', 'nice', 'ogc nice', 'rennes', 'stade rennais',
+        'strasbourg', 'toulouse', 'nantes', 'fc nantes', 'montpellier', 'brest', 'stade brestois',
+        'reims', 'angers', 'auxerre', 'le havre', 'saint-etienne',
+        # Portuguese Liga
+        'sporting cp', 'sporting lisbon', 'braga', 'vitoria guimaraes',
+        # Dutch Eredivisie
+        'psv eindhoven', 'psv', 'feyenoord', 'az alkmaar', 'fc twente', 'utrecht',
+        # Belgian Pro League
+        'club brugge', 'anderlecht', 'union saint-gilloise', 'gent', 'genk',
+        # African Cup of Nations teams (AFCON)
+        'senegal', 'egypt', 'morocco', 'nigeria', 'cameroon', 'ghana', 'ivory coast',
+        'algeria', 'tunisia', 'south africa', 'afcon',
         'kansas jayhawks', 'west virginia mountaineers', 'duke blue devils',
         'kentucky wildcats', 'north carolina tar heels', 'purdue boilermakers',
         'nba trade', 'nfl trade', 'mlb trade', 'nhl trade',
@@ -125,6 +151,10 @@ class PolymarketClient:
         'jake paul', 'mike tyson', 'canelo alvarez', 'tyson fury', 'oleksandr usyk',
         'anthony joshua', 'conor mcgregor', 'jon jones', 'israel adesanya', 'alex pereira',
         'sean strickland', 'ufc fight', 'boxing match',
+        # Sports market patterns (common in Polymarket sports market titles)
+        'o/u 2.5', 'o/u 3.5', 'o/u 1.5', 'o/u 0.5', 'total 2', 'total 3', 'total goals',
+        'btts', 'both teams to score', 'will win on', 'will win vs',
+        'match winner', 'game winner', 'outright winner', 'to win', 'to beat',
     ]
     
     CRYPTO_KEYWORDS = [

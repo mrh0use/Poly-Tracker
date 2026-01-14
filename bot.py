@@ -512,7 +512,7 @@ class PolymarketBot(commands.Bot):
             all_configs = session.query(ServerConfig).all()
             print(f"[STARTUP] Found {len(all_configs)} server configs:", flush=True)
             for c in all_configs:
-                print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 1000:,.0f}, sports=${c.sports_threshold or 5000:,.0f}, paused={c.is_paused}", flush=True)
+                print(f"[STARTUP] Guild {c.guild_id}: whale=${c.whale_threshold:,.0f}, fresh=${c.fresh_wallet_threshold or 1000:,.0f}, sports=${c.sports_threshold or 3000:,.0f}, paused={c.is_paused}", flush=True)
         finally:
             session.close()
     
@@ -984,13 +984,13 @@ async def list_settings(interaction: discord.Interaction):
             volatility_channel_name=volatility_channel_name,
             volatility_threshold=config.volatility_threshold or 5.0,
             sports_channel_name=sports_channel_name,
-            sports_threshold=config.sports_threshold or 5000.0,
+            sports_threshold=config.sports_threshold or 3000.0,
             wallet_stats=wallet_stats,
             whale_channel_name=whale_channel_name,
             fresh_wallet_channel_name=fresh_wallet_channel_name,
             tracked_wallet_channel_name=tracked_wallet_channel_name,
             top_trader_channel_name=top_trader_channel_name,
-            top_trader_threshold=config.top_trader_threshold or 2500.0,
+            top_trader_threshold=config.top_trader_threshold or 3000.0,
             bonds_channel_name=bonds_channel_name,
             volatility_blacklist=config.volatility_blacklist or ""
         )
@@ -1946,7 +1946,7 @@ async def monitor_loop():
                         if sports_channel:
                             if wallet in tracked_addresses:
                                 pass
-                            elif is_fresh and value >= (config.sports_threshold or 5000.0):
+                            elif is_fresh and value >= (config.sports_threshold or 3000.0):
                                 print(f"[MONITOR] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                                 try:
                                     wallet_stats = await asyncio.wait_for(
@@ -1977,7 +1977,7 @@ async def monitor_loop():
                                     print(f"[MONITOR] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                                 except Exception as e:
                                     print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
-                            elif value >= (config.sports_threshold or 5000.0):
+                            elif value >= (config.sports_threshold or 3000.0):
                                 print(f"[MONITOR] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                                 try:
                                     wallet_stats = await asyncio.wait_for(
@@ -2529,7 +2529,7 @@ async def handle_websocket_trade(trade: dict):
                     print(f"[WS] ✗ CHANNEL IS NONE - cannot send tracked wallet alert to {tracked_channel_id}", flush=True)
             
             if is_sports:
-                top_trader_threshold = config.top_trader_threshold or 2500.0
+                top_trader_threshold = config.top_trader_threshold or 3000.0
                 sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
@@ -2567,7 +2567,7 @@ async def handle_websocket_trade(trade: dict):
                 if sports_channel:
                     if wallet in tracked_addresses:
                         pass
-                    elif is_fresh and value >= (config.sports_threshold or 5000.0):
+                    elif is_fresh and value >= (config.sports_threshold or 3000.0):
                         print(f"[WS] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                         try:
                             wallet_stats = await asyncio.wait_for(
@@ -2599,7 +2599,7 @@ async def handle_websocket_trade(trade: dict):
                             print(f"[WS] ✗ HTTP ERROR: {e.status} {e.code} - {e.text}", flush=True)
                         except Exception as e:
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
-                    elif value >= (config.sports_threshold or 5000.0):
+                    elif value >= (config.sports_threshold or 3000.0):
                         print(f"[WS] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
                         try:
                             wallet_stats = await asyncio.wait_for(
@@ -2632,7 +2632,7 @@ async def handle_websocket_trade(trade: dict):
                         except Exception as e:
                             print(f"[WS] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
             else:
-                top_trader_threshold = config.top_trader_threshold or 2500.0
+                top_trader_threshold = config.top_trader_threshold or 3000.0
                 sent_top_trader_alert = False
                 if top_trader_info and config.top_trader_channel_id and value >= top_trader_threshold:
                     print(f"[WS] ALERT TRIGGERED: Top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
