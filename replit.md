@@ -29,6 +29,7 @@ The bot is built around a modular architecture comprising a main Discord bot han
     - **Slash Commands:** Intuitive Discord slash commands (`/setup`, `/whale_channel`, `/track`, `/positions`, `/list`, `/pause`, `/resume`, `/trending`, `/search`, `/help`) for easy management.
 - **Performance Optimizations:** Implements caching for server configurations and tracked wallets, API call timeouts, and efficient WebSocket handling to reduce CPU and database load. Volatility tracking is managed in-memory to minimize database writes.
 - **Resilience:** Features WebSocket activity timeouts, proactive reconnections, and a backup WebSocket for enhanced reliability.
+- **Data Freshness Monitoring:** REST API polling every 30 seconds to verify WebSocket data freshness. Compares REST API trade timestamps with WebSocket timestamps to detect lag. Logs warnings at 30+ seconds lag, automatically pauses all alerts at 60+ seconds lag until WebSocket catches up. Prevents sending alerts based on stale data.
 
 **UI/UX Decisions:**
 - **Simple Discord Interface:** Focus on clear, concise alerts and easy-to-use slash commands for configuration.
