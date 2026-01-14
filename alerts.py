@@ -630,18 +630,28 @@ def create_volatility_alert_embed(
     old_price: float,
     new_price: float,
     price_change: float,
-    time_window_minutes: int = 60
+    time_window_minutes: int = 60,
+    volume_usd: float = 0,
+    trade_count: int = 0
 ) -> Embed:
     direction = "up" if price_change > 0 else "down"
     arrow = "+" if price_change > 0 else ""
     color = 0x27AE60 if price_change > 0 else 0xE74C3C
     
+    # Urgency formatting based on timeframe
+    if time_window_minutes <= 5:
+        urgency = "🚨 RAPID"
+    elif time_window_minutes <= 15:
+        urgency = "⚡ Fast"
+    else:
+        urgency = "📊 Swing"
+    
     market_url = f"https://polymarket.com/market/{slug}" if slug else "https://polymarket.com"
     market_display = get_market_link(market_title, market_url)
     
     embed = Embed(
-        title=f"📈 Volatility Alert",
-        description=f"A market is swinging wildly! Moved {arrow}{price_change:.1f}% in just {time_window_minutes} minutes!",
+        title=f"{urgency} Volatility Alert",
+        description=f"Market moved {arrow}{price_change:.1f} pts in {time_window_minutes} minutes!",
         color=color,
         timestamp=datetime.utcnow()
     )
@@ -654,21 +664,35 @@ def create_volatility_alert_embed(
     
     embed.add_field(
         name="Previous Price",
-        value=f"{old_price*100:.1f}%",
+        value=f"{old_price*100:.0f}%",
         inline=True
     )
     
     embed.add_field(
         name="Current Price",
-        value=f"{new_price*100:.1f}%",
+        value=f"{new_price*100:.0f}%",
         inline=True
     )
     
     embed.add_field(
         name="Change",
-        value=f"{arrow}{price_change:.1f}%",
+        value=f"{arrow}{price_change:.1f} pts",
         inline=True
     )
+    
+    if volume_usd > 0:
+        embed.add_field(
+            name="Volume",
+            value=f"${volume_usd:,.0f}",
+            inline=True
+        )
+    
+    if trade_count > 0:
+        embed.add_field(
+            name="Trades",
+            value=str(trade_count),
+            inline=True
+        )
     
     embed.set_footer(text="Polymarket Volatility Monitor")
     

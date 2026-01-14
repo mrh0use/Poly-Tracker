@@ -2169,7 +2169,7 @@ async def cleanup_loop():
                 VolatilityAlert.alerted_at < alert_cutoff
             ).delete()
             
-            old_cutoff = datetime.utcnow() - timedelta(days=7)
+            old_cutoff = datetime.utcnow() - timedelta(hours=24)
             deleted_seen = session.query(SeenTransaction).filter(
                 SeenTransaction.seen_at < old_cutoff
             ).delete()
@@ -2194,6 +2194,13 @@ _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'l
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
+    
+    # Skip old trades (older than 5 minutes) to prevent delayed alerts on reconnect
+    trade_timestamp = trade.get('timestamp', 0)
+    if trade_timestamp:
+        trade_age_seconds = time.time() - trade_timestamp
+        if trade_age_seconds > 300:  # 5 minutes
+            return
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
