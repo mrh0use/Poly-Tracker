@@ -668,6 +668,75 @@ class PolymarketClient:
             print(f"Error fetching USDC balance for {wallet_address}: {e}")
             return None
     
+    async def get_transaction_block_timestamp(self, tx_hash: str) -> Optional[int]:
+        """Get the block timestamp for a transaction on Polygon.
+        
+        This is used to verify the actual execution time of a trade,
+        since Polymarket's WebSocket only provides the broadcast time.
+        
+        Returns: Unix timestamp in seconds, or None if not found.
+        """
+        if not tx_hash or not tx_hash.startswith('0x'):
+            return None
+        
+        await self.ensure_session()
+        
+        # First get the transaction receipt to find the block number
+        rpc_payload = {
+            "jsonrpc": "2.0",
+            "method": "eth_getTransactionReceipt",
+            "params": [tx_hash],
+            "id": 1
+        }
+        
+        try:
+            async with self.session.post(
+                "https://polygon-rpc.com",
+                json=rpc_payload,
+                headers={"Content-Type": "application/json"},
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                result = await resp.json()
+                receipt = result.get("result")
+                if not receipt:
+                    return None
+                
+                block_number_hex = receipt.get("blockNumber")
+                if not block_number_hex:
+                    return None
+                
+                # Now get the block to find its timestamp
+                block_payload = {
+                    "jsonrpc": "2.0",
+                    "method": "eth_getBlockByNumber",
+                    "params": [block_number_hex, False],  # False = don't include full txs
+                    "id": 2
+                }
+                
+                async with self.session.post(
+                    "https://polygon-rpc.com",
+                    json=block_payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=5)
+                ) as block_resp:
+                    if block_resp.status != 200:
+                        return None
+                    block_result = await block_resp.json()
+                    block = block_result.get("result")
+                    if not block:
+                        return None
+                    
+                    timestamp_hex = block.get("timestamp")
+                    if timestamp_hex:
+                        return int(timestamp_hex, 16)
+                    return None
+                    
+        except Exception as e:
+            # Don't spam logs - this is a best-effort lookup
+            return None
+    
     async def _fetch_positions_paginated(self, wallet_address: str) -> List[Dict[str, Any]]:
         await self.ensure_session()
         all_positions = []
