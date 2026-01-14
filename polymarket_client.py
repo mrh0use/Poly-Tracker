@@ -722,33 +722,72 @@ class PolymarketClient:
         
         return all_closed
     
-    async def has_prior_activity(self, wallet_address: str) -> Optional[bool]:
-        """Check if wallet has prior TRADES (not just activity like deposits/approvals)."""
+    async def has_prior_activity(self, wallet_address: str, current_trade_timestamp: int = None) -> Optional[bool]:
+        """
+        Check if wallet has prior TRADES (not just activity like deposits/approvals).
+        
+        Args:
+            wallet_address: The proxy wallet address
+            current_trade_timestamp: Unix timestamp of trade being processed (optional)
+        
+        Returns:
+            True = Has prior trades (NOT fresh)
+            False = No prior trades (IS fresh - first trade)
+            None = Error occurred
+        """
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
+        # Short cache TTL (5 min) - fresh status can change quickly
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
-            if last_updated and (now - last_updated).total_seconds() < 3600:
+            if last_updated and (now - last_updated).total_seconds() < 300:
                 cached = self._wallet_history_cache[wallet_lower]
-                print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_trades={cached}", flush=True)
+                print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_trades={cached}", flush=True)
                 return cached
         
         await self.ensure_session()
         try:
+            # Fetch more trades to get accurate history
             async with self.session.get(
                 f"{self.DATA_API_BASE_URL}/trades",
-                params={"user": wallet_address, "limit": 2}
+                params={"user": wallet_address, "limit": 10}
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    # If 2+ trades exist, wallet has prior history (not fresh)
-                    # If 0-1 trades, this could be their first trade (fresh)
-                    has_prior_trades = isinstance(data, list) and len(data) >= 2
+                    
+                    if not isinstance(data, list):
+                        print(f"[FRESH CHECK] API returned non-list for {wallet_address[:10]}...", flush=True)
+                        return None
+                    
+                    total_count = len(data)
+                    
+                    # If we have timestamp, filter out trades at/after current timestamp
+                    if current_trade_timestamp and total_count > 0:
+                        prior_trades = [t for t in data if t.get('timestamp', 0) < current_trade_timestamp]
+                        prior_count = len(prior_trades)
+                        
+                        has_prior_trades = prior_count > 0
+                        self._wallet_history_cache[wallet_lower] = has_prior_trades
+                        self._wallet_history_updated[wallet_lower] = now
+                        
+                        if has_prior_trades:
+                            print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - {prior_count} trades before timestamp {current_trade_timestamp}", flush=True)
+                        else:
+                            print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - 0 trades before timestamp {current_trade_timestamp} (total={total_count})", flush=True)
+                        return has_prior_trades
+                    
+                    # No timestamp - use simple count logic
+                    has_prior_trades = total_count >= 2
                     self._wallet_history_cache[wallet_lower] = has_prior_trades
                     self._wallet_history_updated[wallet_lower] = now
-                    print(f"[FRESH CHECK] /trades API for {wallet_address[:10]}...: has_prior_trades={has_prior_trades} (count={len(data) if isinstance(data, list) else 'N/A'})", flush=True)
+                    
+                    if has_prior_trades:
+                        print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - {total_count} trades in history", flush=True)
+                    else:
+                        print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - only {total_count} trade(s)", flush=True)
                     return has_prior_trades
+                    
                 print(f"[FRESH CHECK] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
         except Exception as e:
             print(f"[FRESH CHECK] Exception for {wallet_address[:10]}...: {e}", flush=True)

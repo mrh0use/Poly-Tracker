@@ -1806,13 +1806,16 @@ async def monitor_loop():
                 if side == 'sell':
                     continue
                 
+                # Get trade timestamp early - needed for fresh wallet check
+                trade_timestamp = trade.get('timestamp', 0)
+                
                 is_fresh = False
                 if wallet not in processed_wallets_this_batch:
                     wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
                     if wallet_activity is None:
                         try:
                             has_history = await asyncio.wait_for(
-                                polymarket_client.has_prior_activity(wallet),
+                                polymarket_client.has_prior_activity(wallet, trade_timestamp),
                                 timeout=2.0
                             )
                         except asyncio.TimeoutError:
@@ -1833,7 +1836,6 @@ async def monitor_loop():
                     market_id = await polymarket_client.get_market_id_async(trade)
                     button_view = create_trade_button_view(market_id, market_url)
                     
-                    trade_timestamp = trade.get('timestamp', 0)
                     trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
                     
                     def is_trade_after_tracking(trade_dt, added_dt):
@@ -2340,6 +2342,13 @@ async def handle_websocket_trade(trade: dict):
         is_sports = polymarket_client.is_sports_market(trade)
         is_bond = price >= 0.95
         
+        # Get trade timestamp early - needed for fresh wallet check
+        trade_timestamp = trade.get('timestamp', 0)
+        
+        # Log for debugging trade routing
+        if value >= 5000:
+            print(f"[WS] Trade routing: ${value:,.0f} | is_sports={is_sports} | is_bond={is_bond} | market={market_title[:50]}...", flush=True)
+        
         all_configs = get_cached_server_configs()
         configs = [c for c in all_configs if not c.is_paused]
         configs = [c for c in configs if c.alert_channel_id or c.sports_channel_id or c.top_trader_channel_id or c.bonds_channel_id or c.tracked_wallet_channel_id or c.whale_channel_id or c.fresh_wallet_channel_id]
@@ -2353,7 +2362,7 @@ async def handle_websocket_trade(trade: dict):
             print(f"[FRESH] New wallet detected: {wallet[:10]}... checking for prior activity", flush=True)
             try:
                 has_history = await asyncio.wait_for(
-                    polymarket_client.has_prior_activity(wallet),
+                    polymarket_client.has_prior_activity(wallet, trade_timestamp),
                     timeout=2.0
                 )
                 print(f"[FRESH] API result for {wallet[:10]}...: has_history={has_history}", flush=True)
@@ -2388,7 +2397,6 @@ async def handle_websocket_trade(trade: dict):
         if top_trader_info:
             print(f"[WS] TOP TRADER DETECTED: {wallet[:10]}... ${value:,.0f} - Rank #{top_trader_info.get('rank')} ({top_trader_info.get('username', 'Unknown')})", flush=True)
         
-        trade_timestamp = trade.get('timestamp', 0)
         trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
         
         def is_trade_after_tracking(trade_dt, added_dt):
