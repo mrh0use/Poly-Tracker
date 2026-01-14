@@ -830,14 +830,15 @@ class PolymarketClient:
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
-        # Check cache first (5 min TTL) - for both fresh and non-fresh wallets
+        # Check cache first (5 min TTL) - only for wallets with confirmed history
+        # We intentionally don't cache fresh wallets because they become non-fresh on their next trade
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
             if last_updated and (now - last_updated).total_seconds() < 300:
                 cached = self._wallet_history_cache[wallet_lower]
-                if cached is not None:
-                    print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity={cached}", flush=True)
-                    return cached
+                if cached:  # Only use cache if wallet has prior activity
+                    print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity=True", flush=True)
+                    return True
         
         # Use Data API /activity endpoint for authoritative on-chain history
         # This is the ground truth - it queries actual blockchain transactions
