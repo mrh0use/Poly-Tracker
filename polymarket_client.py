@@ -1719,6 +1719,20 @@ class PolymarketWebSocket:
             size = float(payload.get('size', 0) or 0)
             price = float(payload.get('price', 0) or 0)
             
+            # Calculate USD value for debug logging
+            usd_value = size * price
+            
+            # DEBUG: Dump full payload for whale trades ($10000+) to see all available fields
+            # Only log first 10 whale trades to avoid log spam
+            if not hasattr(self, '_whale_debug_count'):
+                self._whale_debug_count = 0
+            if usd_value >= 10000 and self._whale_debug_count < 10:
+                self._whale_debug_count += 1
+                import json as json_module
+                print(f"[WS RAW PAYLOAD #{self._whale_debug_count}] ${usd_value:,.0f} trade - ALL FIELDS:", flush=True)
+                print(f"[WS RAW PAYLOAD #{self._whale_debug_count}] {json_module.dumps(payload, default=str)}", flush=True)
+                print(f"[WS RAW PAYLOAD #{self._whale_debug_count}] msg_timestamp={msg_timestamp}", flush=True)
+            
             # CRITICAL: Use payload's match_time or timestamp FIRST - this is the actual trade execution time
             # msg_timestamp is when WS broadcast the message, NOT when trade happened
             # Polymarket docs: payload.match_time and payload.timestamp are in SECONDS
