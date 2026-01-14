@@ -722,76 +722,111 @@ class PolymarketClient:
         
         return all_closed
     
-    async def has_prior_activity(self, wallet_address: str, current_trade_timestamp: int = None) -> Optional[bool]:
+    async def has_prior_activity(self, wallet_address: str, current_trade_value: float = 0) -> Optional[bool]:
         """
-        Check if wallet has prior TRADES (not just activity like deposits/approvals).
+        Check if wallet has prior trading activity using leaderboard stats.
+        
+        A wallet is FRESH (no prior activity) if their total volume is approximately
+        equal to the current trade value (meaning this is their first trade).
+        
+        The leaderboard API includes the current trade immediately, so we need to
+        account for that by comparing volume to the current trade value.
         
         Args:
-            wallet_address: The proxy wallet address
-            current_trade_timestamp: Unix timestamp of trade being processed (optional)
+            wallet_address: The wallet address to check
+            current_trade_value: The USD value of the current trade being processed
         
         Returns:
-            True = Has prior trades (NOT fresh)
-            False = No prior trades (IS fresh - first trade)
+            True = Has prior activity (NOT fresh)
+            False = No prior activity (IS fresh)
             None = Error occurred
         """
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
-        # Short cache TTL (5 min) - fresh status can change quickly
+        # Check cache first (5 min TTL)
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
             if last_updated and (now - last_updated).total_seconds() < 300:
                 cached = self._wallet_history_cache[wallet_lower]
-                print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_trades={cached}", flush=True)
+                print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity={cached}", flush=True)
                 return cached
         
         await self.ensure_session()
         try:
-            # Fetch more trades to get accurate history
             async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/trades",
-                params={"user": wallet_address, "limit": 10}
+                f"{self.DATA_API_BASE_URL}/v1/leaderboard",
+                params={"user": wallet_address, "timePeriod": "ALL"},
+                timeout=aiohttp.ClientTimeout(total=3)
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     
-                    if not isinstance(data, list):
-                        print(f"[FRESH CHECK] API returned non-list for {wallet_address[:10]}...", flush=True)
-                        return None
-                    
-                    total_count = len(data)
-                    
-                    # If we have timestamp, filter out trades at/after current timestamp
-                    if current_trade_timestamp and total_count > 0:
-                        prior_trades = [t for t in data if t.get('timestamp', 0) < current_trade_timestamp]
-                        prior_count = len(prior_trades)
+                    if isinstance(data, list) and len(data) > 0:
+                        user_data = data[0]
+                        pnl = float(user_data.get('pnl', 0) or 0)
+                        volume = float(user_data.get('vol', 0) or 0)
+                        rank = user_data.get('rank')
                         
-                        has_prior_trades = prior_count > 0
-                        self._wallet_history_cache[wallet_lower] = has_prior_trades
-                        self._wallet_history_updated[wallet_lower] = now
+                        # The leaderboard includes the current trade immediately.
+                        # To check if this is their first trade:
+                        # - Subtract the current trade value from total volume
+                        # - If remaining volume is near zero (< $100), this is their first trade
+                        # - If remaining volume is significant, they have prior trades
                         
-                        if has_prior_trades:
-                            print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - {prior_count} trades before timestamp {current_trade_timestamp}", flush=True)
+                        if current_trade_value > 0:
+                            # Subtract current trade and allow small tolerance for rounding
+                            prior_volume = volume - current_trade_value
+                            tolerance = 100  # $100 tolerance for price differences
+                            has_prior = prior_volume > tolerance
+                            
+                            # Don't cache when using trade-specific logic
+                            if has_prior:
+                                print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - Prior volume ${prior_volume:,.0f} (total ${volume:,.0f} - trade ${current_trade_value:,.0f})", flush=True)
+                            else:
+                                print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - Prior volume ${prior_volume:,.0f} <= ${tolerance} (first trade)", flush=True)
+                            
+                            return has_prior
                         else:
-                            print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - 0 trades before timestamp {current_trade_timestamp} (total={total_count})", flush=True)
-                        return has_prior_trades
-                    
-                    # No timestamp - use simple count logic
-                    has_prior_trades = total_count >= 2
-                    self._wallet_history_cache[wallet_lower] = has_prior_trades
-                    self._wallet_history_updated[wallet_lower] = now
-                    
-                    if has_prior_trades:
-                        print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - {total_count} trades in history", flush=True)
+                            # No trade value provided - use simple logic
+                            has_activity = (pnl != 0 or volume > 0)
+                            self._wallet_history_cache[wallet_lower] = has_activity
+                            self._wallet_history_updated[wallet_lower] = now
+                            
+                            if has_activity:
+                                print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - PnL=${pnl:,.2f}, Volume=${volume:,.2f}", flush=True)
+                            else:
+                                print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - PnL=$0, Volume=$0", flush=True)
+                            
+                            return has_activity
                     else:
-                        print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - only {total_count} trade(s)", flush=True)
-                    return has_prior_trades
-                    
+                        # Empty response = no leaderboard entry = truly fresh
+                        self._wallet_history_cache[wallet_lower] = False
+                        self._wallet_history_updated[wallet_lower] = now
+                        print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - No leaderboard entry", flush=True)
+                        return False
+                        
                 print(f"[FRESH CHECK] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
+        except asyncio.TimeoutError:
+            print(f"[FRESH CHECK] Timeout for {wallet_address[:10]}...", flush=True)
         except Exception as e:
             print(f"[FRESH CHECK] Exception for {wallet_address[:10]}...: {e}", flush=True)
+        
         return None
+    
+    def get_market_id_by_slug(self, slug: str) -> str:
+        """Get the numeric market ID from a market slug for Onsight deep links."""
+        if not slug:
+            return ''
+        
+        # Search the market cache for a matching slug
+        for key, market_info in self._market_cache.items():
+            if market_info.get('slug') == slug:
+                market_id = market_info.get('marketId', '')
+                if market_id:
+                    return str(market_id)
+        
+        return ''
     
     async def get_wallet_pnl_stats(self, wallet_address: str, force_refresh: bool = False) -> Dict[str, Any]:
         wallet_lower = wallet_address.lower()

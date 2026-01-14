@@ -1815,8 +1815,8 @@ async def monitor_loop():
                     if wallet_activity is None:
                         try:
                             has_history = await asyncio.wait_for(
-                                polymarket_client.has_prior_activity(wallet, trade_timestamp),
-                                timeout=2.0
+                                polymarket_client.has_prior_activity(wallet, value),
+                                timeout=3.0
                             )
                         except asyncio.TimeoutError:
                             has_history = True  # Assume not fresh if timeout
@@ -2255,7 +2255,7 @@ async def handle_websocket_trade(trade: dict):
                                     trade_count=alert['trade_count']
                                 )
                                 
-                                market_id = await polymarket_client.get_market_id_async({'asset': asset_id, 'conditionId': asset_id})
+                                market_id = polymarket_client.get_market_id_by_slug(alert['slug'])
                                 button_view = create_trade_button_view(market_id, market_url)
                                 
                                 try:
@@ -2362,8 +2362,8 @@ async def handle_websocket_trade(trade: dict):
             print(f"[FRESH] New wallet detected: {wallet[:10]}... checking for prior activity", flush=True)
             try:
                 has_history = await asyncio.wait_for(
-                    polymarket_client.has_prior_activity(wallet, trade_timestamp),
-                    timeout=2.0
+                    polymarket_client.has_prior_activity(wallet, value),
+                    timeout=3.0
                 )
                 print(f"[FRESH] API result for {wallet[:10]}...: has_history={has_history}", flush=True)
             except asyncio.TimeoutError:
