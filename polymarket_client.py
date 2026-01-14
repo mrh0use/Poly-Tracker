@@ -833,69 +833,70 @@ class PolymarketClient:
         wallet_lower = wallet_address.lower()
         now = datetime.utcnow()
         
-        # Check cache first (5 min TTL)
+        # Check cache first (5 min TTL) - only for wallets confirmed to have history
         if wallet_lower in self._wallet_history_cache:
             last_updated = self._wallet_history_updated.get(wallet_lower)
             if last_updated and (now - last_updated).total_seconds() < 300:
                 cached = self._wallet_history_cache[wallet_lower]
-                print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity={cached}", flush=True)
-                return cached
+                # Only use cache for wallets with prior activity (positive cache)
+                if cached:
+                    print(f"[FRESH CHECK] Cache hit for {wallet_address[:10]}...: has_prior_activity=True", flush=True)
+                    return True
         
+        # Use Data API /activity endpoint for authoritative on-chain history
+        # This is the ground truth - it queries actual blockchain transactions
         await self.ensure_session()
         try:
+            # Query on-chain activity for this wallet, excluding the current trade timestamp
+            # by looking for any prior TRADE activity
             async with self.session.get(
-                f"{self.DATA_API_BASE_URL}/v1/leaderboard",
-                params={"user": wallet_address, "timePeriod": "ALL"},
-                timeout=aiohttp.ClientTimeout(total=3)
+                "https://data-api.polymarket.com/activity",
+                params={
+                    "user": wallet_address,
+                    "type": "TRADE",
+                    "limit": 5,  # We only need to know if ANY prior trades exist
+                    "sortBy": "TIMESTAMP",
+                    "sortDirection": "DESC"
+                },
+                timeout=aiohttp.ClientTimeout(total=4)
             ) as resp:
                 if resp.status == 200:
-                    data = await resp.json()
+                    activities = await resp.json()
                     
-                    if isinstance(data, list) and len(data) > 0:
-                        user_data = data[0]
-                        pnl = float(user_data.get('pnl', 0) or 0)
-                        volume = float(user_data.get('vol', 0) or 0)
-                        rank = user_data.get('rank')
-                        
-                        # The leaderboard includes the current trade immediately.
-                        # To check if this is their first trade:
-                        # - Subtract the current trade value from total volume
-                        # - If remaining volume is near zero (< $10), this is their first trade
-                        # - If remaining volume is significant, they have prior trades
-                        
-                        if current_trade_value > 0:
-                            # Subtract current trade and allow minimal tolerance for rounding
-                            prior_volume = volume - current_trade_value
-                            tolerance = 10  # $10 tolerance for minor price slippage only
-                            has_prior = prior_volume > tolerance
-                            
-                            # Don't cache when using trade-specific logic
-                            if has_prior:
-                                print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - Prior volume ${prior_volume:,.0f} (total ${volume:,.0f} - trade ${current_trade_value:,.0f})", flush=True)
-                            else:
-                                print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - Prior volume ${prior_volume:,.0f} <= ${tolerance} (first trade)", flush=True)
-                            
-                            return has_prior
-                        else:
-                            # No trade value provided - use simple logic
-                            has_activity = (pnl != 0 or volume > 0)
-                            self._wallet_history_cache[wallet_lower] = has_activity
-                            self._wallet_history_updated[wallet_lower] = now
-                            
-                            if has_activity:
-                                print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - PnL=${pnl:,.2f}, Volume=${volume:,.2f}", flush=True)
-                            else:
-                                print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - PnL=$0, Volume=$0", flush=True)
-                            
-                            return has_activity
-                    else:
-                        # Empty response = no leaderboard entry = truly fresh
-                        self._wallet_history_cache[wallet_lower] = False
-                        self._wallet_history_updated[wallet_lower] = now
-                        print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - No leaderboard entry", flush=True)
+                    if not activities or len(activities) == 0:
+                        # No trades at all - definitely fresh
+                        print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - No on-chain trades found", flush=True)
                         return False
+                    
+                    # Check if there's more than one trade, or if the single trade
+                    # is older than a few seconds (meaning it's not the current trade)
+                    if len(activities) > 1:
+                        # Multiple trades = has history
+                        self._wallet_history_cache[wallet_lower] = True
+                        self._wallet_history_updated[wallet_lower] = now
+                        total_volume = sum(float(a.get('usdcSize', 0) or 0) for a in activities)
+                        print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - {len(activities)} on-chain trades, ${total_volume:,.0f} volume", flush=True)
+                        return True
+                    
+                    # Single trade - check if it matches current trade value
+                    if len(activities) == 1:
+                        single_trade = activities[0]
+                        single_value = float(single_trade.get('usdcSize', 0) or 0)
                         
-                print(f"[FRESH CHECK] API error status {resp.status} for {wallet_address[:10]}...", flush=True)
+                        # Allow tolerance for this being the current trade
+                        if current_trade_value > 0 and abs(single_value - current_trade_value) < 50:
+                            print(f"[FRESH CHECK] {wallet_address[:10]}...: FRESH - Only on-chain trade matches current (${single_value:,.0f} ~= ${current_trade_value:,.0f})", flush=True)
+                            return False
+                        else:
+                            # Single trade doesn't match current trade - has prior history
+                            self._wallet_history_cache[wallet_lower] = True
+                            self._wallet_history_updated[wallet_lower] = now
+                            print(f"[FRESH CHECK] {wallet_address[:10]}...: NOT FRESH - Prior on-chain trade ${single_value:,.0f}", flush=True)
+                            return True
+                    
+                    return False
+                        
+                print(f"[FRESH CHECK] Data API error status {resp.status} for {wallet_address[:10]}...", flush=True)
         except asyncio.TimeoutError:
             print(f"[FRESH CHECK] Timeout for {wallet_address[:10]}...", flush=True)
         except Exception as e:

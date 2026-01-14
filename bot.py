@@ -2192,10 +2192,30 @@ async def before_cleanup():
 
 
 
-_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
+_ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0, 'stale_skipped': 0}
 
 async def handle_websocket_trade(trade: dict):
     global _ws_stats
+    
+    # STALENESS FILTER: Skip trades older than 30 seconds to avoid backlog delays
+    trade_timestamp = trade.get('timestamp', 0)
+    if trade_timestamp:
+        try:
+            trade_ts = int(trade_timestamp)
+            # Handle both seconds and milliseconds timestamps
+            if trade_ts > 1000000000000:  # Milliseconds
+                trade_ts = trade_ts / 1000
+            now_ts = time.time()
+            age_seconds = now_ts - trade_ts
+            
+            if age_seconds > 30:
+                # Skip stale trades (from backlog) - count them
+                _ws_stats['stale_skipped'] += 1
+                if _ws_stats['stale_skipped'] % 500 == 1:
+                    print(f"[WS] Skipping stale trade (age={age_seconds:.0f}s) - total stale skipped: {_ws_stats['stale_skipped']}", flush=True)
+                return
+        except (ValueError, TypeError):
+            pass  # If timestamp parsing fails, process the trade anyway
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
