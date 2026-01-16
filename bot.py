@@ -4,13 +4,14 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Deque
 from collections import deque
 from aiohttp import web
 import time
 
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert
 from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
 from polymarket_client import polymarket_client, PolymarketWebSocket
 from alerts import (
@@ -25,6 +26,9 @@ from alerts import (
     create_wallet_positions_embed,
     create_volatility_alert_embed
 )
+
+TRADE_WORKER_COUNT = int(os.environ.get("TRADE_WORKER_COUNT", "32"))
+TRADE_QUEUE_MAXSIZE = int(os.environ.get("TRADE_QUEUE_MAXSIZE", "8000"))
 
 # Server config cache to reduce database queries
 _server_config_cache = []
@@ -55,6 +59,11 @@ _tracked_wallet_set = set()  # Quick lookup set of all tracked addresses
 _tracked_wallet_cache_time = 0
 _TRACKED_WALLET_CACHE_TTL = 300  # Refresh every 5 minutes
 
+_channel_cache: Dict[int, discord.abc.GuildChannel] = {}
+
+_trade_queue = asyncio.Queue(maxsize=TRADE_QUEUE_MAXSIZE)
+_trade_workers_started = False
+
 def get_cached_tracked_wallets():
     """Get tracked wallets from cache, refreshing if stale. Returns (set of addresses, dict by guild)."""
     global _tracked_wallet_cache, _tracked_wallet_set, _tracked_wallet_cache_time
@@ -75,6 +84,48 @@ def get_cached_tracked_wallets():
         finally:
             session.close()
     return _tracked_wallet_set, _tracked_wallet_cache
+
+def format_ws_timestamp(raw_timestamp) -> str:
+    """Return a human-readable UTC timestamp from Polymarket's trade payload."""
+    if not raw_timestamp:
+        return "N/A"
+    try:
+        ts = float(raw_timestamp)
+        if ts > 1_000_000_000_000:  # payloads may come in ms
+            ts /= 1000.0
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + " UTC"
+    except Exception:
+        return str(raw_timestamp)
+
+
+def format_utc_datetime(dt: Optional[datetime]) -> str:
+    if not dt:
+        return "N/A"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + " UTC"
+
+
+def upsert_wallet_activity(session, wallet_address: str, increment: int = 1) -> None:
+    wallet_lower = wallet_address.lower()
+    stmt = insert(WalletActivity).values(
+        wallet_address=wallet_lower,
+        transaction_count=increment
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[WalletActivity.wallet_address],
+        set_={'transaction_count': WalletActivity.transaction_count + increment}
+    )
+    session.execute(stmt)
+
+
+def annotate_tx_hash(trade: dict) -> str:
+    tx_hash = trade.get('transactionHash') or trade.get('txHash') or trade.get('hash') or ''
+    if tx_hash and not trade.get('txHash'):
+        trade['txHash'] = tx_hash
+    return tx_hash
+
 
 def invalidate_tracked_wallet_cache():
     """Invalidate cache when tracked wallets are updated."""
@@ -441,6 +492,7 @@ class PolymarketBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
         self.synced = False
         self.websocket_started = False
+        self.trade_workers_started = False
     
     async def setup_hook(self):
         init_db()
@@ -481,6 +533,13 @@ class PolymarketBot(commands.Bot):
             asyncio.create_task(start_websocket())
             print("WebSocket task scheduled")
         
+        if not self.trade_workers_started:
+            self.trade_workers_started = True
+            semaphore = asyncio.Semaphore(TRADE_WORKER_COUNT)
+            for worker_id in range(1, TRADE_WORKER_COUNT + 1):
+                asyncio.create_task(trade_worker(worker_id, semaphore))
+            print(f"[QUEUE] Started {TRADE_WORKER_COUNT} concurrent trade processor(s)")
+
         
         # Log all server configs at startup
         session = get_session()
@@ -508,12 +567,17 @@ async def get_or_fetch_channel(channel_id):
     """Get channel from cache or fetch from API if not cached."""
     if not channel_id:
         return None
+    channel = _channel_cache.get(channel_id)
+    if channel:
+        return channel
     channel = bot.get_channel(channel_id)
     if channel:
+        _channel_cache[channel_id] = channel
         return channel
     try:
         channel = await bot.fetch_channel(channel_id)
         print(f"[CHANNEL] Fetched channel {channel_id} from API (was not in cache)", flush=True)
+        _channel_cache[channel_id] = channel
         return channel
     except discord.NotFound:
         print(f"[CHANNEL] Channel {channel_id} not found", flush=True)
@@ -596,6 +660,25 @@ async def setup(
         )
     finally:
         session.close()
+
+
+async def trade_worker(worker_id: int, semaphore: asyncio.Semaphore):
+    print(f"[QUEUE] Trade worker #{worker_id} started", flush=True)
+    while True:
+        trade = await _trade_queue.get()
+
+        async def run_trade(payload):
+            try:
+                async with semaphore:
+                    await process_websocket_trade(payload)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                print(f"[QUEUE] Worker #{worker_id} error: {type(e).__name__}: {e}", flush=True)
+            finally:
+                _trade_queue.task_done()
+
+        asyncio.create_task(run_trade(trade))
 
 
 @bot.tree.command(name="whale_channel", description="Set the channel for whale alerts")
@@ -1792,6 +1875,7 @@ async def monitor_loop():
                 
                 value = polymarket_client.calculate_trade_value(trade)
                 wallet = polymarket_client.get_wallet_from_trade(trade)
+                tx_hash = annotate_tx_hash(trade)
                 
                 if not wallet:
                     continue
@@ -1820,9 +1904,7 @@ async def monitor_loop():
                             print(f"[MONITOR] Activity check timeout for {wallet[:10]}...", flush=True)
                         if has_history is False:
                             is_fresh = True
-                        session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
-                    else:
-                        wallet_activity.transaction_count += 1
+                    upsert_wallet_activity(session, wallet)
                     processed_wallets_this_batch.add(wallet)
                 
                 is_sports = polymarket_client.is_sports_market(trade)
@@ -1835,6 +1917,8 @@ async def monitor_loop():
                     
                     trade_timestamp = trade.get('timestamp', 0)
                     trade_time = datetime.utcfromtimestamp(trade_timestamp) if trade_timestamp else None
+                    if trade_timestamp and not trade.get('timestamp'):
+                        trade['timestamp'] = trade_timestamp
                     
                     def is_trade_after_tracking(trade_dt, added_dt):
                         if not trade_dt or not added_dt:
@@ -1847,7 +1931,7 @@ async def monitor_loop():
                     
                     if wallet in tracked_addresses:
                         tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
-                        print(f"[MONITOR] ALERT TRIGGERED: Tracked wallet ${value:,.0f}, attempting channel {tracked_channel_id}", flush=True)
+                        print(f"[MONITOR] ALERT TRIGGERED: Tracked wallet ${value:,.0f}, attempting channel {tracked_channel_id} | tx={tx_hash[:10]}", flush=True)
                         tracked_channel = await get_or_fetch_channel(tracked_channel_id)
                         print(f"[MONITOR] Channel fetch result: {tracked_channel} (type: {type(tracked_channel).__name__ if tracked_channel else 'None'})", flush=True)
                         if tracked_channel:
@@ -1875,7 +1959,7 @@ async def monitor_loop():
                             )
                             try:
                                 message = await tracked_channel.send(embed=embed, view=button_view)
-                                print(f"[MONITOR] ✓ ALERT SENT: Tracked wallet ${value:,.0f} to channel {tracked_channel_id}, msg_id={message.id}", flush=True)
+                                print(f"[MONITOR] ✓ ALERT SENT: Tracked wallet ${value:,.0f} to channel {tracked_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                             except discord.Forbidden as e:
                                 print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {tracked_channel_id} - {e}", flush=True)
                             except discord.NotFound as e:
@@ -1889,7 +1973,7 @@ async def monitor_loop():
                     
                     if is_sports:
                         if top_trader_info and config.top_trader_channel_id:
-                            print(f"[MONITOR] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id}", flush=True)
+                            print(f"[MONITOR] ALERT TRIGGERED: Sports top trader ${value:,.0f}, attempting channel {config.top_trader_channel_id} | tx={tx_hash[:10]}", flush=True)
                             top_channel = await get_or_fetch_channel(config.top_trader_channel_id)
                             print(f"[MONITOR] Channel fetch result: {top_channel} (type: {type(top_channel).__name__ if top_channel else 'None'})", flush=True)
                             if top_channel:
@@ -1903,7 +1987,7 @@ async def monitor_loop():
                                 )
                                 try:
                                     message = await top_channel.send(embed=embed, view=button_view)
-                                    print(f"[MONITOR] ✓ ALERT SENT: Sports top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Sports top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                                 except discord.Forbidden as e:
                                     print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
                                 except discord.NotFound as e:
@@ -1921,7 +2005,7 @@ async def monitor_loop():
                             if wallet in tracked_addresses:
                                 pass
                             elif is_fresh and value >= (config.sports_threshold or 5000.0):
-                                print(f"[MONITOR] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
+                                print(f"[MONITOR] ALERT TRIGGERED: Sports fresh wallet ${value:,.0f}, attempting channel {config.sports_channel_id} | tx={tx_hash[:10]}", flush=True)
                                 try:
                                     wallet_stats = await asyncio.wait_for(
                                         polymarket_client.get_wallet_pnl_stats(wallet),
@@ -1942,7 +2026,7 @@ async def monitor_loop():
                                 )
                                 try:
                                     message = await sports_channel.send(embed=embed, view=button_view)
-                                    print(f"[MONITOR] ✓ ALERT SENT: Sports fresh wallet ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Sports fresh wallet ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                                 except discord.Forbidden as e:
                                     print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
                                 except discord.NotFound as e:
@@ -1952,7 +2036,7 @@ async def monitor_loop():
                                 except Exception as e:
                                     print(f"[MONITOR] ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}", flush=True)
                             elif value >= (config.sports_threshold or 5000.0):
-                                print(f"[MONITOR] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id}", flush=True)
+                                print(f"[MONITOR] ALERT TRIGGERED: Sports whale ${value:,.0f}, attempting channel {config.sports_channel_id} | tx={tx_hash[:10]}", flush=True)
                                 try:
                                     wallet_stats = await asyncio.wait_for(
                                         polymarket_client.get_wallet_pnl_stats(wallet),
@@ -1973,7 +2057,7 @@ async def monitor_loop():
                                 )
                                 try:
                                     message = await sports_channel.send(embed=embed, view=button_view)
-                                    print(f"[MONITOR] ✓ ALERT SENT: Sports whale ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Sports whale ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                                 except discord.Forbidden as e:
                                     print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
                                 except discord.NotFound as e:
@@ -2013,7 +2097,7 @@ async def monitor_loop():
                                 print(f"[MONITOR] ✗ CHANNEL IS NONE - cannot send top trader alert to {config.top_trader_channel_id}", flush=True)
                         
                         if is_bond and value >= 5000.0 and config.bonds_channel_id:
-                            print(f"[MONITOR] ALERT TRIGGERED: Bonds ${value:,.0f}, attempting channel {config.bonds_channel_id}", flush=True)
+                            print(f"[MONITOR] ALERT TRIGGERED: Bonds ${value:,.0f}, attempting channel {config.bonds_channel_id} | tx={tx_hash[:10]}", flush=True)
                             bonds_channel = await get_or_fetch_channel(config.bonds_channel_id)
                             print(f"[MONITOR] Channel fetch result: {bonds_channel} (type: {type(bonds_channel).__name__ if bonds_channel else 'None'})", flush=True)
                             if bonds_channel:
@@ -2037,7 +2121,7 @@ async def monitor_loop():
                                 try:
                                     message = await bonds_channel.send(embed=embed, view=button_view)
                                     alerts_sent += 1
-                                    print(f"[MONITOR] ✓ ALERT SENT: Bonds ${value:,.0f} to channel {config.bonds_channel_id}, msg_id={message.id}", flush=True)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Bonds ${value:,.0f} to channel {config.bonds_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                                 except discord.Forbidden as e:
                                     print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {config.bonds_channel_id} - {e}", flush=True)
                                 except discord.NotFound as e:
@@ -2051,7 +2135,7 @@ async def monitor_loop():
                         
                         elif is_fresh and value >= (config.fresh_wallet_threshold or 10000.0) and not is_bond:
                             fresh_channel_id = config.fresh_wallet_channel_id or config.alert_channel_id
-                            print(f"[MONITOR] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id}", flush=True)
+                            print(f"[MONITOR] ALERT TRIGGERED: Fresh wallet ${value:,.0f}, attempting channel {fresh_channel_id} | tx={tx_hash[:10]}", flush=True)
                             fresh_channel = await get_or_fetch_channel(fresh_channel_id)
                             print(f"[MONITOR] Channel fetch result: {fresh_channel} (type: {type(fresh_channel).__name__ if fresh_channel else 'None'})", flush=True)
                             if fresh_channel:
@@ -2074,7 +2158,7 @@ async def monitor_loop():
                                 )
                                 try:
                                     message = await fresh_channel.send(embed=embed, view=button_view)
-                                    print(f"[MONITOR] ✓ ALERT SENT: Fresh wallet ${value:,.0f} to channel {fresh_channel_id}, msg_id={message.id}", flush=True)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Fresh wallet ${value:,.0f} to channel {fresh_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                                 except discord.Forbidden as e:
                                     print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {fresh_channel_id} - {e}", flush=True)
                                 except discord.NotFound as e:
@@ -2089,7 +2173,7 @@ async def monitor_loop():
                         elif value >= (config.whale_threshold or 10000.0) and not is_bond:
                             whale_channel_id = config.whale_channel_id or config.alert_channel_id
                             whale_threshold = config.whale_threshold or 10000.0
-                            print(f"[MONITOR] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, attempting channel {whale_channel_id}", flush=True)
+                            print(f"[MONITOR] ALERT TRIGGERED: Whale ${value:,.0f} >= threshold ${whale_threshold:,.0f}, attempting channel {whale_channel_id} | tx={tx_hash[:10]}", flush=True)
                             whale_channel = await get_or_fetch_channel(whale_channel_id)
                             print(f"[MONITOR] Channel fetch result: {whale_channel} (type: {type(whale_channel).__name__ if whale_channel else 'None'})", flush=True)
                             if whale_channel:
@@ -2113,7 +2197,7 @@ async def monitor_loop():
                                 try:
                                     message = await whale_channel.send(embed=embed, view=button_view)
                                     alerts_sent += 1
-                                    print(f"[MONITOR] ✓ ALERT SENT: Whale ${value:,.0f} to channel {whale_channel_id}, msg_id={message.id}", flush=True)
+                                    print(f"[MONITOR] ✓ ALERT SENT: Whale ${value:,.0f} to channel {whale_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                                 except discord.Forbidden as e:
                                     print(f"[MONITOR] ✗ FORBIDDEN: Cannot send to channel {whale_channel_id} - {e}", flush=True)
                                 except discord.NotFound as e:
@@ -2192,11 +2276,12 @@ async def before_cleanup():
 
 _ws_stats = {'processed': 0, 'above_5k': 0, 'above_10k': 0, 'alerts_sent': 0, 'last_log': 0}
 
-async def handle_websocket_trade(trade: dict):
+async def process_websocket_trade(trade: dict):
     global _ws_stats
     
     value = polymarket_client.calculate_trade_value(trade)
     wallet = polymarket_client.get_wallet_from_trade(trade)
+    tx_hash = annotate_tx_hash(trade)
     
     if not wallet:
         return
@@ -2274,6 +2359,26 @@ async def handle_websocket_trade(trade: dict):
     
     tracked_addresses, tracked_by_guild = get_cached_tracked_wallets()
     is_tracked = wallet in tracked_addresses
+    queued_at = trade.get('_ws_received_at')
+    processed_at = datetime.now(timezone.utc)
+    queue_delay = None
+    if isinstance(queued_at, datetime):
+        if queued_at.tzinfo is None:
+            queued_at = queued_at.replace(tzinfo=timezone.utc)
+        queue_delay = (processed_at - queued_at).total_seconds()
+
+    if value >= 5000 or is_tracked:
+        payload_ts = format_ws_timestamp(trade.get('timestamp'))
+        queued_ts = format_utc_datetime(queued_at)
+        processed_ts = format_utc_datetime(processed_at)
+        wallet_preview = f"{wallet[:10]}..." if wallet else "unknown"
+        tx_preview = tx_hash[:10] if tx_hash else "unknown"
+        delay_info = f" queue_delay={queue_delay:.2f}s" if queue_delay is not None else ""
+        print(
+            f"[WS EVENT] Received ${value:,.0f} trade from {wallet_preview} payload={payload_ts} "
+            f"queued={queued_ts} processed={processed_ts}{delay_info} tx={tx_preview}",
+            flush=True
+        )
     
     if value < 1000 and not is_tracked:
         return
@@ -2291,9 +2396,9 @@ async def handle_websocket_trade(trade: dict):
     
     # Only log significant trades
     if value >= 5000:
-        print(f"[WS] Processing ${value:,.0f} trade from {wallet[:10]}...", flush=True)
+        print(f"[WS] Processing ${value:,.0f} trade from {wallet[:10]}... | tx={tx_hash[:10]}", flush=True)
     elif is_tracked:
-        print(f"[WS] Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}...", flush=True)
+        print(f"[WS] Processing tracked wallet trade ${value:,.0f} from {wallet[:10]}... | tx={tx_hash[:10]}", flush=True)
     
     # Check bot ready state before processing
     if not bot.is_ready():
@@ -2360,11 +2465,8 @@ async def handle_websocket_trade(trade: dict):
                 print(f"[WS] Activity check timeout for {wallet[:10]}...", flush=True)
             if has_history is False:
                 is_fresh = True
-            session.add(WalletActivity(wallet_address=wallet, transaction_count=1))
-            session.commit()
-        else:
-            wallet_activity.transaction_count += 1
-            session.commit()
+        upsert_wallet_activity(session, wallet)
+        session.commit()
         
         top_trader_info = polymarket_client.is_top_trader(wallet)
         
@@ -2400,7 +2502,7 @@ async def handle_websocket_trade(trade: dict):
             
             if wallet in tracked_addresses:
                 tracked_channel_id = config.tracked_wallet_channel_id or config.alert_channel_id
-                print(f"[WS] ALERT TRIGGERED: Tracked wallet ${value:,.0f}, attempting channel {tracked_channel_id}", flush=True)
+                print(f"[WS] ALERT TRIGGERED: Tracked wallet ${value:,.0f}, attempting channel {tracked_channel_id} | tx={tx_hash[:10]}", flush=True)
                 tracked_channel = await get_or_fetch_channel(tracked_channel_id)
                 print(f"[WS] Channel fetch result: {tracked_channel} (type: {type(tracked_channel).__name__ if tracked_channel else 'None'})", flush=True)
                 if tracked_channel:
@@ -2423,13 +2525,12 @@ async def handle_websocket_trade(trade: dict):
                         wallet_label=tw.label,
                         market_url=market_url,
                         pnl=wallet_stats.get('pnl'),
-                        volume=wallet_stats.get('volume'),
                         rank=wallet_stats.get('rank')
                     )
                     try:
                         message = await tracked_channel.send(embed=embed, view=button_view)
                         _ws_stats['alerts_sent'] += 1
-                        print(f"[WS] ✓ ALERT SENT: Tracked wallet ${value:,.0f} to channel {tracked_channel_id}, msg_id={message.id}", flush=True)
+                        print(f"[WS] ✓ ALERT SENT: Tracked wallet ${value:,.0f} to channel {tracked_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                     except discord.Forbidden as e:
                         print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {tracked_channel_id} - {e}", flush=True)
                     except discord.NotFound as e:
@@ -2460,7 +2561,7 @@ async def handle_websocket_trade(trade: dict):
                         try:
                             message = await top_channel.send(embed=embed, view=button_view)
                             sent_top_trader_alert = True
-                            print(f"[WS] ✓ ALERT SENT: Sports top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] ✓ ALERT SENT: Sports top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                             print(f"[WS] Top trader takes priority - skipping sports whale routing", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
@@ -2503,7 +2604,7 @@ async def handle_websocket_trade(trade: dict):
                         try:
                             message = await sports_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] ✓ ALERT SENT: Sports fresh wallet ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] ✓ ALERT SENT: Sports fresh wallet ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
                         except discord.NotFound as e:
@@ -2535,7 +2636,7 @@ async def handle_websocket_trade(trade: dict):
                         try:
                             message = await sports_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] ✓ ALERT SENT: Sports whale ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] ✓ ALERT SENT: Sports whale ${value:,.0f} to channel {config.sports_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.sports_channel_id} - {e}", flush=True)
                         except discord.NotFound as e:
@@ -2564,7 +2665,7 @@ async def handle_websocket_trade(trade: dict):
                             message = await top_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
                             sent_top_trader_alert = True
-                            print(f"[WS] ✓ ALERT SENT: Top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] ✓ ALERT SENT: Top trader ${value:,.0f} to channel {config.top_trader_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                             print(f"[WS] Top trader takes priority - skipping whale/fresh routing", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.top_trader_channel_id} - {e}", flush=True)
@@ -2605,7 +2706,7 @@ async def handle_websocket_trade(trade: dict):
                         try:
                             message = await bonds_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] ✓ ALERT SENT: Bonds ${value:,.0f} to channel {config.bonds_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] ✓ ALERT SENT: Bonds ${value:,.0f} to channel {config.bonds_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {config.bonds_channel_id} - {e}", flush=True)
                         except discord.NotFound as e:
@@ -2643,7 +2744,7 @@ async def handle_websocket_trade(trade: dict):
                         try:
                             message = await fresh_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] ✓ ALERT SENT: Fresh wallet ${value:,.0f} to channel {fresh_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] ✓ ALERT SENT: Fresh wallet ${value:,.0f} to channel {fresh_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {fresh_channel_id} - {e}", flush=True)
                         except discord.NotFound as e:
@@ -2682,7 +2783,7 @@ async def handle_websocket_trade(trade: dict):
                         try:
                             message = await whale_channel.send(embed=embed, view=button_view)
                             _ws_stats['alerts_sent'] += 1
-                            print(f"[WS] ✓ ALERT SENT: Whale ${value:,.0f} to channel {whale_channel_id}, msg_id={message.id}", flush=True)
+                            print(f"[WS] ✓ ALERT SENT: Whale ${value:,.0f} to channel {whale_channel_id}, msg_id={message.id} | tx={tx_hash[:10]}", flush=True)
                         except discord.Forbidden as e:
                             print(f"[WS] ✗ FORBIDDEN: Cannot send to channel {whale_channel_id} - {e}", flush=True)
                         except discord.NotFound as e:
@@ -2695,6 +2796,37 @@ async def handle_websocket_trade(trade: dict):
                         print(f"[WS] ✗ CHANNEL IS NONE - cannot send whale alert to {whale_channel_id}", flush=True)
     finally:
         session.close()
+
+
+async def handle_websocket_trade(trade: dict):
+    trade['_ws_received_at'] = datetime.now(timezone.utc)
+    try:
+        _trade_queue.put_nowait(trade)
+        queue_size = _trade_queue.qsize()
+        if queue_size % 100 == 0:
+            oldest = None
+            if queue_size:
+                try:
+                    oldest = _trade_queue._queue[0]
+                except Exception:
+                    oldest = None
+            oldest_ts = getattr(oldest, '_ws_received_at', None) if oldest else None
+            print(
+                f"[QUEUE] Enqueued trade. size={queue_size} oldest={format_utc_datetime(oldest_ts)}",
+                flush=True
+            )
+    except asyncio.QueueFull:
+        try:
+            oldest = _trade_queue.get_nowait()
+            _trade_queue.task_done()
+            _trade_queue.put_nowait(trade)
+            oldest_ts = getattr(oldest, '_ws_received_at', None)
+            print(
+                f"[QUEUE] Dropped oldest trade queued_at={format_utc_datetime(oldest_ts)} to enqueue new one",
+                flush=True
+            )
+        except asyncio.QueueEmpty:
+            print("[QUEUE] Trade queue full, dropping incoming trade", flush=True)
 
 
 def on_websocket_reconnect():
