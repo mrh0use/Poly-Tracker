@@ -630,7 +630,9 @@ def create_volatility_alert_embed(
     old_price: float,
     new_price: float,
     price_change: float,
-    time_window_minutes: int = 60
+    time_window_minutes: int = 60,
+    volume_usd: Optional[float] = None,
+    trade_count: Optional[int] = None
 ) -> Embed:
     direction = "up" if price_change > 0 else "down"
     arrow = "+" if price_change > 0 else ""
@@ -669,7 +671,21 @@ def create_volatility_alert_embed(
         value=f"{arrow}{price_change:.1f}%",
         inline=True
     )
-    
+
+    if volume_usd is not None:
+        embed.add_field(
+            name="Volume",
+            value=f"${volume_usd:,.0f}",
+            inline=True
+        )
+
+    if trade_count is not None:
+        embed.add_field(
+            name="Trades",
+            value=str(trade_count),
+            inline=True
+        )
+
     embed.set_footer(text="Polymarket Volatility Monitor")
     
     return embed, market_url
