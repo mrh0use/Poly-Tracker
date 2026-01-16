@@ -14,6 +14,8 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from database import init_db, get_session, ServerConfig, TrackedWallet, SeenTransaction, WalletActivity, PriceSnapshot, VolatilityAlert
 from polymarket_client import polymarket_client, PolymarketWebSocket
+from fill_keys import annotate_tx_hash, build_fill_key
+
 from alerts import (
     create_whale_alert_embed,
     create_fresh_wallet_alert_embed,
@@ -118,13 +120,6 @@ def upsert_wallet_activity(session, wallet_address: str, increment: int = 1) -> 
         set_={'transaction_count': WalletActivity.transaction_count + increment}
     )
     session.execute(stmt)
-
-
-def annotate_tx_hash(trade: dict) -> str:
-    tx_hash = trade.get('transactionHash') or trade.get('txHash') or trade.get('hash') or ''
-    if tx_hash and not trade.get('txHash'):
-        trade['txHash'] = tx_hash
-    return tx_hash
 
 
 def invalidate_tracked_wallet_cache():
@@ -1860,21 +1855,25 @@ async def monitor_loop():
             trades_above_threshold = 0
             
             for trade in all_trades:
-                unique_key = polymarket_client.get_unique_trade_id(trade)
-                
-                if not unique_key or len(unique_key) < 10:
+                wallet = polymarket_client.get_wallet_from_trade(trade)
+                fill_key = build_fill_key(trade, wallet=wallet)
+                if not fill_key:
                     continue
-                
-                seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key[:66]).first()
+
+                tx_hash = (trade.get('txHash') or annotate_tx_hash(trade) or '')[:66]
+                if not tx_hash:
+                    continue
+
+                seen = session.query(SeenTransaction).filter_by(fill_key=fill_key).first()
                 if seen:
                     skipped_seen_count += 1
                     continue
                 
-                session.add(SeenTransaction(tx_hash=unique_key[:66]))
+                session.add(SeenTransaction(tx_hash=tx_hash, fill_key=fill_key))
                 new_trades_count += 1
                 
                 value = polymarket_client.calculate_trade_value(trade)
-                wallet = polymarket_client.get_wallet_from_trade(trade)
+                wallet = wallet or polymarket_client.get_wallet_from_trade(trade)
                 tx_hash = annotate_tx_hash(trade)
                 
                 if not wallet:
@@ -1954,7 +1953,6 @@ async def monitor_loop():
                                 wallet_label=tw.label,
                                 market_url=market_url,
                                 pnl=wallet_stats.get('pnl'),
-                                volume=wallet_stats.get('volume'),
                                 rank=wallet_stats.get('rank')
                             )
                             try:
@@ -2421,17 +2419,22 @@ async def process_websocket_trade(trade: dict):
         return
     
     try:
-        unique_key = polymarket_client.get_unique_trade_id(trade)
-        if not unique_key or len(unique_key) < 10:
+        wallet = polymarket_client.get_wallet_from_trade(trade)
+        fill_key = build_fill_key(trade, wallet=wallet)
+        if not fill_key:
             return
-        
-        seen = session.query(SeenTransaction).filter_by(tx_hash=unique_key[:66]).first()
+
+        tx_hash = (trade.get('txHash') or annotate_tx_hash(trade) or '')[:66]
+        if not tx_hash:
+            return
+
+        seen = session.query(SeenTransaction).filter_by(fill_key=fill_key).first()
         if seen:
             return
         
-        session.add(SeenTransaction(tx_hash=unique_key[:66]))
+        session.add(SeenTransaction(tx_hash=tx_hash, fill_key=fill_key))
         session.commit()
-        
+
         price = float(trade.get('price', 0) or 0)
         
         market_title = polymarket_client.get_market_title(trade)
@@ -2452,6 +2455,7 @@ async def process_websocket_trade(trade: dict):
         if not configs:
             return
         
+        wallet = wallet or polymarket_client.get_wallet_from_trade(trade)
         wallet_activity = session.query(WalletActivity).filter_by(wallet_address=wallet).first()
         is_fresh = False
         if wallet_activity is None:

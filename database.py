@@ -60,7 +60,8 @@ class TrackedWallet(Base):
 class SeenTransaction(Base):
     __tablename__ = 'seen_transactions'
     
-    tx_hash = Column(String(66), primary_key=True)
+    fill_key = Column(String(128), primary_key=True)
+    tx_hash = Column(String(66), nullable=False, index=True)
     seen_at = Column(DateTime, default=datetime.utcnow)
 
 
